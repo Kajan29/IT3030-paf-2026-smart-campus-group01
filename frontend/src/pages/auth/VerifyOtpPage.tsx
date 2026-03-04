@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { ShieldCheck, ArrowLeft } from "lucide-react";
 import AuthHeroPanel from "../../components/common/AuthHeroPanel";
+import authService from "../../services/authService";
 import { toast } from "react-toastify";
 
 const VerifyOtpPage = () => {
@@ -62,10 +63,15 @@ const VerifyOtpPage = () => {
 
     setLoading(true);
     try {
-      // Replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      toast.success("Account verified successfully! 🎓");
-      navigate("/auth/login");
+      const response = await authService.verifyEmail({
+        email: email as string,
+        verificationCode: code,
+      });
+
+      if (response.data.success) {
+        toast.success(response.data.message || "Account verified successfully! 🎓");
+        navigate("/auth/login");
+      }
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Verification failed. Please try again.");
     } finally {
@@ -77,12 +83,13 @@ const VerifyOtpPage = () => {
     if (resendTimer > 0) return;
     
     try {
-      // Replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setResendTimer(60);
-      toast.success("New verification code sent!");
-    } catch (error) {
-      toast.error("Failed to resend code. Please try again.");
+      const response = await authService.resendVerification(email as string);
+      if (response.data.success) {
+        setResendTimer(60);
+        toast.success(response.data.message || "New verification code sent!");
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to resend code. Please try again.");
     }
   };
 

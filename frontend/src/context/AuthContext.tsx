@@ -1,18 +1,19 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import authService from '../services/authService'
+import authService, { UserRole } from '../services/authService'
 
 interface User {
-  id: string
   email: string
   firstName: string
   lastName: string
-  role?: string
+  role: UserRole
+  isVerified: boolean
 }
 
 type AuthContextType = {
   user: User | null
   login: (credentials: any) => Promise<any>
   logout: () => void
+  register: (userData: any) => Promise<any>
   isAuthenticated: boolean
   loading: boolean
 }
@@ -31,10 +32,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (credentials: any) => {
     const response = await authService.login(credentials)
-    const { token, user } = response.data
-    localStorage.setItem('token', token)
-    localStorage.setItem('user', JSON.stringify(user))
-    setUser(user)
+    const { token, ...userData } = response.data.data
+    if (token) {
+      authService.saveAuthData(token, userData)
+      setUser(userData)
+    }
+    return response
+  }
+
+  const register = async (userData: any) => {
+    const response = await authService.register(userData)
+    // Note: After registration, user needs to verify email before getting token
     return response
   }
 
@@ -47,6 +55,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     user,
     login,
     logout,
+    register,
     isAuthenticated: !!user,
     loading,
   }
