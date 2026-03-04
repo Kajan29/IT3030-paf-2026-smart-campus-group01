@@ -1,13 +1,12 @@
 import { Outlet } from 'react-router-dom'
 import Header from '../components/common/Header'
 import Footer from '../components/common/Footer'
-import './MainLayout.css'
 
 const MainLayout = (): JSX.Element => {
   return (
-    <div className="main-layout">
+    <div className="flex flex-col min-h-screen">
       <Header />
-      <main className="main-content">
+      <main className="flex-1">
         <Outlet />
       </main>
       <Footer />

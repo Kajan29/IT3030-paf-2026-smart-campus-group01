@@ -1,80 +1,125 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap');
+@import './pages/auth/auth.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 20% 97%;
+    --foreground: 220 40% 13%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 40% 13%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 40% 13%;
+
+    --primary: 220 60% 22%;
+    --primary-foreground: 45 80% 95%;
+
+    --secondary: 45 70% 55%;
+    --secondary-foreground: 220 60% 12%;
+
+    --muted: 220 15% 92%;
+    --muted-foreground: 220 10% 46%;
+
+    --accent: 45 70% 55%;
+    --accent-foreground: 220 60% 12%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 15% 88%;
+    --input: 220 15% 88%;
+    --ring: 220 60% 22%;
+
+    --radius: 0.625rem;
+
+    --sidebar-background: 220 60% 18%;
+    --sidebar-foreground: 220 15% 92%;
+    --sidebar-primary: 45 70% 55%;
+    --sidebar-primary-foreground: 220 60% 12%;
+    --sidebar-accent: 220 50% 28%;
+    --sidebar-accent-foreground: 220 15% 92%;
+    --sidebar-border: 220 40% 28%;
+    --sidebar-ring: 45 70% 55%;
+
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-body: 'Source Sans 3', system-ui, sans-serif;
+
+    --gradient-primary: linear-gradient(135deg, hsl(220, 60%, 22%), hsl(220, 55%, 32%));
+    --gradient-gold: linear-gradient(135deg, hsl(45, 70%, 55%), hsl(38, 80%, 50%));
+    --gradient-hero: linear-gradient(160deg, hsl(220, 60%, 15%) 0%, hsl(220, 55%, 25%) 50%, hsl(225, 50%, 30%) 100%);
+    --shadow-card: 0 4px 24px -4px hsl(220 60% 22% / 0.08);
+    --shadow-elevated: 0 12px 40px -8px hsl(220 60% 22% / 0.15);
+  }
+
+  .dark {
+    --background: 220 40% 8%;
+    --foreground: 220 15% 92%;
+    --card: 220 35% 12%;
+    --card-foreground: 220 15% 92%;
+    --popover: 220 35% 12%;
+    --popover-foreground: 220 15% 92%;
+    --primary: 45 70% 55%;
+    --primary-foreground: 220 60% 12%;
+    --secondary: 220 50% 28%;
+    --secondary-foreground: 220 15% 92%;
+    --muted: 220 30% 18%;
+    --muted-foreground: 220 10% 55%;
+    --accent: 45 70% 55%;
+    --accent-foreground: 220 60% 12%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 30% 20%;
+    --input: 220 30% 20%;
+    --ring: 45 70% 55%;
+    --sidebar-background: 220 40% 8%;
+    --sidebar-foreground: 220 15% 92%;
+    --sidebar-primary: 45 70% 55%;
+    --sidebar-primary-foreground: 220 60% 12%;
+    --sidebar-accent: 220 35% 15%;
+    --sidebar-accent-foreground: 220 15% 92%;
+    --sidebar-border: 220 30% 18%;
+    --sidebar-ring: 45 70% 55%;
+  }
 }
 
-:root {
-  --primary-color: #3b82f6;
-  --primary-dark: #2563eb;
-  --secondary-color: #64748b;
-  --background-color: #f8fafc;
-  --text-color: #1e293b;
-  --text-light: #64748b;
-  --white: #ffffff;
-  --border-color: #e2e8f0;
-  --success-color: #22c55e;
-  --error-color: #ef4444;
-  --warning-color: #f59e0b;
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+  }
 }
 
-body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-  background-color: var(--background-color);
-  color: var(--text-color);
-  line-height: 1.6;
-}
+@layer components {
+  .container {
+    @apply max-w-7xl mx-auto px-4;
+  }
 
-a {
-  text-decoration: none;
-  color: inherit;
-}
+  .btn {
+    @apply inline-flex items-center justify-center rounded-lg px-6 py-3 font-medium transition-all duration-200;
+  }
 
-ul {
-  list-style: none;
-}
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:opacity-90;
+  }
 
-button {
-  cursor: pointer;
-  border: none;
-  outline: none;
-}
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:opacity-90;
+  }
 
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1rem;
-}
-
-.btn {
-  display: inline-block;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.5rem;
-  font-weight: 500;
-  transition: all 0.3s ease;
-}
-
-.btn-primary {
-  background-color: var(--primary-color);
-  color: var(--white);
-}
-
-.btn-primary:hover {
-  background-color: var(--primary-dark);
-}
-
-.btn-secondary {
-  background-color: var(--secondary-color);
-  color: var(--white);
-}
-
-.btn-outline {
-  background-color: transparent;
-  border: 2px solid var(--primary-color);
-  color: var(--primary-color);
-}
-
-.btn-outline:hover {
-  background-color: var(--primary-color);
-  color: var(--white);
+  .btn-outline {
+    @apply border-2 border-primary text-primary bg-transparent hover:bg-primary hover:text-primary-foreground;
+  }
 }

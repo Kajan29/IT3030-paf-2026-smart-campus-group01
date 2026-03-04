@@ -37,6 +37,7 @@ public class User {
     @Column(name = "last_name")
     private String lastName;
 
+    @Builder.Default
     @Column(name = "is_active")
     private Boolean isActive = true;
 
