@@ -38,7 +38,13 @@ const LoginPage = () => {
         
         authService.saveAuthData(token, userData);
         toast.success(response.data.message || "Login successful!");
-        navigate("/");
+        
+        // Redirect based on user role
+        if (userData.role === "ADMIN") {
+          navigate("/admin");
+        } else {
+          navigate("/");
+        }
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Login failed. Please try again.");

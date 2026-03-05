@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Account Created - Zentaritas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            background-color: #f4f5f7;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 50px 30px;
+            text-align: center;
+        }
+        .logo {
+            font-size: 32px;
+            font-weight: bold;
+            color: #ffffff;
+            text-decoration: none;
+            letter-spacing: 1px;
+        }
+        .header-subtitle {
+            color: #ffffff;
+            font-size: 18px;
+            margin-top: 10px;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .greeting {
+            font-size: 28px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .message {
+            font-size: 16px;
+            color: #555555;
+            margin-bottom: 30px;
+            line-height: 1.8;
+        }
+        .admin-icon {
+            font-size: 64px;
+            text-align: center;
+            margin: 30px 0;
+        }
+        .credentials-box {
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%);
+            border-left: 4px solid #dc2626;
+            padding: 25px;
+            margin: 25px 0;
+            border-radius: 8px;
+        }
+        .credentials-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #dc2626;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        .credentials-title:before {
+            content: "🔐 ";
+            margin-right: 10px;
+        }
+        .credential-item {
+            padding: 12px 0;
+            border-bottom: 1px solid #fecaca;
+        }
+        .credential-item:last-child {
+            border-bottom: none;
+        }
+        .credential-label {
+            font-size: 13px;
+            color: #991b1b;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+        .credential-value {
+            font-size: 16px;
+            color: #1a1a1a;
+            font-family: 'Courier New', monospace;
+            background: #ffffff;
+            padding: 10px 15px;
+            border-radius: 4px;
+            word-break: break-all;
+            border: 1px solid #fecaca;
+        }
+        .warning-box {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            border-left: 4px solid #f59e0b;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 8px;
+        }
+        .warning-box p {
+            color: #92400e;
+            font-size: 14px;
+            margin: 0;
+            line-height: 1.6;
+        }
+        .warning-box strong {
+            color: #78350f;
+        }
+        .cta-button {
+            display: inline-block;
+            padding: 16px 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            text-align: center;
+            display: block;
+        }
+        .info-box {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border-left: 4px solid #0284c7;
+            padding: 25px;
+            margin: 25px 0;
+            border-radius: 8px;
+        }
+        .info-box-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 15px;
+        }
+        .info-box ul {
+            list-style: none;
+            padding: 0;
+        }
+        .info-box li {
+            padding: 8px 0;
+            color: #555555;
+            font-size: 15px;
+        }
+        .info-box li:before {
+            content: "✓ ";
+            color: #0284c7;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, #e0e0e0, transparent);
+            margin: 30px 0;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #e9ecef;
+        }
+        .footer-text {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 15px;
+        }
+        .copyright {
+            font-size: 12px;
+            color: #999999;
+            margin-top: 20px;
+        }
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                width: 100% !important;
+            }
+            .content {
+                padding: 30px 20px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <a href="#" class="logo">ZENTARITAS</a>
+            <p class="header-subtitle">Administrator Access Portal</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <div class="admin-icon">👨‍💼</div>
+            
+            <h1 class="greeting">Welcome, ${adminName}</h1>
+            
+            <p class="message">
+                Your administrator account has been successfully created for the Zentaritas platform. 
+                This account provides you with full administrative access to manage the system.
+            </p>
+
+            <!-- Credentials Box -->
+            <div class="credentials-box">
+                <div class="credentials-title">
+                    Your Login Credentials
+                </div>
+                <div class="credential-item">
+                    <div class="credential-label">Email Address</div>
+                    <div class="credential-value">${adminEmail}</div>
+                </div>
+                <div class="credential-item">
+                    <div class="credential-label">Default Password</div>
+                    <div class="credential-value">${defaultPassword}</div>
+                </div>
+            </div>
+
+            <!-- Warning Box -->
+            <div class="warning-box">
+                <p>
+                    ⚠️ <strong>Important Security Notice:</strong> This is a default password. 
+                    Please change your password immediately after your first login to ensure account security.
+                </p>
+            </div>
+
+            <!-- CTA Button -->
+            <a href="${loginUrl}" class="cta-button">
+                Login to Admin Dashboard
+            </a>
+
+            <div class="divider"></div>
+
+            <!-- Admin Capabilities -->
+            <div class="info-box">
+                <div class="info-box-title">🎯 Administrator Capabilities</div>
+                <ul>
+                    <li>User Management - View, edit, and manage all user accounts</li>
+                    <li>System Configuration - Modify system settings and preferences</li>
+                    <li>Content Management - Control and moderate platform content</li>
+                    <li>Analytics & Reports - Access detailed analytics and generate reports</li>
+                    <li>Security Controls - Manage security settings and permissions</li>
+                </ul>
+            </div>
+
+            <p class="message" style="margin-top: 30px; font-size: 14px; color: #777777;">
+                If you have any questions or need assistance, please contact the system administrator 
+                or refer to the administrator documentation.
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p class="footer-text">
+                This is an automated system email. Please do not reply to this message.
+            </p>
+            <p class="copyright">
+                &copy; 2026 Zentaritas. All rights reserved.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

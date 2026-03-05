@@ -1,0 +1,187 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* UniHub Design System — All colors in HSL */
+
+@layer base {
+  :root {
+    /* Brand */
+    --primary: 214 73% 22%;          /* #0f3460 deep university blue */
+    --primary-light: 214 60% 32%;    /* lighter blue */
+    --primary-foreground: 0 0% 98%;
+
+    --accent-red: 1 76% 55%;         /* #e53935 university red */
+    --accent-red-foreground: 0 0% 98%;
+
+    /* Surfaces */
+    --background: 220 20% 97%;
+    --foreground: 220 30% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 30% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 30% 12%;
+
+    /* Sidebar */
+    --sidebar-bg: 214 73% 14%;
+    --sidebar-active: 214 73% 22%;
+    --sidebar-hover: 214 60% 26%;
+    --sidebar-text: 214 30% 75%;
+    --sidebar-text-active: 0 0% 100%;
+    --sidebar-accent: 1 76% 55%;
+
+    /* Semantic */
+    --secondary: 220 14% 93%;
+    --secondary-foreground: 220 30% 20%;
+
+    --muted: 220 14% 93%;
+    --muted-foreground: 220 10% 50%;
+
+    --accent: 214 60% 95%;
+    --accent-foreground: 214 73% 22%;
+
+    --destructive: 1 76% 55%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 14% 89%;
+    --input: 220 14% 89%;
+    --ring: 214 73% 22%;
+
+    --radius: 0.75rem;
+
+    /* Status colors */
+    --success: 142 69% 40%;
+    --success-foreground: 0 0% 98%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 10%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 98%;
+
+    /* Glassmorphism */
+    --glass-bg: 0 0% 100% / 0.7;
+    --glass-border: 0 0% 100% / 0.3;
+
+    /* Shadows */
+    --shadow-card: 0 4px 24px hsl(214 73% 22% / 0.08);
+    --shadow-card-hover: 0 8px 40px hsl(214 73% 22% / 0.16);
+    --shadow-sidebar: 4px 0 24px hsl(214 73% 10% / 0.3);
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(214 73% 22%), hsl(214 60% 35%));
+    --gradient-red: linear-gradient(135deg, hsl(1 76% 55%), hsl(1 76% 65%));
+    --gradient-success: linear-gradient(135deg, hsl(142 69% 38%), hsl(142 60% 50%));
+    --gradient-info: linear-gradient(135deg, hsl(199 89% 45%), hsl(210 80% 60%));
+    --gradient-warning: linear-gradient(135deg, hsl(38 92% 48%), hsl(45 95% 58%));
+    --gradient-hero: linear-gradient(135deg, hsl(214 73% 14%) 0%, hsl(214 60% 26%) 100%);
+
+    /* Sidebar specific */
+    --sidebar-background: 214 73% 14%;
+    --sidebar-foreground: 214 30% 75%;
+    --sidebar-primary: 1 76% 55%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 214 60% 26%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 214 50% 20%;
+    --sidebar-ring: 1 76% 55%;
+  }
+
+  .dark {
+    --background: 220 30% 8%;
+    --foreground: 220 20% 92%;
+    --card: 220 28% 12%;
+    --card-foreground: 220 20% 92%;
+    --popover: 220 28% 12%;
+    --popover-foreground: 220 20% 92%;
+    --primary: 214 60% 55%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 220 20% 18%;
+    --secondary-foreground: 220 20% 85%;
+    --muted: 220 20% 18%;
+    --muted-foreground: 220 10% 55%;
+    --accent: 220 20% 20%;
+    --accent-foreground: 220 20% 92%;
+    --destructive: 1 76% 55%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 20% 20%;
+    --input: 220 20% 20%;
+    --ring: 214 60% 55%;
+    --sidebar-background: 220 30% 6%;
+    --sidebar-foreground: 214 30% 70%;
+    --sidebar-primary: 1 76% 55%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 220 20% 15%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 220 20% 14%;
+    --sidebar-ring: 1 76% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.4);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.7);
+  }
+}
+
+@layer utilities {
+  .glass {
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid hsl(var(--glass-border));
+  }
+
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+
+  .shadow-card-hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+
+  .gradient-red {
+    background: var(--gradient-red);
+  }
+
+  .gradient-success {
+    background: var(--gradient-success);
+  }
+
+  .gradient-info {
+    background: var(--gradient-info);
+  }
+
+  .gradient-warning {
+    background: var(--gradient-warning);
+  }
+
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+}

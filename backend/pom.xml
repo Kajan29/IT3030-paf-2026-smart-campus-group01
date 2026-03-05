@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.0</version>
+        <version>3.4.1</version>
         <relativePath/>
     </parent>
     
@@ -19,7 +19,47 @@
     
     <properties>
         <java.version>17</java.version>
+        <nimbus-jose-jwt.version>10.0.2</nimbus-jose-jwt.version>
+        <mysql-connector-j.version>8.4.0</mysql-connector-j.version>
+        <spring-security.version>6.4.4</spring-security.version>
+        <tomcat.version>10.1.50</tomcat.version>
+        <jackson.version>2.18.2</jackson.version>
     </properties>
+    
+    <dependencyManagement>
+        <dependencies>
+            <!-- Override Nimbus JOSE+JWT version to fix CVE-2023-52428 and CVE-2025-53864 -->
+            <dependency>
+                <groupId>com.nimbusds</groupId>
+                <artifactId>nimbus-jose-jwt</artifactId>
+                <version>${nimbus-jose-jwt.version}</version>
+            </dependency>
+            <!-- Override Spring Security versions to fix CVE-2025-41232, CVE-2025-41248, CVE-2025-22228 -->
+            <dependency>
+                <groupId>org.springframework.security</groupId>
+                <artifactId>spring-security-bom</artifactId>
+                <version>${spring-security.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- Override Tomcat version to fix CVE-2025-24813 and others -->
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-core</artifactId>
+                <version>${tomcat.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-websocket</artifactId>
+                <version>${tomcat.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-el</artifactId>
+                <version>${tomcat.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
     
     <dependencies>
         <!-- Spring Boot Starters -->
@@ -85,6 +125,7 @@
         <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
+            <version>${mysql-connector-j.version}</version>
             <scope>runtime</scope>
         </dependency>
         

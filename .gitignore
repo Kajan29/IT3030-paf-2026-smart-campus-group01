@@ -104,3 +104,5 @@ coverage/
 *.pid
 *.seed
 *.pid.lock
+
+admin
