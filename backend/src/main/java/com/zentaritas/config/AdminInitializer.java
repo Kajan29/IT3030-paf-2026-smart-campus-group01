@@ -41,11 +41,15 @@ public class AdminInitializer {
     CommandLineRunner initAdminAccount() {
         return args -> {
             try {
-                // Check if admin account already exists
+                log.info("🔍 Checking for admin account with email: {}", adminEmail);
+                
+                // Check if admin account already exists with this specific email
                 if (userRepository.existsByEmail(adminEmail)) {
-                    log.info("Admin account already exists: {}", adminEmail);
+                    log.info("✓ Admin account already exists: {}", adminEmail);
                     return;
                 }
+
+                log.info("🆕 No admin account found. Creating admin account for: {}", adminEmail);
 
                 // Create admin account
                 User admin = User.builder()
@@ -60,6 +64,8 @@ public class AdminInitializer {
 
                 userRepository.save(admin);
                 log.info("✅ Admin account created successfully: {}", adminEmail);
+                log.info("   Name: {} {}", adminFirstName, adminLastName);
+                log.info("   Role: ADMIN");
 
                 // Send welcome email to admin
                 try {
@@ -70,11 +76,11 @@ public class AdminInitializer {
                     );
                     log.info("📧 Welcome email sent to admin: {}", adminEmail);
                 } catch (Exception e) {
-                    log.error("Failed to send welcome email to admin. Admin account created but email not sent.", e);
+                    log.error("⚠️ Failed to send welcome email to admin. Admin account created but email not sent.", e);
                 }
 
             } catch (Exception e) {
-                log.error("❌ Failed to initialize admin account", e);
+                log.error("❌ Failed to initialize admin account for email: {}", adminEmail, e);
             }
         };
     }

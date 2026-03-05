@@ -132,4 +132,25 @@ public class EmailService {
             throw new RuntimeException("Failed to send admin welcome email", e);
         }
     }
+
+    /**
+     * Send staff credentials email
+     */
+    public void sendStaffCredentialsEmail(String toEmail, String staffName, String defaultPassword, String roleType) {
+        try {
+            String htmlContent = loadTemplate("admin-welcome.html");
+            htmlContent = htmlContent.replace("${adminName}", staffName);
+            htmlContent = htmlContent.replace("${adminEmail}", toEmail);
+            htmlContent = htmlContent.replace("${defaultPassword}", defaultPassword);
+            htmlContent = htmlContent.replace("${loginUrl}", frontendUrl + "/login");
+            htmlContent = htmlContent.replace("${dashboardUrl}", frontendUrl + "/dashboard");
+            htmlContent = htmlContent.replace("Admin", roleType.replace("_", " "));
+            
+            sendHtmlEmail(toEmail, "Staff Account Created - Zentaritas", htmlContent);
+            log.info("Staff credentials email sent to: {}", toEmail);
+        } catch (Exception e) {
+            log.error("Failed to send staff credentials email to: {}", toEmail, e);
+            throw new RuntimeException("Failed to send staff credentials email", e);
+        }
+    }
 }

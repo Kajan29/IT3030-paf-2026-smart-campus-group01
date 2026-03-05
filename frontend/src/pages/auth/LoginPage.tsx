@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, LogIn } from "lucide-react";
 import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
 import AuthHeroPanel from "../../components/common/AuthHeroPanel";
-import authService from "../../services/authService";
 import { useAuth } from "../../context/AuthContext";
 import { toast } from "react-toastify";
 
@@ -13,7 +12,18 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { googleLogin } = useAuth();
+  const { user, isAuthenticated, login, googleLogin } = useAuth();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.role === "ADMIN") {
+        navigate("/admin", { replace: true });
+      } else {
+        navigate("/", { replace: true });
+      }
+    }
+  }, [isAuthenticated, user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +35,7 @@ const LoginPage = () => {
 
     setLoading(true);
     try {
-      const response = await authService.login({ email, password });
+      const response = await login({ email, password });
       
       if (response.data.success) {
         const { token, ...userData } = response.data.data;
@@ -36,7 +46,6 @@ const LoginPage = () => {
           return;
         }
         
-        authService.saveAuthData(token, userData);
         toast.success(response.data.message || "Login successful!");
         
         // Redirect based on user role
@@ -63,8 +72,15 @@ const LoginPage = () => {
       const response = await googleLogin(credentialResponse.credential, "STUDENT");
       
       if (response.data.success) {
+        const { ...userData } = response.data.data;
         toast.success("Google login successful!");
-        navigate("/");
+        
+        // Redirect based on user role
+        if (userData.role === "ADMIN") {
+          navigate("/admin");
+        } else {
+          navigate("/");
+        }
       }
     } catch (error: any) {
       console.error("Google login error:", error);

@@ -50,8 +50,8 @@ export const Sidebar = ({ activeItem, onItemClick, collapsed, onToggle }: Sideba
           </div>
           {!collapsed && (
             <div className="animate-fade-in">
-              <span className="text-white font-bold text-lg leading-none">UniHub</span>
-              <p className="text-sidebar-foreground text-[10px] leading-tight mt-0.5">Management Platform</p>
+              <span className="text-white font-bold text-lg leading-none">Zentaritas</span>
+              <p className="text-sidebar-foreground text-[10px] leading-tight mt-0.5">Admin Portal</p>
             </div>
           )}
         </div>

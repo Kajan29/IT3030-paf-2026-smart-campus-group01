@@ -37,6 +37,15 @@
 
     --radius: 0.625rem;
 
+    --accent-red: 0 72% 51%;
+    --accent-red-foreground: 0 0% 100%;
+    --info: 200 90% 50%;
+    --info-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 30 40% 12%;
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+
     --sidebar-background: 220 60% 18%;
     --sidebar-foreground: 220 15% 92%;
     --sidebar-primary: 45 70% 55%;
@@ -76,6 +85,14 @@
     --border: 220 30% 20%;
     --input: 220 30% 20%;
     --ring: 45 70% 55%;
+    --accent-red: 0 72% 51%;
+    --accent-red-foreground: 0 0% 100%;
+    --info: 200 90% 50%;
+    --info-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 30 40% 12%;
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
     --sidebar-background: 220 40% 8%;
     --sidebar-foreground: 220 15% 92%;
     --sidebar-primary: 45 70% 55%;
@@ -121,5 +138,43 @@
 
   .btn-outline {
     @apply border-2 border-primary text-primary bg-transparent hover:bg-primary hover:text-primary-foreground;
+  }
+
+  /* Gradient utility classes */
+  .gradient-primary {
+    @apply bg-gradient-to-br from-primary to-primary/80;
+  }
+
+  .gradient-red {
+    @apply bg-gradient-to-br from-accent-red to-red-600;
+  }
+
+  .gradient-info {
+    @apply bg-gradient-to-br from-info to-blue-500;
+  }
+
+  .gradient-success {
+    @apply bg-gradient-to-br from-success to-emerald-500;
+  }
+
+  .gradient-warning {
+    @apply bg-gradient-to-br from-warning to-amber-500;
+  }
+
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+
+  /* Shadow utilities */
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+
+  .shadow-elevated {
+    box-shadow: var(--shadow-elevated);
+  }
+
+  .shadow-card-hover {
+    box-shadow: 0 8px 32px -4px hsl(var(--primary) / 0.12);
   }
 }

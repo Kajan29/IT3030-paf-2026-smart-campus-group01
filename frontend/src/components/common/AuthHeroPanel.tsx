@@ -10,7 +10,7 @@ const AuthHeroPanel = () => {
           </div>
           <h1 className="hero-title">Zentaritas</h1>
         </div>
-        <p className="hero-subtitle">University Management System</p>
+        <p className="hero-subtitle">University Platform & Management</p>
       </div>
 
       <div className="hero-content">

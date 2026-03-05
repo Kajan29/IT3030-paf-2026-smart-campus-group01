@@ -55,9 +55,9 @@ export const DashboardOverview = () => {
             <p className="text-white/60 text-sm font-medium mb-1">
               {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
             </p>
-            <h1 className="text-2xl md:text-3xl font-bold mb-1.5">Welcome back, Admin 👋</h1>
+            <h1 className="text-2xl md:text-3xl font-bold mb-1.5">Welcome to Zentaritas Admin 👋</h1>
             <p className="text-white/70 text-sm md:text-base max-w-lg">
-              Here's your university activity summary. You have <span className="text-white font-semibold">3 alerts</span>, <span className="text-white font-semibold">7 pending approvals</span>, and <span className="text-white font-semibold">28 upcoming events</span>.
+              Manage your entire university platform from here. You have <span className="text-white font-semibold">3 alerts</span>, <span className="text-white font-semibold">7 pending approvals</span>, and <span className="text-white font-semibold">28 upcoming events</span>.
             </p>
           </div>
           <div className="flex gap-3 flex-shrink-0">
