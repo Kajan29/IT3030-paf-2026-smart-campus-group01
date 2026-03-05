@@ -4,17 +4,16 @@ import com.zentaritas.dto.auth.request.*;
 import com.zentaritas.dto.auth.response.AuthResponse;
 import com.zentaritas.exception.ResourceNotFoundException;
 import com.zentaritas.model.auth.Role;
-import com.zentaritas.model.auth.UserEntity;
+import com.zentaritas.model.auth.User;
 import com.zentaritas.model.auth.VerificationToken;
 import com.zentaritas.repository.auth.UserRepository;
 import com.zentaritas.repository.auth.VerificationTokenRepository;
 import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -26,7 +25,6 @@ import java.util.Collections;
 import java.util.Random;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class AuthService implements UserDetailsService {
 
@@ -37,12 +35,28 @@ public class AuthService implements UserDetailsService {
     private final EmailService emailService;
     private final AuthenticationManager authenticationManager;
 
+    public AuthService(
+            UserRepository userRepository,
+            VerificationTokenRepository verificationTokenRepository,
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService,
+            EmailService emailService,
+            @Lazy AuthenticationManager authenticationManager
+    ) {
+        this.userRepository = userRepository;
+        this.verificationTokenRepository = verificationTokenRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
+        this.emailService = emailService;
+        this.authenticationManager = authenticationManager;
+    }
+
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        UserEntity user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
-        return User.builder()
+        return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getEmail())
                 .password(user.getPassword())
                 .authorities(Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())))
@@ -58,7 +72,7 @@ public class AuthService implements UserDetailsService {
         }
 
         // Create new user (only students can register)
-        UserEntity user = UserEntity.builder()
+        User user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .firstName(request.getFirstName())
@@ -94,7 +108,7 @@ public class AuthService implements UserDetailsService {
                 )
         );
 
-        UserEntity user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (!user.getIsVerified()) {
@@ -134,7 +148,7 @@ public class AuthService implements UserDetailsService {
             throw new RuntimeException("Verification code expired");
         }
 
-        UserEntity user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         user.setIsVerified(true);
@@ -148,7 +162,7 @@ public class AuthService implements UserDetailsService {
 
     @Transactional
     public void forgotPassword(ForgotPasswordRequest request) {
-        UserEntity user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with this email"));
 
         // Delete old password reset tokens
@@ -183,7 +197,7 @@ public class AuthService implements UserDetailsService {
             throw new RuntimeException("Verification code expired");
         }
 
-        UserEntity user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
@@ -197,7 +211,7 @@ public class AuthService implements UserDetailsService {
 
     @Transactional
     public void resendVerificationCode(String email) {
-        UserEntity user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (user.getIsVerified()) {

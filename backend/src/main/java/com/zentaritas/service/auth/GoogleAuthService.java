@@ -2,7 +2,7 @@ package com.zentaritas.service.auth;
 
 import com.zentaritas.dto.auth.response.AuthResponse;
 import com.zentaritas.model.auth.Role;
-import com.zentaritas.model.auth.UserEntity;
+import com.zentaritas.model.auth.User;
 import com.zentaritas.repository.auth.UserRepository;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
@@ -51,10 +51,10 @@ public class GoogleAuthService {
             String pictureUrl = (String) payload.get("picture");
 
             // Check if user exists
-            UserEntity user = userRepository.findByEmail(email)
+            User user = userRepository.findByEmail(email)
                     .orElseGet(() -> {
                         // Create new user
-                        UserEntity newUser = UserEntity.builder()
+                        User newUser = User.builder()
                                 .email(email)
                                 .password(passwordEncoder.encode(UUID.randomUUID().toString()))
                                 .firstName(firstName)

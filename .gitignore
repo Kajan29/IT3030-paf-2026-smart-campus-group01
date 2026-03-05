@@ -1,99 +1,106 @@
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
+# ==========================
+# Zentaritas - Root .gitignore
+# Frontend (Vite/React) + Backend (Spring Boot/Maven)
+# ==========================
 
-# OS
-.DS_Store
-Thumbs.db
-
-# Environment
+# --- Environment Variables ---
 .env
 .env.local
 .env.*.local
-
-# Logs
-*.log
-# ==========================
-# Root .gitignore for Zentaritas
-# Consolidated for frontend (Vite/React) and backend (Spring Boot/Maven)
-# ==========================
-
-# --- Node / Frontend ---
-node_modules/
-dist/
-dist-ssr/
-/.parcel-cache/
-/.vite/
-
-# Vite local envs
-.env
-.env.*.local
-
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# --- Java / Backend ---
-target/
-*.class
-*.jar
-*.war
-*.ear
-
-# Maven
-.mvn/
-!**/src/main/**/target/
-!**/src/test/**/target/
-
-# Gradle
-.gradle/
-build/
-
-# --- IDEs and Editors ---
-.idea/
-.vscode/
-*.iml
-.project
-.classpath
-.settings/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Misc
-*.log
-logs/
-
-# Ignore dotenv files (keep examples committed)
-.env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# Ignore build output inside frontend and backend
-frontend/node_modules/
-frontend/dist/
-backend/target/
+# --- Node.js / Frontend ---
+node_modules/
+dist/
+dist-ssr/
+*.local
+.parcel-cache/
+.vite/
 
-# JetBrains IDE
-/.idea/
+# Package manager logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Temporary files
+# --- Java / Spring Boot / Maven ---
+target/
+!**/src/main/**/target/
+!**/src/test/**/target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+
+# Maven
+.mvn/
+mvnw
+mvnw.cmd
+
+# Gradle
+.gradle/
+build/
+!gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# --- IDEs and Editors ---
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Eclipse
+.project
+.classpath
+.settings/
+.metadata/
+bin/
+tmp/
 *.tmp
-*.temp
+*.bak
+*.swp
+*~.nib
 
-# Coverage
+# VS Code
+.vscode/
+!.vscode/extensions.json
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# --- OS Files ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# --- Logs ---
+logs/
+*.log
+
+# --- Testing ---
 coverage/
-Authendication
+*.coverage
+.nyc_output/
+.cache/
+
+# --- Misc ---
+*.temp
+*.pid
+*.seed
+*.pid.lock

@@ -12,6 +12,7 @@ interface User {
 type AuthContextType = {
   user: User | null
   login: (credentials: any) => Promise<any>
+  googleLogin: (token: string, role?: UserRole) => Promise<any>
   logout: () => void
   register: (userData: any) => Promise<any>
   isAuthenticated: boolean
@@ -40,6 +41,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return response
   }
 
+  const googleLogin = async (token: string, role?: UserRole) => {
+    const response = await authService.googleAuth({ token, role })
+    const { token: jwtToken, ...userData } = response.data.data
+    if (jwtToken) {
+      authService.saveAuthData(jwtToken, userData)
+      setUser(userData)
+    }
+    return response
+  }
+
   const register = async (userData: any) => {
     const response = await authService.register(userData)
     // Note: After registration, user needs to verify email before getting token
@@ -54,6 +65,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const value: AuthContextType = {
     user,
     login,
+    googleLogin,
     logout,
     register,
     isAuthenticated: !!user,
