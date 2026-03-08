@@ -7,6 +7,8 @@ import { SportsManagementPage } from "@/components/dashboard/SportsManagementPag
 import { MediaClubPage } from "@/components/dashboard/MediaClubPage";
 import { EventManagementPage } from "@/components/dashboard/EventManagementPage";
 import { BookingsPage } from "@/components/dashboard/BookingsPage";
+import { ReportsAnalyticsPage } from "@/components/dashboard/ReportsAnalyticsPage";
+import { SettingsPage } from "@/components/dashboard/SettingsPage";
 import { Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +19,8 @@ const pageComponents: Record<string, React.ComponentType> = {
   media: MediaClubPage,
   events: EventManagementPage,
   bookings: BookingsPage,
+  reports: ReportsAnalyticsPage,
+  settings: SettingsPage,
 };
 
 const pageTitles: Record<string, string> = {
@@ -29,16 +33,6 @@ const pageTitles: Record<string, string> = {
   reports: "Reports & Analytics",
   settings: "Settings",
 };
-
-const ComingSoon = ({ title }: { title: string }) => (
-  <div className="flex flex-col items-center justify-center h-96 text-center animate-fade-in">
-    <div className="w-20 h-20 rounded-2xl bg-muted flex items-center justify-center mb-4">
-      <span className="text-3xl">🚧</span>
-    </div>
-    <h2 className="text-xl font-bold text-foreground mb-2">{title}</h2>
-    <p className="text-muted-foreground text-sm max-w-xs">This section is under construction. Check back soon for the full feature.</p>
-  </div>
-);
 
 const AdminDashboard = () => {
   const [activeItem, setActiveItem] = useState("dashboard");
@@ -57,13 +51,11 @@ const AdminDashboard = () => {
   const pageTitle = pageTitles[activeItem] || activeItem;
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
-      {/* Mobile overlay */}
+    <div className="flex h-screen dashboard-surface overflow-hidden">
       {mobileSidebarOpen && (
         <div className="fixed inset-0 bg-foreground/40 z-30 md:hidden" onClick={() => setMobileSidebarOpen(false)} />
       )}
 
-      {/* Sidebar — desktop */}
       <div className="hidden md:flex">
         <Sidebar
           activeItem={activeItem}
@@ -73,7 +65,6 @@ const AdminDashboard = () => {
         />
       </div>
 
-      {/* Sidebar — mobile */}
       <div className={cn(
         "fixed top-0 left-0 h-full z-40 md:hidden transition-transform duration-300",
         mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -86,10 +77,8 @@ const AdminDashboard = () => {
         />
       </div>
 
-      {/* Main content */}
       <div className="flex flex-col flex-1 min-w-0">
-        {/* Mobile header */}
-        <div className="md:hidden flex items-center gap-3 px-4 py-3 bg-card border-b border-border">
+        <div className="md:hidden flex items-center gap-3 px-4 py-3 glass-card border-b border-border">
           <button onClick={() => setMobileSidebarOpen(true)} className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center text-muted-foreground">
             <Menu size={18} />
           </button>
@@ -97,12 +86,10 @@ const AdminDashboard = () => {
           <span className="text-muted-foreground text-sm ml-1">/ {pageTitle}</span>
         </div>
 
-        {/* Navbar */}
         <Navbar darkMode={darkMode} onToggleDark={toggleDark} />
 
-        {/* Page content */}
-        <main className="flex-1 overflow-auto p-6">
-          {PageComponent ? <PageComponent /> : <ComingSoon title={pageTitle} />}
+        <main className="flex-1 overflow-auto p-4 md:p-6">
+          {PageComponent ? <PageComponent /> : <DashboardOverview />}
         </main>
       </div>
     </div>

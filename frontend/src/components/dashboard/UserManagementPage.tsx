@@ -99,7 +99,7 @@ const AddStaffModal = ({ onClose, onSuccess }: AddStaffModalProps) => {
               <div className="bg-muted p-4 rounded-xl w-full">
                 <p className="text-xs text-muted-foreground mb-1">Default Password:</p>
                 <p className="font-mono text-sm font-bold text-foreground">{success.password}</p>
-                <p className="text-xs text-warning mt-2">⚠️ Save this password - it won't be shown again!</p>
+                <p className="text-xs text-warning mt-2">Important: Save this password - it will not be shown again.</p>
               </div>
             </div>
           </div>
@@ -285,7 +285,7 @@ const ImportExcelModal = ({ onClose, onSuccess }: ImportExcelModalProps) => {
               )}
 
               <div className="bg-info/10 border border-info/20 rounded-xl p-4">
-                <p className="text-sm font-medium text-info mb-2">📋 CSV Format:</p>
+                <p className="text-sm font-medium text-info mb-2">CSV Format:</p>
                 <p className="text-xs text-muted-foreground mb-3">
                   email, firstName, lastName, role (ACADEMIC_STAFF or NON_ACADEMIC_STAFF)
                 </p>
@@ -454,7 +454,7 @@ export const UserManagementPage = () => {
       <div className="bg-card rounded-2xl border border-border shadow-card">
         {error && (
           <div className="m-4 bg-destructive/10 border border-destructive/20 rounded-xl p-4">
-            <p className="text-destructive font-semibold text-sm mb-1">⚠️ Error Loading Users</p>
+            <p className="text-destructive font-semibold text-sm mb-1">Error Loading Users</p>
             <p className="text-destructive text-xs">{error}</p>
             <button 
               onClick={fetchUsers}

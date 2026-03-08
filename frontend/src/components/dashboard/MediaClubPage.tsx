@@ -1,10 +1,10 @@
-import { Plus, Image, Video, FileText, Eye, Heart, Share2 } from "lucide-react";
+import { Plus, Image, Video, FileText, Eye, Heart } from "lucide-react";
 
 const posts = [
-  { title: "Campus Life: Spring Edition", type: "Photo", author: "Media Team", date: "Feb 18", views: 1240, likes: 89, status: "Published" },
-  { title: "Sports Day 2025 Highlights", type: "Video", author: "John Carter", date: "Feb 15", views: 3450, likes: 201, status: "Published" },
-  { title: "New Library Wing Opening", type: "Article", author: "Sarah Mills", date: "Feb 14", views: 560, likes: 44, status: "Draft" },
-  { title: "Orientation Week Recap", type: "Photo", author: "Media Team", date: "Feb 10", views: 2100, likes: 145, status: "Published" },
+  { title: "Campus Life: Spring Edition", type: "Photo", author: "Media Team", date: "Apr 3", views: 1240, likes: 89, status: "Published" },
+  { title: "Sports Day 2026 Highlights", type: "Video", author: "John Carter", date: "Apr 1", views: 3450, likes: 201, status: "Published" },
+  { title: "New Library Wing Opening", type: "Article", author: "Sarah Mills", date: "Mar 29", views: 560, likes: 44, status: "Draft" },
+  { title: "Orientation Week Recap", type: "Photo", author: "Media Team", date: "Mar 25", views: 2100, likes: 145, status: "Published" },
 ];
 
 const typeIcon: Record<string, React.ElementType> = { Photo: Image, Video: Video, Article: FileText };
@@ -24,11 +24,11 @@ export const MediaClubPage = () => (
 
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
       {[
-        { label: "Total Posts", value: 567, color: "text-primary" },
-        { label: "Published", value: 512, color: "text-success" },
-        { label: "Drafts", value: 55, color: "text-warning" },
-        { label: "Total Views", value: "84K", color: "text-info" },
-      ].map(s => (
+        { label: "Total Posts", value: 622, color: "text-primary" },
+        { label: "Published", value: 556, color: "text-success" },
+        { label: "Drafts", value: 66, color: "text-warning" },
+        { label: "Total Views", value: "98K", color: "text-info" },
+      ].map((s) => (
         <div key={s.label} className="bg-card rounded-xl p-4 border border-border shadow-card">
           <p className="text-xs text-muted-foreground">{s.label}</p>
           <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
@@ -41,22 +41,22 @@ export const MediaClubPage = () => (
         <h3 className="font-semibold text-foreground">Recent Posts</h3>
       </div>
       <div className="divide-y divide-border">
-        {posts.map((p, i) => {
-          const Icon = typeIcon[p.type];
+        {posts.map((post) => {
+          const Icon = typeIcon[post.type];
           return (
-            <div key={i} className="flex items-center gap-4 p-4 hover:bg-muted/20 transition-colors">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white flex-shrink-0 ${typeColor[p.type]}`}>
+            <div key={post.title} className="flex items-center gap-4 p-4 hover:bg-muted/20 transition-colors">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white flex-shrink-0 ${typeColor[post.type]}`}>
                 <Icon size={18} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground truncate">{p.title}</p>
-                <p className="text-xs text-muted-foreground">{p.author} · {p.date}</p>
+                <p className="text-sm font-semibold text-foreground truncate">{post.title}</p>
+                <p className="text-xs text-muted-foreground">{post.author} - {post.date}</p>
               </div>
               <div className="flex items-center gap-4 text-xs text-muted-foreground flex-shrink-0">
-                <span className="flex items-center gap-1"><Eye size={11} />{p.views.toLocaleString()}</span>
-                <span className="flex items-center gap-1"><Heart size={11} />{p.likes}</span>
+                <span className="flex items-center gap-1"><Eye size={11} />{post.views.toLocaleString()}</span>
+                <span className="flex items-center gap-1"><Heart size={11} />{post.likes}</span>
               </div>
-              <span className={`text-[10px] px-2.5 py-1 rounded-lg font-semibold border flex-shrink-0 ${p.status === "Published" ? "bg-success/10 text-success border-success/20" : "bg-warning/10 text-warning-foreground border-warning/20"}`}>{p.status}</span>
+              <span className={`text-[10px] px-2.5 py-1 rounded-lg font-semibold border flex-shrink-0 ${post.status === "Published" ? "bg-success/10 text-success border-success/20" : "bg-warning/10 text-warning-foreground border-warning/20"}`}>{post.status}</span>
             </div>
           );
         })}

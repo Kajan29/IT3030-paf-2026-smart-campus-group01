@@ -12,55 +12,54 @@ export const mockUsers: User[] = [
 ];
 
 export const mockStats: StatCard[] = [
-  { id: "1", title: "Total Users", value: 8492, growth: 12.5, icon: "Users", gradient: "gradient-primary" },
-  { id: "2", title: "Active Bookings", value: 342, growth: 8.2, icon: "Calendar", gradient: "gradient-info" },
-  { id: "3", title: "Upcoming Events", value: 28, growth: -3.1, icon: "Star", gradient: "gradient-warning" },
-  { id: "4", title: "Sports Registrations", value: 1204, growth: 21.3, icon: "Trophy", gradient: "gradient-success" },
-  { id: "5", title: "Media Posts", value: 567, growth: 15.8, icon: "FileImage", gradient: "gradient-red" },
-  { id: "6", title: "System Alerts", value: 3, growth: -50.0, icon: "AlertTriangle", gradient: "gradient-warning" },
+  { id: "1", title: "Campus Users", value: 10124, growth: 10.8, icon: "Users", gradient: "gradient-primary" },
+  { id: "2", title: "Active Bookings", value: 418, growth: 7.4, icon: "Calendar", gradient: "gradient-info" },
+  { id: "3", title: "Upcoming Events", value: 16, growth: 4.2, icon: "Star", gradient: "gradient-warning" },
+  { id: "4", title: "Sports Registrations", value: 1432, growth: 18.7, icon: "Trophy", gradient: "gradient-success" },
+  { id: "5", title: "Media Publications", value: 622, growth: 11.2, icon: "FileImage", gradient: "gradient-red" },
+  { id: "6", title: "Open Alerts", value: 4, growth: -20.0, icon: "AlertTriangle", gradient: "gradient-warning" },
 ];
 
 export const mockQuickActions: QuickAction[] = [
-  { id: "1", label: "Add User", icon: "UserPlus", gradient: "gradient-primary", description: "Register a new university member" },
-  { id: "2", label: "Create Tournament", icon: "Trophy", gradient: "gradient-success", description: "Schedule a new sports event" },
-  { id: "3", label: "Publish Event", icon: "Megaphone", gradient: "gradient-warning", description: "Announce a campus event" },
-  { id: "4", label: "AI Poster", icon: "Sparkles", gradient: "gradient-red", description: "Generate promotional poster" },
-  { id: "5", label: "View Reports", icon: "BarChart3", gradient: "gradient-info", description: "Access analytics dashboard" },
+  { id: "1", label: "Add User", icon: "UserPlus", gradient: "gradient-primary", description: "Register a new student or staff account" },
+  { id: "2", label: "Create Tournament", icon: "Trophy", gradient: "gradient-success", description: "Plan inter-faculty sports tournaments" },
+  { id: "3", label: "Publish Event", icon: "Megaphone", gradient: "gradient-warning", description: "Post approved events to student portal" },
+  { id: "4", label: "Generate Poster", icon: "Sparkles", gradient: "gradient-red", description: "Build media artwork for campus promotions" },
+  { id: "5", label: "View Reports", icon: "BarChart3", gradient: "gradient-info", description: "Open analytics and compliance reports" },
 ];
 
 export const mockNotifications: Notification[] = [
-  { id: "1", title: "New User Registration", message: "5 new students registered today", time: "2m ago", read: false, type: "info" },
-  { id: "2", title: "Booking Conflict", message: "Hall A has a double booking on Friday", time: "15m ago", read: false, type: "warning" },
-  { id: "3", title: "System Update", message: "Scheduled maintenance at 2:00 AM", time: "1h ago", read: false, type: "error" },
-  { id: "4", title: "Event Published", message: "Annual Sports Day event is now live", time: "3h ago", read: true, type: "success" },
+  { id: "1", title: "New Registrations", message: "12 new students completed onboarding today", time: "4m ago", read: false, type: "info" },
+  { id: "2", title: "Venue Conflict", message: "Auditorium B has overlapping bookings for Tuesday", time: "18m ago", read: false, type: "warning" },
+  { id: "3", title: "Security Alert", message: "Two blocked sign-in attempts from unknown IPs", time: "57m ago", read: false, type: "error" },
+  { id: "4", title: "Report Ready", message: "March attendance summary is available for download", time: "2h ago", read: true, type: "success" },
 ];
 
 export const userGrowthData = [
-  { month: "Jul", users: 5200 },
-  { month: "Aug", users: 5800 },
-  { month: "Sep", users: 6400 },
-  { month: "Oct", users: 6900 },
-  { month: "Nov", users: 7200 },
-  { month: "Dec", users: 7600 },
-  { month: "Jan", users: 7900 },
-  { month: "Feb", users: 8200 },
-  { month: "Mar", users: 8492 },
+  { month: "Aug", users: 6400 },
+  { month: "Sep", users: 7020 },
+  { month: "Oct", users: 7510 },
+  { month: "Nov", users: 8040 },
+  { month: "Dec", users: 8420 },
+  { month: "Jan", users: 9010 },
+  { month: "Feb", users: 9640 },
+  { month: "Mar", users: 10124 },
 ];
 
 export const bookingDistribution = [
-  { name: "Sports Hall", value: 35, color: "#0f3460" },
-  { name: "Conference Rooms", value: 25, color: "#e53935" },
-  { name: "Auditorium", value: 20, color: "#2196f3" },
-  { name: "Labs", value: 12, color: "#4caf50" },
-  { name: "Others", value: 8, color: "#ff9800" },
+  { name: "Sports Hall", value: 32, color: "#0f3460" },
+  { name: "Conference Rooms", value: 24, color: "#e53935" },
+  { name: "Auditorium", value: 19, color: "#2196f3" },
+  { name: "Labs", value: 15, color: "#4caf50" },
+  { name: "Other Facilities", value: 10, color: "#ff9800" },
 ];
 
 export const eventsPerMonth = [
-  { month: "Sep", events: 8 },
-  { month: "Oct", events: 12 },
-  { month: "Nov", events: 10 },
-  { month: "Dec", events: 15 },
-  { month: "Jan", events: 7 },
-  { month: "Feb", events: 11 },
-  { month: "Mar", events: 14 },
+  { month: "Oct", events: 10 },
+  { month: "Nov", events: 12 },
+  { month: "Dec", events: 9 },
+  { month: "Jan", events: 11 },
+  { month: "Feb", events: 14 },
+  { month: "Mar", events: 16 },
+  { month: "Apr", events: 13 },
 ];

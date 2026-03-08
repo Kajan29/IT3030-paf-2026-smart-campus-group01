@@ -1,4 +1,4 @@
-import { Trophy, Plus, Search, Users, Calendar, ChevronRight } from "lucide-react";
+import { Trophy, Plus, Calendar } from "lucide-react";
 
 const teams = [
   { name: "Football Team A", sport: "Football", members: 22, coach: "Mr. Harris", status: "Active", wins: 8, losses: 2 },
@@ -8,9 +8,9 @@ const teams = [
 ];
 
 const tournaments = [
-  { name: "Inter-Faculty Football Cup", sport: "Football", date: "Mar 10", teams: 8, status: "Registration Open" },
-  { name: "Annual Swimming Meet", sport: "Swimming", date: "Mar 20", teams: 12, status: "Upcoming" },
-  { name: "Basketball League 2025", sport: "Basketball", date: "Apr 05", teams: 6, status: "Planning" },
+  { name: "Inter-Faculty Football Cup", sport: "Football", date: "Apr 26", teams: 8, status: "Registration Open" },
+  { name: "Annual Swimming Meet", sport: "Swimming", date: "May 3", teams: 12, status: "Upcoming" },
+  { name: "Basketball League 2026", sport: "Basketball", date: "May 19", teams: 6, status: "Planning" },
 ];
 
 export const SportsManagementPage = () => (
@@ -27,11 +27,11 @@ export const SportsManagementPage = () => (
 
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
       {[
-        { label: "Total Teams", value: 12, color: "text-primary" },
-        { label: "Active Players", value: 284, color: "text-success" },
-        { label: "Tournaments", value: 3, color: "text-info" },
-        { label: "Registrations", value: 1204, color: "text-accent-red" },
-      ].map(s => (
+        { label: "Total Teams", value: 14, color: "text-primary" },
+        { label: "Active Players", value: 328, color: "text-success" },
+        { label: "Tournaments", value: 6, color: "text-info" },
+        { label: "Registrations", value: 1432, color: "text-accent-red" },
+      ].map((s) => (
         <div key={s.label} className="bg-card rounded-xl p-4 border border-border shadow-card">
           <p className="text-xs text-muted-foreground">{s.label}</p>
           <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value.toLocaleString()}</p>
@@ -46,18 +46,18 @@ export const SportsManagementPage = () => (
           <button className="text-xs text-primary font-medium">+ Add Team</button>
         </div>
         <div className="divide-y divide-border">
-          {teams.map((t, i) => (
-            <div key={i} className="flex items-center gap-4 p-4 hover:bg-muted/20 transition-colors">
+          {teams.map((team) => (
+            <div key={team.name} className="flex items-center gap-4 p-4 hover:bg-muted/20 transition-colors">
               <div className="w-10 h-10 rounded-xl gradient-success flex items-center justify-center text-white flex-shrink-0">
                 <Trophy size={18} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground">{t.name}</p>
-                <p className="text-xs text-muted-foreground">{t.coach} · {t.members} members</p>
+                <p className="text-sm font-semibold text-foreground">{team.name}</p>
+                <p className="text-xs text-muted-foreground">{team.coach} - {team.members} members</p>
               </div>
               <div className="text-right flex-shrink-0">
-                <p className="text-xs font-semibold text-success">{t.wins}W <span className="text-destructive">{t.losses}L</span></p>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${t.status === "Active" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>{t.status}</span>
+                <p className="text-xs font-semibold text-success">{team.wins}W <span className="text-destructive">{team.losses}L</span></p>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${team.status === "Active" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>{team.status}</span>
               </div>
             </div>
           ))}
@@ -70,20 +70,20 @@ export const SportsManagementPage = () => (
           <button className="text-xs text-primary font-medium">View All</button>
         </div>
         <div className="divide-y divide-border">
-          {tournaments.map((t, i) => (
-            <div key={i} className="flex items-center gap-4 p-4 hover:bg-muted/20 transition-colors">
+          {tournaments.map((tournament) => (
+            <div key={tournament.name} className="flex items-center gap-4 p-4 hover:bg-muted/20 transition-colors">
               <div className="w-10 h-10 rounded-xl gradient-warning flex items-center justify-center text-white flex-shrink-0">
                 <Calendar size={18} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground">{t.name}</p>
-                <p className="text-xs text-muted-foreground">{t.date} · {t.teams} teams</p>
+                <p className="text-sm font-semibold text-foreground">{tournament.name}</p>
+                <p className="text-xs text-muted-foreground">{tournament.date} - {tournament.teams} teams</p>
               </div>
               <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${
-                t.status === "Registration Open" ? "bg-success/10 text-success border border-success/20" :
-                t.status === "Upcoming" ? "bg-info/10 text-info border border-info/20" :
+                tournament.status === "Registration Open" ? "bg-success/10 text-success border border-success/20" :
+                tournament.status === "Upcoming" ? "bg-info/10 text-info border border-info/20" :
                 "bg-muted text-muted-foreground border border-border"
-              }`}>{t.status}</span>
+              }`}>{tournament.status}</span>
             </div>
           ))}
         </div>

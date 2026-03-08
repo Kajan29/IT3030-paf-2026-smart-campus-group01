@@ -12,10 +12,13 @@ const iconMap: Record<string, LucideIcon> = {
 
 export const QuickActions = () => {
   return (
-    <div className="bg-card rounded-2xl p-5 shadow-card border border-border animate-fade-in" style={{ animationDelay: "600ms" }}>
-      <div className="mb-4">
-        <h3 className="font-semibold text-foreground">Quick Actions</h3>
-        <p className="text-xs text-muted-foreground mt-0.5">Frequently used admin tasks</p>
+    <div className="glass-card rounded-2xl p-5 animate-fade-in" style={{ animationDelay: "600ms" }}>
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h3 className="font-semibold text-foreground">Quick Actions</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">Common daily workflows</p>
+        </div>
+        <span className="text-[10px] px-2 py-1 rounded-md bg-primary/10 text-primary font-semibold">One click</span>
       </div>
       <div className="grid grid-cols-1 gap-3">
         {mockQuickActions.map((action, i) => {
@@ -23,13 +26,13 @@ export const QuickActions = () => {
           return (
             <button
               key={action.id}
-              className="flex items-center gap-3 p-3 rounded-xl border border-border hover:border-primary/30 hover:bg-muted/50 transition-all duration-200 group text-left animate-fade-in"
+              className="flex items-center gap-3 p-3 rounded-xl border border-border/70 hover:border-primary/40 hover:bg-primary/5 transition-all duration-200 group text-left animate-fade-in"
               style={{ animationDelay: `${600 + i * 80}ms` }}
             >
               <div
                 className={cn(
                   "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md",
-                  "group-hover:scale-110 transition-transform duration-200",
+                  "group-hover:scale-110 transition-transform duration-200 border border-white/30",
                   action.gradient
                 )}
               >

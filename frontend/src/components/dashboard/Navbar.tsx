@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { Bell, Search, Sun, Moon, ChevronDown, User, Settings, LogOut } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Bell, Search, Sun, Moon, ChevronDown, User, Settings, LogOut, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { mockNotifications } from "@/data/mockData";
+import { useAuth } from "@/context/AuthContext";
 
 interface NavbarProps {
   darkMode: boolean;
@@ -9,9 +11,16 @@ interface NavbarProps {
 }
 
 export const Navbar = ({ darkMode, onToggleDark }: NavbarProps) => {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   const unreadCount = mockNotifications.filter((n) => !n.read).length;
 
@@ -23,55 +32,62 @@ export const Navbar = ({ darkMode, onToggleDark }: NavbarProps) => {
   };
 
   return (
-    <header className="h-16 bg-card border-b border-border flex items-center justify-between px-4 md:px-6 gap-4 relative z-40">
-      {/* Search */}
+    <header className="h-16 glass-card border-b border-border/70 flex items-center justify-between px-4 md:px-6 gap-4 relative z-40">
+      <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-success/10 border border-success/20">
+        <ShieldCheck size={14} className="text-success" />
+        <span className="text-xs font-semibold text-success">Campus systems secure</span>
+      </div>
+
       <div
         className={cn(
           "flex items-center gap-2 px-3 py-2 rounded-xl border transition-all duration-200",
-          "bg-muted/50 max-w-md w-full",
-          searchFocused ? "border-primary shadow-sm ring-2 ring-primary/10" : "border-border"
+          "bg-card/80 max-w-xl w-full",
+          searchFocused ? "border-primary shadow-sm ring-2 ring-primary/10" : "border-border/70"
         )}
       >
         <Search size={16} className="text-muted-foreground flex-shrink-0" />
         <input
           type="text"
-          placeholder="Search users, events, bookings..."
+          placeholder="Search users, events, reports..."
           className="bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground w-full"
           onFocus={() => setSearchFocused(true)}
           onBlur={() => setSearchFocused(false)}
         />
       </div>
 
-      {/* Right Actions */}
       <div className="flex items-center gap-2">
-        {/* Dark mode toggle */}
+        <div className="hidden lg:block text-right mr-2">
+          <p className="text-xs text-muted-foreground">
+            {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+          </p>
+          <p className="text-xs font-semibold text-foreground">Operations Desk</p>
+        </div>
+
         <button
           onClick={onToggleDark}
-          className="w-9 h-9 rounded-xl bg-muted hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground transition-all duration-200"
+          className="w-9 h-9 rounded-xl bg-muted/70 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-all duration-200"
           aria-label="Toggle dark mode"
         >
           {darkMode ? <Sun size={17} /> : <Moon size={17} />}
         </button>
 
-        {/* Notifications */}
         <div className="relative">
           <button
             onClick={() => {
               setShowNotifications(!showNotifications);
               setShowProfile(false);
             }}
-            className="w-9 h-9 rounded-xl bg-muted hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground transition-all duration-200 relative"
+            className="w-9 h-9 rounded-xl bg-muted/70 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-all duration-200 relative"
             aria-label="Notifications"
           >
             <Bell size={17} />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent-red text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-scale-in">
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent-red text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                 {unreadCount}
               </span>
             )}
           </button>
 
-          {/* Notification Dropdown */}
           {showNotifications && (
             <div className="absolute right-0 top-12 w-80 bg-card border border-border rounded-2xl shadow-card-hover animate-scale-in z-50 overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-border">
@@ -83,7 +99,7 @@ export const Navbar = ({ darkMode, onToggleDark }: NavbarProps) => {
                   <div
                     key={notif.id}
                     className={cn(
-                      "flex gap-3 p-4 hover:bg-muted/50 cursor-pointer transition-colors",
+                      "flex gap-3 p-4 hover:bg-muted/40 cursor-pointer transition-colors",
                       !notif.read && "bg-primary/5"
                     )}
                   >
@@ -105,14 +121,13 @@ export const Navbar = ({ darkMode, onToggleDark }: NavbarProps) => {
           )}
         </div>
 
-        {/* Profile */}
         <div className="relative">
           <button
             onClick={() => {
               setShowProfile(!showProfile);
               setShowNotifications(false);
             }}
-            className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-muted/80 transition-all duration-200 group"
+            className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-muted/70 transition-all duration-200 group"
           >
             <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
               AD
@@ -124,7 +139,6 @@ export const Navbar = ({ darkMode, onToggleDark }: NavbarProps) => {
             <ChevronDown size={14} className="text-muted-foreground group-hover:text-foreground transition-all duration-200 hidden md:block" />
           </button>
 
-          {/* Profile Dropdown */}
           {showProfile && (
             <div className="absolute right-0 top-12 w-52 bg-card border border-border rounded-2xl shadow-card-hover animate-scale-in z-50 overflow-hidden">
               <div className="p-4 border-b border-border">
@@ -147,7 +161,10 @@ export const Navbar = ({ darkMode, onToggleDark }: NavbarProps) => {
                     {label}
                   </button>
                 ))}
-                <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-xl transition-colors mt-1">
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-xl transition-colors mt-1"
+                >
                   <LogOut size={15} />
                   Logout
                 </button>
@@ -157,7 +174,6 @@ export const Navbar = ({ darkMode, onToggleDark }: NavbarProps) => {
         </div>
       </div>
 
-      {/* Backdrop */}
       {(showNotifications || showProfile) && (
         <div
           className="fixed inset-0 z-40"
