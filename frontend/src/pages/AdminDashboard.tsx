@@ -51,7 +51,7 @@ const AdminDashboard = () => {
   const pageTitle = pageTitles[activeItem] || activeItem;
 
   return (
-    <div className="flex h-screen dashboard-surface overflow-hidden">
+    <div className="admin-theme flex h-screen dashboard-surface overflow-hidden">
       {mobileSidebarOpen && (
         <div className="fixed inset-0 bg-foreground/40 z-30 md:hidden" onClick={() => setMobileSidebarOpen(false)} />
       )}

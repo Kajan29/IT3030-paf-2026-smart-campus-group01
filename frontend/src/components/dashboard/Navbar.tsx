@@ -19,7 +19,7 @@ export const Navbar = ({ darkMode, onToggleDark }: NavbarProps) => {
 
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    navigate("/auth/login");
   };
 
   const unreadCount = mockNotifications.filter((n) => !n.read).length;

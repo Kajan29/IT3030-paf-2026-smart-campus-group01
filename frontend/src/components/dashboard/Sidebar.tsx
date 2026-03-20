@@ -41,24 +41,21 @@ export const Sidebar = ({ activeItem, onItemClick, collapsed, onToggle }: Sideba
 
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    navigate("/auth/login");
   };
 
   return (
     <aside
       className={cn(
-        "relative flex flex-col h-screen border-r border-sidebar-border/70 shadow-sidebar overflow-hidden",
+        "relative flex flex-col h-screen border-r border-sidebar-border/70 shadow-[6px_0_22px_-8px_hsl(var(--foreground)/0.35)] overflow-hidden",
         "transition-all duration-300 ease-in-out flex-shrink-0",
-        "bg-gradient-to-b from-sidebar to-sidebar-accent/90",
+        "bg-sidebar",
         collapsed ? "w-16" : "w-72"
       )}
     >
-      <div className="absolute -top-14 -right-14 w-36 h-36 rounded-full bg-info/20 blur-2xl" />
-      <div className="absolute bottom-12 -left-12 w-28 h-28 rounded-full bg-warning/20 blur-xl" />
-
       <div className="relative flex items-center justify-between px-4 py-5 border-b border-sidebar-border/70">
         <div className={cn("flex items-center gap-3 overflow-hidden", collapsed && "justify-center")}>
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-warning to-accent-red flex items-center justify-center flex-shrink-0 shadow-lg">
+          <div className="w-10 h-10 rounded-2xl bg-sidebar-primary flex items-center justify-center flex-shrink-0 shadow-lg">
             <GraduationCap size={20} className="text-white" />
           </div>
           {!collapsed && (

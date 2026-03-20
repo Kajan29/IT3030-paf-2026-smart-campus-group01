@@ -56,6 +56,7 @@ public class GoogleAuthService {
                         // Create new user
                         User newUser = User.builder()
                                 .email(email)
+                            .username(email)
                                 .password(passwordEncoder.encode(UUID.randomUUID().toString()))
                                 .firstName(firstName)
                                 .lastName(lastName)
@@ -72,6 +73,11 @@ public class GoogleAuthService {
             if (user.getGoogleId() == null) {
                 user.setGoogleId(googleId);
                 user.setIsVerified(true);
+                userRepository.save(user);
+            }
+
+            if (user.getUsername() == null || user.getUsername().isBlank()) {
+                user.setUsername(user.getEmail());
                 userRepository.save(user);
             }
 

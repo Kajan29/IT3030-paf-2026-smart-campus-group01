@@ -21,7 +21,9 @@ export default {
     extend: {
       fontFamily: {
         display: ['Playfair Display', 'Georgia', 'serif'],
-        body: ['Source Sans 3', 'system-ui', 'sans-serif'],
+        body: ['Libre Franklin', 'Source Sans 3', 'system-ui', 'sans-serif'],
+        heading: ['Playfair Display', 'Georgia', 'serif'],
+        vintage: ['Crimson Text', 'Georgia', 'serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -106,6 +108,14 @@ export default {
         spin: {
           to: { transform: "rotate(360deg)" },
         },
+        "float": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-10px)" },
+        },
+        "slide-up": {
+          from: { opacity: "0", transform: "translateY(30px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -113,6 +123,8 @@ export default {
         "fade-in": "fade-in 0.4s ease-out",
         "slide-in-right": "slide-in-right 0.5s ease-out",
         "spin": "spin 1s linear infinite",
+        "float": "float 3s ease-in-out infinite",
+        "slide-up": "slide-up 0.6s ease-out forwards",
       },
       boxShadow: {
         sidebar: "2px 0 12px -2px rgba(0, 0, 0, 0.1)",

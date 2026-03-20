@@ -74,6 +74,7 @@ public class AuthService implements UserDetailsService {
         // Create new user (only students can register)
         User user = User.builder()
                 .email(request.getEmail())
+                .username(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())

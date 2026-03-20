@@ -1,0 +1,44 @@
+{
+  "properties": [
+    {
+      "name": "app.cors.allowed-origins",
+      "type": "java.lang.String",
+      "description": "Comma-separated list of allowed CORS origins or origin patterns."
+    },
+    {
+      "name": "app.frontend.url",
+      "type": "java.lang.String",
+      "description": "Frontend base URL used in email templates and links."
+    },
+    {
+      "name": "app.admin.email",
+      "type": "java.lang.String",
+      "description": "Default admin account email created on startup."
+    },
+    {
+      "name": "app.admin.password",
+      "type": "java.lang.String",
+      "description": "Default admin account password created on startup."
+    },
+    {
+      "name": "app.admin.firstname",
+      "type": "java.lang.String",
+      "description": "Default admin account first name."
+    },
+    {
+      "name": "app.admin.lastname",
+      "type": "java.lang.String",
+      "description": "Default admin account last name."
+    },
+    {
+      "name": "app.jwt.secret",
+      "type": "java.lang.String",
+      "description": "JWT signing secret key."
+    },
+    {
+      "name": "app.jwt.expiration",
+      "type": "java.lang.Long",
+      "description": "JWT expiration duration in milliseconds."
+    }
+  ]
+}

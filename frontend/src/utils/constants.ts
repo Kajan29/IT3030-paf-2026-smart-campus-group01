@@ -6,8 +6,8 @@ export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/ap
 export const ROUTES = {
   HOME: '/',
   ABOUT: '/about',
-  LOGIN: '/login',
-  REGISTER: '/register',
+  LOGIN: '/auth/login',
+  REGISTER: '/auth/register',
   DASHBOARD: '/dashboard',
 }
 

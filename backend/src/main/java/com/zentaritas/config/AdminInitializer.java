@@ -54,6 +54,7 @@ public class AdminInitializer {
                 // Create admin account
                 User admin = User.builder()
                         .email(adminEmail)
+                    .username(adminEmail)
                         .password(passwordEncoder.encode(adminPassword))
                         .firstName(adminFirstName)
                         .lastName(adminLastName)

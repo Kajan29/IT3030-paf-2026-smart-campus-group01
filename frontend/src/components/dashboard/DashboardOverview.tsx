@@ -31,24 +31,22 @@ export const DashboardOverview = () => {
   return (
     <div className="space-y-5 animate-fade-in">
       <section className="grid grid-cols-1 xl:grid-cols-5 gap-4">
-        <div className="xl:col-span-3 rounded-3xl p-6 md:p-7 bg-gradient-to-br from-primary via-primary/95 to-info text-primary-foreground shadow-elevated relative overflow-hidden">
-          <div className="absolute -top-16 right-8 h-44 w-44 rounded-full bg-white/10 blur-xl" />
-          <div className="absolute -bottom-20 left-8 h-44 w-44 rounded-full bg-warning/25 blur-xl" />
+        <div className="xl:col-span-3 rounded-3xl p-6 md:p-7 bg-card text-foreground shadow-elevated border border-border/70 relative overflow-hidden">
 
           <div className="relative z-10">
-            <p className="text-primary-foreground/80 text-xs uppercase tracking-[0.18em]">
+            <p className="text-muted-foreground text-xs uppercase tracking-[0.18em]">
               University Operations Dashboard
             </p>
             <h1 className="text-3xl md:text-4xl font-bold mt-2">Campus Control Hub</h1>
-            <p className="max-w-xl text-sm md:text-base text-primary-foreground/80 mt-2">
+            <p className="max-w-xl text-sm md:text-base text-muted-foreground mt-2">
               Centralized monitoring for students, facilities, events, and departments with real-time operational visibility.
             </p>
 
             <div className="mt-6 flex flex-wrap gap-3">
-              <button className="px-4 py-2 rounded-xl bg-white text-primary text-sm font-semibold hover:opacity-90 transition-opacity">
+              <button className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity">
                 Generate Daily Brief
               </button>
-              <button className="px-4 py-2 rounded-xl bg-white/10 border border-white/25 text-white text-sm font-semibold hover:bg-white/20 transition-colors">
+              <button className="px-4 py-2 rounded-xl bg-transparent border border-border text-foreground text-sm font-semibold hover:bg-muted/70 transition-colors">
                 View Pending Tasks
               </button>
             </div>

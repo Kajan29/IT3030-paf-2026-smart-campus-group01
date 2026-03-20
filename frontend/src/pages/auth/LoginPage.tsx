@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, LogIn } from "lucide-react";
+import { Eye, EyeOff, LogIn, ArrowLeft } from "lucide-react";
 import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
 import AuthHeroPanel from "../../components/common/AuthHeroPanel";
 import { useAuth } from "../../context/AuthContext";
@@ -98,6 +98,15 @@ const LoginPage = () => {
 
       <div className="auth-panel flex-1 lg:w-1/2">
         <div className="auth-content">
+          {/* Back to Home Button */}
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 text-primary hover:text-accent transition-colors mb-6 font-medium"
+          >
+            <ArrowLeft size={20} />
+            Back to Home
+          </Link>
+
           <div className="mb-10">
             <div className="lg:hidden flex items-center gap-2 mb-6">
               <div className="logo-small">
