@@ -22,15 +22,13 @@ mysql --version    # Should show MySQL 8.0+
 
 ### 1. Database Setup
 
-Create the MySQL database:
-```sql
-CREATE DATABASE zentaritas_db;
+No manual table creation is required.
 
--- Optional: Create a dedicated user
-CREATE USER 'zentaritas_user'@'localhost' IDENTIFIED BY 'your_password';
-GRANT ALL PRIVILEGES ON zentaritas_db.* TO 'zentaritas_user'@'localhost';
-FLUSH PRIVILEGES;
-```
+- The application reads DB settings from `backend/.env`.
+- If the database does not exist, it is created automatically when `DB_AUTO_CREATE=true`.
+- Tables are created/updated automatically when `JPA_DDL_AUTO=update`.
+
+Important: The configured MySQL user must have permission to create databases.
 
 ### 2. Google OAuth Configuration (Optional)
 

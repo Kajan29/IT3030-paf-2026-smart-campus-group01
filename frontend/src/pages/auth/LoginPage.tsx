@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, LogIn, ArrowLeft } from "lucide-react";
 import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
@@ -12,18 +12,8 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { user, isAuthenticated, login, googleLogin } = useAuth();
-
-  // Redirect if already logged in
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      if (user.role === "ADMIN") {
-        navigate("/admin", { replace: true });
-      } else {
-        navigate("/", { replace: true });
-      }
-    }
-  }, [isAuthenticated, user, navigate]);
+  const { login, googleLogin } = useAuth();
+  const hasGoogleClientId = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,15 +176,19 @@ const LoginPage = () => {
           </div>
 
           <div className="flex justify-center">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleError}
-              theme="outline"
-              size="large"
-              text="signin_with"
-              shape="rectangular"
-              width="100%"
-            />
+            {hasGoogleClientId ? (
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+                theme="outline"
+                size="large"
+                text="signin_with"
+                shape="rectangular"
+                width="100%"
+              />
+            ) : (
+              <p className="small-text text-center">Google Sign In is currently unavailable.</p>
+            )}
           </div>
 
           <p className="auth-footer-text">

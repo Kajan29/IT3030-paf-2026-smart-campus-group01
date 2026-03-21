@@ -27,9 +27,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const currentUser = authService.getCurrentUser()
-    if (currentUser) setUser(currentUser)
+    if (currentUser) {
+      if (authService.isSessionExpired()) {
+        authService.logout()
+      } else {
+        setUser(currentUser)
+      }
+    }
     setLoading(false)
   }, [])
+
+  useEffect(() => {
+    if (!user) return
+
+    const trackActivity = () => authService.updateSessionActivity()
+    const activityEvents: Array<keyof WindowEventMap> = [
+      'click',
+      'keydown',
+      'mousemove',
+      'scroll',
+      'touchstart',
+    ]
+
+    activityEvents.forEach((eventName) => {
+      window.addEventListener(eventName, trackActivity, { passive: true })
+    })
+
+    const intervalId = window.setInterval(() => {
+      if (authService.isSessionExpired()) {
+        authService.logout()
+        setUser(null)
+        if (!window.location.pathname.startsWith('/auth/')) {
+          window.location.href = '/auth/login'
+        }
+      }
+    }, 15000)
+
+    return () => {
+      activityEvents.forEach((eventName) => {
+        window.removeEventListener(eventName, trackActivity)
+      })
+      window.clearInterval(intervalId)
+    }
+  }, [user])
 
   const login = async (credentials: any) => {
     const response = await authService.login(credentials)

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
@@ -16,6 +16,17 @@ const navLinks = [
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const goToLogin = () => {
+    setMobileOpen(false);
+    navigate("/auth/login");
+  };
+
+  const goToRegister = () => {
+    setMobileOpen(false);
+    navigate("/auth/register");
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-xl border-b border-border">
@@ -44,12 +55,8 @@ const Navbar = () => {
         </div>
 
         <div className="hidden md:flex items-center gap-3">
-          <Link to="/auth/register">
-            <Button variant="outline" size="sm">Register</Button>
-          </Link>
-          <Link to="/auth/login">
-            <Button size="sm" className="bg-primary text-primary-foreground border-0 hover:bg-primary/90 transition-colors">Sign In</Button>
-          </Link>
+          <Button variant="outline" size="sm" onClick={goToRegister}>Register</Button>
+          <Button size="sm" className="bg-primary text-primary-foreground border-0 hover:bg-primary/90 transition-colors" onClick={goToLogin}>Sign In</Button>
         </div>
 
         <button className="md:hidden text-foreground" onClick={() => setMobileOpen(!mobileOpen)}>
@@ -80,12 +87,8 @@ const Navbar = () => {
                   {link.label}
                 </Link>
               ))}
-              <Link to="/auth/register" onClick={() => setMobileOpen(false)}>
-                <Button variant="outline" className="w-full mt-2">Register</Button>
-              </Link>
-              <Link to="/auth/login" onClick={() => setMobileOpen(false)}>
-                <Button className="w-full bg-primary text-primary-foreground border-0 hover:bg-primary/90 transition-colors">Sign In</Button>
-              </Link>
+              <Button variant="outline" className="w-full mt-2" onClick={goToRegister}>Register</Button>
+              <Button className="w-full bg-primary text-primary-foreground border-0 hover:bg-primary/90 transition-colors" onClick={goToLogin}>Sign In</Button>
             </div>
           </motion.div>
         )}

@@ -1,5 +1,9 @@
 import api from './api'
 
+const SESSION_TIMEOUT_MINUTES = Number(import.meta.env.VITE_SESSION_TIMEOUT_MINUTES || 30)
+const SESSION_TIMEOUT_MS = SESSION_TIMEOUT_MINUTES * 60 * 1000
+const LAST_ACTIVITY_KEY = 'lastActivityAt'
+
 export type UserRole = 'STUDENT' | 'ACADEMIC_STAFF' | 'NON_ACADEMIC_STAFF' | 'ADMIN'
 
 interface LoginCredentials {
@@ -80,6 +84,7 @@ export const authService = {
   logout: () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
+    localStorage.removeItem(LAST_ACTIVITY_KEY)
   },
   
   // Get current user from localStorage
@@ -92,6 +97,24 @@ export const authService = {
   isAuthenticated: () => {
     return !!localStorage.getItem('token')
   },
+
+  getSessionTimeoutMs: () => SESSION_TIMEOUT_MS,
+
+  updateSessionActivity: () => {
+    if (localStorage.getItem('token')) {
+      localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()))
+    }
+  },
+
+  isSessionExpired: () => {
+    const token = localStorage.getItem('token')
+    if (!token) return false
+
+    const lastActivityAt = Number(localStorage.getItem(LAST_ACTIVITY_KEY) || 0)
+    if (!lastActivityAt) return true
+
+    return Date.now() - lastActivityAt > SESSION_TIMEOUT_MS
+  },
   
   // Get auth token
   getToken: () => {
@@ -102,6 +125,7 @@ export const authService = {
   saveAuthData: (token: string, user: any) => {
     localStorage.setItem('token', token)
     localStorage.setItem('user', JSON.stringify(user))
+    localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()))
   },
 }
 

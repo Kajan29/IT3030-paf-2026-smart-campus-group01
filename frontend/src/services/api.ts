@@ -1,6 +1,7 @@
 import axios from 'axios'
+import authService from './authService'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
+const API_URL = import.meta.env.VITE_API_URL || '/api'
 
 const api = axios.create({
   baseURL: API_URL,
@@ -11,6 +12,15 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
+    if (authService.isSessionExpired()) {
+      authService.logout()
+      if (!window.location.pathname.startsWith('/auth/')) {
+        window.location.href = '/auth/login'
+      }
+      return Promise.reject(new axios.Cancel('Session expired'))
+    }
+
+    authService.updateSessionActivity()
     const token = localStorage.getItem('token')
     if (token && config.headers) {
       ;(config.headers as Record<string, string>).Authorization = `Bearer ${token}`
