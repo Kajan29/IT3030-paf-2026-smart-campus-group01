@@ -73,9 +73,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (credentials: any) => {
     const response = await authService.login(credentials)
-    const { token, ...userData } = response.data.data
-    if (token) {
-      authService.saveAuthData(token, userData)
+    const { accessToken, token, ...userData } = response.data.data
+    const effectiveToken = accessToken || token
+    if (effectiveToken) {
+      authService.saveAuthData(effectiveToken, userData)
       setUser(userData)
     }
     return response
@@ -83,9 +84,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const googleLogin = async (token: string, role?: UserRole) => {
     const response = await authService.googleAuth({ token, role })
-    const { token: jwtToken, ...userData } = response.data.data
-    if (jwtToken) {
-      authService.saveAuthData(jwtToken, userData)
+    const { accessToken, token: jwtToken, ...userData } = response.data.data
+    const effectiveToken = accessToken || jwtToken
+    if (effectiveToken) {
+      authService.saveAuthData(effectiveToken, userData)
       setUser(userData)
     }
     return response
@@ -98,8 +100,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const logout = () => {
-    authService.logout()
-    setUser(null)
+    authService.serverLogout().catch(() => null).finally(() => {
+      authService.logout()
+      setUser(null)
+    })
   }
 
   const value: AuthContextType = {

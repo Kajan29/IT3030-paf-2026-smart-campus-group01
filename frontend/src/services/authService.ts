@@ -3,6 +3,7 @@ import api from './api'
 const SESSION_TIMEOUT_MINUTES = Number(import.meta.env.VITE_SESSION_TIMEOUT_MINUTES || 30)
 const SESSION_TIMEOUT_MS = SESSION_TIMEOUT_MINUTES * 60 * 1000
 const LAST_ACTIVITY_KEY = 'lastActivityAt'
+const ACCESS_TOKEN_KEY = 'accessToken'
 
 export type UserRole = 'STUDENT' | 'ACADEMIC_STAFF' | 'NON_ACADEMIC_STAFF' | 'ADMIN'
 
@@ -42,6 +43,8 @@ interface AuthResponse {
   success: boolean
   message: string
   data: {
+    accessToken?: string
+    refreshToken?: string
     token?: string
     email: string
     firstName: string
@@ -79,9 +82,14 @@ export const authService = {
   // Google Authentication
   googleAuth: (data: GoogleAuthData) => 
     api.post<AuthResponse>(`/auth/google?role=${data.role || 'STUDENT'}`, { token: data.token }),
+
+  refresh: () => api.post<AuthResponse>('/auth/refresh', {}),
+
+  serverLogout: () => api.post('/auth/logout', {}),
   
   // Logout
   logout: () => {
+    localStorage.removeItem(ACCESS_TOKEN_KEY)
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     localStorage.removeItem(LAST_ACTIVITY_KEY)
@@ -95,19 +103,19 @@ export const authService = {
   
   // Check if user is authenticated
   isAuthenticated: () => {
-    return !!localStorage.getItem('token')
+    return !!localStorage.getItem(ACCESS_TOKEN_KEY)
   },
 
   getSessionTimeoutMs: () => SESSION_TIMEOUT_MS,
 
   updateSessionActivity: () => {
-    if (localStorage.getItem('token')) {
+    if (localStorage.getItem(ACCESS_TOKEN_KEY)) {
       localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()))
     }
   },
 
   isSessionExpired: () => {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem(ACCESS_TOKEN_KEY)
     if (!token) return false // No token means not logged in, not expired
 
     const lastActivityAt = Number(localStorage.getItem(LAST_ACTIVITY_KEY) || 0)
@@ -116,14 +124,25 @@ export const authService = {
     return Date.now() - lastActivityAt > SESSION_TIMEOUT_MS
   },
   
-  // Get auth token
+  // Get access token
+  getAccessToken: () => {
+    return localStorage.getItem(ACCESS_TOKEN_KEY)
+  },
+
+  // Keep backward compatibility where getToken is still used
   getToken: () => {
-    return localStorage.getItem('token')
+    return localStorage.getItem(ACCESS_TOKEN_KEY)
+  },
+
+  setAccessToken: (accessToken: string) => {
+    localStorage.setItem(ACCESS_TOKEN_KEY, accessToken)
+    localStorage.setItem('token', accessToken)
   },
   
-  // Save user and token
-  saveAuthData: (token: string, user: any) => {
-    localStorage.setItem('token', token)
+  // Save user and access token
+  saveAuthData: (accessToken: string, user: any) => {
+    localStorage.setItem(ACCESS_TOKEN_KEY, accessToken)
+    localStorage.setItem('token', accessToken)
     localStorage.setItem('user', JSON.stringify(user))
     localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()))
   },

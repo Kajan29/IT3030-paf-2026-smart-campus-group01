@@ -26,6 +26,7 @@ public class GoogleAuthService {
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final AuthService authService;
+    private final RefreshTokenService refreshTokenService;
     private final PasswordEncoder passwordEncoder;
 
     @Value("${spring.security.oauth2.client.registration.google.client-id}")
@@ -56,7 +57,7 @@ public class GoogleAuthService {
                         // Create new user
                         User newUser = User.builder()
                                 .email(email)
-                            .username(email)
+                                .username(email)
                                 .password(passwordEncoder.encode(UUID.randomUUID().toString()))
                                 .firstName(firstName)
                                 .lastName(lastName)
@@ -82,12 +83,16 @@ public class GoogleAuthService {
             }
 
             UserDetails userDetails = authService.loadUserByUsername(user.getEmail());
-            String jwtToken = jwtService.generateToken(userDetails);
+            String accessToken = jwtService.generateAccessToken(userDetails);
+            refreshTokenService.revokeAllUserTokens(user.getId());
+            String refreshToken = refreshTokenService.issueRefreshToken(user);
 
             log.info("User authenticated with Google: {}", user.getEmail());
 
             return AuthResponse.builder()
-                    .token(jwtToken)
+                    .token(accessToken)
+                    .accessToken(accessToken)
+                    .refreshToken(refreshToken)
                     .email(user.getEmail())
                     .firstName(user.getFirstName())
                     .lastName(user.getLastName())
