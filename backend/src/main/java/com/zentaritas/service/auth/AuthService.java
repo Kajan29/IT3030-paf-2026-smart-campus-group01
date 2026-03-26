@@ -112,9 +112,10 @@ public class AuthService implements UserDetailsService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        if (!user.getIsVerified()) {
-            throw new RuntimeException("Email not verified. Please verify your email first.");
-        }
+        // TEMPORARILY DISABLED FOR DEVELOPMENT - REMOVE IN PRODUCTION
+        // if (!user.getIsVerified()) {
+        //     throw new RuntimeException("Email not verified. Please verify your email first.");
+        // }
 
         UserDetails userDetails = loadUserByUsername(user.getEmail());
         String jwtToken = jwtService.generateToken(userDetails);

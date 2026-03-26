@@ -1,16 +1,16 @@
 import Navbar from "../components/Navbar";
 import HeroSection from "../components/HeroSection";
-import CoursesPreview from "../components/CoursesPreview";
-import BookingsPreview from "../components/BookingsPreview";
+import FeaturesSection from "../components/CoursesPreview";
+import StatsSection from "../components/BookingsPreview";
 import Footer from "../components/Footer";
 
 const HomePage = (): JSX.Element => {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <Navbar />
       <HeroSection />
-      <CoursesPreview />
-      <BookingsPreview />
+      <FeaturesSection />
+      <StatsSection />
       <Footer />
     </div>
   )

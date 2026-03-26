@@ -10,16 +10,27 @@ import './index.css'
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 const queryClient = new QueryClient()
 
+const AppWrapper = () => {
+  const content = (
+    <BrowserRouter>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </BrowserRouter>
+  )
+
+  // Only wrap with GoogleOAuthProvider if client ID is provided
+  if (googleClientId) {
+    return <GoogleOAuthProvider clientId={googleClientId}>{content}</GoogleOAuthProvider>
+  }
+
+  return content
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <GoogleOAuthProvider clientId={googleClientId}>
-        <BrowserRouter>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </BrowserRouter>
-      </GoogleOAuthProvider>
+      <AppWrapper />
     </QueryClientProvider>
   </React.StrictMode>,
 )

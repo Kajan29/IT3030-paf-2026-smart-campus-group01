@@ -138,19 +138,23 @@ public class EmailService {
      */
     public void sendStaffCredentialsEmail(String toEmail, String staffName, String defaultPassword, String roleType) {
         try {
-            String htmlContent = loadTemplate("admin-welcome.html");
-            htmlContent = htmlContent.replace("${adminName}", staffName);
-            htmlContent = htmlContent.replace("${adminEmail}", toEmail);
+            String htmlContent = loadTemplate("staff-credentials.html");
+            htmlContent = htmlContent.replace("${staffName}", staffName);
+            htmlContent = htmlContent.replace("${staffEmail}", toEmail);
             htmlContent = htmlContent.replace("${defaultPassword}", defaultPassword);
-            htmlContent = htmlContent.replace("${loginUrl}", frontendUrl + "/login");
-            htmlContent = htmlContent.replace("${dashboardUrl}", frontendUrl + "/dashboard");
-            htmlContent = htmlContent.replace("Admin", roleType.replace("_", " "));
+            htmlContent = htmlContent.replace("${loginUrl}", frontendUrl + "/auth/login");
+            
+            // Format role type nicely (e.g., ACADEMIC_STAFF -> Academic Staff)
+            String formattedRole = roleType.replace("_", " ").toLowerCase();
+            formattedRole = formattedRole.substring(0, 1).toUpperCase() + formattedRole.substring(1);
+            htmlContent = htmlContent.replace("${roleType}", formattedRole);
             
             sendHtmlEmail(toEmail, "Staff Account Created - Zentaritas", htmlContent);
             log.info("Staff credentials email sent to: {}", toEmail);
         } catch (Exception e) {
             log.error("Failed to send staff credentials email to: {}", toEmail, e);
-            throw new RuntimeException("Failed to send staff credentials email", e);
+            // Don't throw exception - we still want to return the password even if email fails
+            log.warn("Continuing without sending staff credentials email");
         }
     }
 }

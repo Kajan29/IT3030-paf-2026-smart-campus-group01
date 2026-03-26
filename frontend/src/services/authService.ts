@@ -108,10 +108,10 @@ export const authService = {
 
   isSessionExpired: () => {
     const token = localStorage.getItem('token')
-    if (!token) return false
+    if (!token) return false // No token means not logged in, not expired
 
     const lastActivityAt = Number(localStorage.getItem(LAST_ACTIVITY_KEY) || 0)
-    if (!lastActivityAt) return true
+    if (!lastActivityAt) return false // If no activity timestamp, consider it fresh (just logged in)
 
     return Date.now() - lastActivityAt > SESSION_TIMEOUT_MS
   },

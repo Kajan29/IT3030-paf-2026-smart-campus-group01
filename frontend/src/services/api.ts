@@ -12,7 +12,10 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    if (authService.isSessionExpired()) {
+    // Skip session check for auth endpoints
+    const isAuthEndpoint = config.url?.includes('/auth/');
+    
+    if (!isAuthEndpoint && authService.isSessionExpired()) {
       authService.logout()
       if (!window.location.pathname.startsWith('/auth/')) {
         window.location.href = '/auth/login'
@@ -20,7 +23,10 @@ api.interceptors.request.use(
       return Promise.reject(new axios.Cancel('Session expired'))
     }
 
-    authService.updateSessionActivity()
+    if (!isAuthEndpoint) {
+      authService.updateSessionActivity()
+    }
+    
     const token = localStorage.getItem('token')
     if (token && config.headers) {
       ;(config.headers as Record<string, string>).Authorization = `Bearer ${token}`

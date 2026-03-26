@@ -8,7 +8,9 @@ import com.zentaritas.exception.ResourceNotFoundException;
 import com.zentaritas.model.auth.Role;
 import com.zentaritas.model.auth.User;
 import com.zentaritas.repository.auth.UserRepository;
+import com.zentaritas.service.auth.EmailService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
@@ -32,12 +34,14 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserManagementService {
 
     private static final String PASSWORD_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789@$!%*?&";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
     public List<UserManagementResponse> getAllUsers() {
         return userRepository.findAll()
@@ -88,7 +92,7 @@ public class UserManagementService {
 
         User user = User.builder()
                 .email(request.getEmail())
-            .username(request.getEmail())
+                .username(request.getEmail())
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .role(request.getRole())
@@ -99,11 +103,30 @@ public class UserManagementService {
 
         User savedUser = userRepository.save(user);
 
+        // Send credentials email if requested
+        boolean emailSent = false;
+        if (Boolean.TRUE.equals(request.getSendEmail())) {
+            try {
+                String staffName = request.getFirstName() + " " + request.getLastName();
+                emailService.sendStaffCredentialsEmail(
+                    request.getEmail(),
+                    staffName,
+                    rawPassword,
+                    request.getRole().name()
+                );
+                emailSent = true;
+                log.info("Staff credentials email sent successfully to: {}", request.getEmail());
+            } catch (Exception e) {
+                log.error("Failed to send staff credentials email to: {}", request.getEmail(), e);
+                // Don't fail the creation if email fails - just log it
+            }
+        }
+
         return StaffCreationResponse.builder()
                 .user(UserManagementResponse.from(savedUser))
                 .defaultPassword(rawPassword)
-                .emailSent(false)
-                .message("Staff account created successfully")
+                .emailSent(emailSent)
+                .message("Staff account created successfully" + (emailSent ? " and credentials email sent" : ""))
                 .build();
     }
 
