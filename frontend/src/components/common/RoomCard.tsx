@@ -103,7 +103,7 @@ export const RoomCard = ({
           {/* Room Number Badge */}
           <div className="absolute top-3 left-3">
             <span className="px-3 py-1 rounded-full text-xs font-bold bg-primary/90 text-primary-foreground backdrop-blur-sm">
-              {room.roomNumber}
+              {room.code}
             </span>
           </div>
 
@@ -158,11 +158,11 @@ export const RoomCard = ({
               </div>
 
               {/* Amenities */}
-              {room.amenities && room.amenities.length > 0 && (
+              {room.facilities && room.facilities.length > 0 && (
                 <div className="pt-4 border-t border-border">
                   <p className="text-xs text-muted-foreground mb-2">Amenities</p>
                   <div className="flex flex-wrap gap-2">
-                    {room.amenities.slice(0, 4).map((amenity, i) => (
+                    {room.facilities.slice(0, 4).map((amenity, i) => (
                       <div
                         key={i}
                         className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-accent/10 text-accent text-xs"
@@ -171,9 +171,9 @@ export const RoomCard = ({
                         <span>{amenity}</span>
                       </div>
                     ))}
-                    {room.amenities.length > 4 && (
+                    {room.facilities.length > 4 && (
                       <div className="flex items-center px-2 py-1 rounded-md bg-muted text-muted-foreground text-xs">
-                        +{room.amenities.length - 4}
+                        +{room.facilities.length - 4}
                       </div>
                     )}
                   </div>
