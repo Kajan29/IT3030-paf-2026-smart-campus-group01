@@ -23,7 +23,6 @@ export interface CreateStaffRequest {
 
 export interface StaffCreationResponse {
   user: UserResponse;
-  defaultPassword: string;
   emailSent: boolean;
   message: string;
 }

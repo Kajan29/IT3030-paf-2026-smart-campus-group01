@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.security.SecureRandom;
+import java.time.Year;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -36,8 +36,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class UserManagementService {
-
-    private static final String PASSWORD_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789@$!%*?&";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -88,7 +86,7 @@ public class UserManagementService {
             throw new IllegalArgumentException("Email already registered");
         }
 
-        String rawPassword = generateDefaultPassword(12);
+        String rawPassword = generateDefaultPassword(request.getEmail());
 
         User user = User.builder()
                 .email(request.getEmail())
@@ -124,7 +122,6 @@ public class UserManagementService {
 
         return StaffCreationResponse.builder()
                 .user(UserManagementResponse.from(savedUser))
-                .defaultPassword(rawPassword)
                 .emailSent(emailSent)
                 .message("Staff account created successfully" + (emailSent ? " and credentials email sent" : ""))
                 .build();
@@ -172,7 +169,6 @@ public class UserManagementService {
                 if (email.isBlank() || firstName.isBlank() || lastName.isBlank() || roleValue.isBlank()) {
                     results.add(StaffCreationResponse.builder()
                             .user(null)
-                            .defaultPassword(null)
                             .emailSent(false)
                             .message("Skipped row " + (rowIndex + 1) + ": required values are missing")
                             .build());
@@ -185,7 +181,6 @@ public class UserManagementService {
                 } catch (IllegalArgumentException ex) {
                     results.add(StaffCreationResponse.builder()
                             .user(null)
-                            .defaultPassword(null)
                             .emailSent(false)
                             .message("Skipped row " + (rowIndex + 1) + ": " + ex.getMessage())
                             .build());
@@ -195,7 +190,6 @@ public class UserManagementService {
                 if (userRepository.existsByEmail(email)) {
                     results.add(StaffCreationResponse.builder()
                             .user(null)
-                            .defaultPassword(null)
                             .emailSent(false)
                             .message("Skipped row " + (rowIndex + 1) + ": email already registered")
                             .build());
@@ -247,13 +241,14 @@ public class UserManagementService {
         userRepository.delete(user);
     }
 
-    private String generateDefaultPassword(int length) {
-        SecureRandom random = new SecureRandom();
-        StringBuilder sb = new StringBuilder(length);
-        for (int i = 0; i < length; i++) {
-            sb.append(PASSWORD_CHARS.charAt(random.nextInt(PASSWORD_CHARS.length())));
+    private String generateDefaultPassword(String email) {
+        String usernamePart = (email == null ? "" : email).split("@")[0];
+        usernamePart = usernamePart.replaceAll("[^A-Za-z0-9]", "").toLowerCase(Locale.ROOT);
+        if (usernamePart.isBlank()) {
+            usernamePart = "user";
         }
-        return sb.toString();
+        int currentYear = Year.now().getValue();
+        return usernamePart + currentYear;
     }
 
     private Map<String, Integer> buildHeaderMap(Row headerRow, DataFormatter formatter) {
