@@ -23,7 +23,6 @@ export interface CreateStaffRequest {
 
 export interface StaffCreationResponse {
   user: UserResponse;
-  defaultPassword: string;
   emailSent: boolean;
   message: string;
 }
@@ -50,11 +49,7 @@ export const adminUserService = {
   importStaffFromExcel: (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    return api.post<{ data: StaffCreationResponse[] }>('/admin/users/staff/import', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return api.post<{ data: StaffCreationResponse[] }>('/admin/users/staff/import', formData);
   },
   
   updateUserStatus: (id: number, data: UpdateUserStatusRequest) => 

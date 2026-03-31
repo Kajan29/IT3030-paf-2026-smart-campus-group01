@@ -7,7 +7,6 @@ import lombok.Data;
 @Builder
 public class StaffCreationResponse {
     private UserManagementResponse user;
-    private String defaultPassword;
     private Boolean emailSent;
     private String message;
 }

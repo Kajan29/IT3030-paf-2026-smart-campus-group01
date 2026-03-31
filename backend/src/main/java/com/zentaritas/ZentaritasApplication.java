@@ -7,6 +7,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -15,7 +19,38 @@ public class ZentaritasApplication {
 
     public static void main(String[] args) {
         loadDotenvToSystemProperties();
+        createDatabaseIfNotExists();
         SpringApplication.run(ZentaritasApplication.class, args);
+    }
+
+    private static void createDatabaseIfNotExists() {
+        String host = System.getProperty("DB_HOST");
+        String port = System.getProperty("DB_PORT");
+        String dbName = System.getProperty("DB_NAME");
+        String username = System.getProperty("DB_USERNAME");
+        String password = System.getProperty("DB_PASSWORD");
+
+        if (host == null || port == null || dbName == null || username == null || password == null) {
+            System.err.println("Warning: Database configuration missing in .env file. Skipping auto-create.");
+            return;
+        }
+
+        String url = "jdbc:postgresql://" + host + ":" + port + "/postgres";
+
+        try (Connection conn = DriverManager.getConnection(url, username, password);
+             Statement stmt = conn.createStatement()) {
+
+            ResultSet rs = stmt.executeQuery(
+                "SELECT 1 FROM pg_database WHERE datname = '" + dbName + "'"
+            );
+
+            if (!rs.next()) {
+                stmt.executeUpdate("CREATE DATABASE " + dbName);
+                System.out.println("Database '" + dbName + "' created successfully.");
+            }
+        } catch (Exception e) {
+            System.err.println("Warning: Could not auto-create database: " + e.getMessage());
+        }
     }
 
     private static void loadDotenvToSystemProperties() {

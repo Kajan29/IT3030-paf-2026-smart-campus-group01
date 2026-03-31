@@ -105,4 +105,4 @@ coverage/
 *.seed
 *.pid.lock
 
-admin
+main

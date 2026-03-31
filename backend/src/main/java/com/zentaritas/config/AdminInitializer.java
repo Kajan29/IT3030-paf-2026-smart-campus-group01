@@ -44,8 +44,23 @@ public class AdminInitializer {
                 log.info("🔍 Checking for admin account with email: {}", adminEmail);
                 
                 // Check if admin account already exists with this specific email
-                if (userRepository.existsByEmail(adminEmail)) {
-                    log.info("✓ Admin account already exists: {}", adminEmail);
+                var existingAdmin = userRepository.findByEmailIgnoreCase(adminEmail);
+                
+                if (existingAdmin.isPresent()) {
+                    User admin = existingAdmin.get();
+                    // Update password if it doesn't match (in case .env password was changed)
+                    if (!passwordEncoder.matches(adminPassword, admin.getPassword())) {
+                        admin.setPassword(passwordEncoder.encode(adminPassword));
+                        admin.setFirstName(adminFirstName);
+                        admin.setLastName(adminLastName);
+                        admin.setRole(Role.ADMIN);
+                        admin.setIsVerified(true);
+                        admin.setIsActive(true);
+                        userRepository.save(admin);
+                        log.info("✓ Admin password updated for: {}", adminEmail);
+                    } else {
+                        log.info("✓ Admin account already exists: {}", adminEmail);
+                    }
                     return;
                 }
 

@@ -1,134 +1,178 @@
 import { useState } from "react";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { motion } from "framer-motion";
-import { Send, CheckCircle, Ticket, Mail, Phone, MapPin } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Send, MapPin, Phone, Mail, TicketCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import { toast } from "sonner";
+import heroCampus from "@/assets/hero-campus.jpg";
+
+const ticketCategories = [
+  "IT Support",
+  "Facilities",
+  "Academic Issue",
+  "Room Booking",
+  "General Inquiry",
+];
 
 const ContactPage = () => {
-  const [submitted, setSubmitted] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    category: "",
+    subject: "",
+    message: "",
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const ticketId = `ZT-${Date.now().toString().slice(-6)}`;
-    setSubmitted(true);
-    toast.success(`Ticket ${ticketId} created! We'll respond within 24 hours.`);
+    toast.success("Ticket Submitted! We'll get back to you soon.");
+    setForm({ name: "", email: "", category: "", subject: "", message: "" });
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="pt-24 pb-16">
-        <div className="container mx-auto px-4">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-16">
-            <span className="text-primary font-semibold text-sm uppercase tracking-wider">Support</span>
-            <h1 className="font-heading text-4xl md:text-5xl font-bold text-foreground mt-3">Contact & Support</h1>
-            <p className="text-muted-foreground mt-4 max-w-xl mx-auto">Submit a support ticket and our team will get back to you promptly.</p>
+
+      {/* Hero Banner */}
+      <section className="relative pt-24 pb-16 overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <img src={heroCampus} alt="Contact & Support" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-primary/80" />
+        </div>
+        <div className="container mx-auto px-4 relative z-10 text-center py-16">
+          <motion.h1
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="font-display text-4xl md:text-5xl font-bold text-primary-foreground mb-4"
+          >
+            Contact & Support
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-primary-foreground/80 text-lg max-w-2xl mx-auto"
+          >
+            Reach out to us or raise a support ticket for any issues.
+          </motion.p>
+        </div>
+      </section>
+
+      <section className="container mx-auto px-4 py-16">
+        <div className="grid lg:grid-cols-2 gap-12 max-w-5xl mx-auto">
+          {/* Ticket Form */}
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <div className="flex items-center gap-2 mb-6">
+              <TicketCheck className="h-6 w-6 text-accent" />
+              <h2 className="font-display text-2xl font-semibold text-foreground">
+                Raise a Ticket
+              </h2>
+            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <Input
+                  placeholder="Your Name"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  required
+                />
+                <Input
+                  type="email"
+                  placeholder="Email Address"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  required
+                />
+              </div>
+              <Select
+                value={form.category}
+                onValueChange={(v) => setForm({ ...form, category: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ticketCategories.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                placeholder="Subject"
+                value={form.subject}
+                onChange={(e) => setForm({ ...form, subject: e.target.value })}
+                required
+              />
+              <Textarea
+                placeholder="Describe your issue in detail..."
+                rows={5}
+                value={form.message}
+                onChange={(e) => setForm({ ...form, message: e.target.value })}
+                required
+              />
+              <Button
+                type="submit"
+                className="w-full bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Submit Ticket
+              </Button>
+            </form>
           </motion.div>
 
-          <div className="grid lg:grid-cols-3 gap-12 max-w-6xl mx-auto">
-            <div className="lg:col-span-2">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="bg-card rounded-2xl p-8 shadow-card border border-border"
-              >
-                <div className="flex items-center gap-3 mb-6">
-                  <Ticket className="w-6 h-6 text-primary" />
-                  <h2 className="font-heading text-2xl font-bold text-foreground">Submit a Ticket</h2>
-                </div>
-
-                {submitted ? (
-                  <div className="text-center py-12">
-                    <CheckCircle className="w-16 h-16 text-primary mx-auto mb-4" />
-                    <h3 className="font-heading text-2xl font-bold text-foreground mb-2">Ticket Submitted!</h3>
-                    <p className="text-muted-foreground mb-6">We'll respond to your inquiry within 24 hours.</p>
-                    <Button onClick={() => setSubmitted(false)} variant="outline">Submit Another</Button>
+          {/* Contact Info */}
+          <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+            className="space-y-8"
+          >
+            <div>
+              <h2 className="font-display text-2xl font-semibold text-foreground mb-6">
+                Get in Touch
+              </h2>
+              <div className="space-y-5">
+                {[
+                  { icon: MapPin, label: "Address", value: "Zentaritas University Campus, Malabe, Sri Lanka" },
+                  { icon: Phone, label: "Phone", value: "+94 11 234 5678" },
+                  { icon: Mail, label: "Email", value: "info@zentaritas.edu" },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent flex-shrink-0">
+                      <item.icon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{item.label}</p>
+                      <p className="text-sm text-muted-foreground">{item.value}</p>
+                    </div>
                   </div>
-                ) : (
-                  <form onSubmit={handleSubmit} className="space-y-5">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label>Full Name</Label>
-                        <Input placeholder="Your full name" required className="mt-1.5" />
-                      </div>
-                      <div>
-                        <Label>Email Address</Label>
-                        <Input type="email" placeholder="you@zentaritas.edu" required className="mt-1.5" />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label>Category</Label>
-                        <Select required>
-                          <SelectTrigger className="mt-1.5"><SelectValue placeholder="Select category" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="academic">Academic Inquiry</SelectItem>
-                            <SelectItem value="technical">Technical Support</SelectItem>
-                            <SelectItem value="facilities">Facilities</SelectItem>
-                            <SelectItem value="finance">Finance & Fees</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Priority</Label>
-                        <Select required>
-                          <SelectTrigger className="mt-1.5"><SelectValue placeholder="Select priority" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="low">Low</SelectItem>
-                            <SelectItem value="medium">Medium</SelectItem>
-                            <SelectItem value="high">High</SelectItem>
-                            <SelectItem value="urgent">Urgent</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div>
-                      <Label>Subject</Label>
-                      <Input placeholder="Brief summary of your issue" required className="mt-1.5" />
-                    </div>
-                    <div>
-                      <Label>Message</Label>
-                      <Textarea placeholder="Describe your issue in detail..." required className="mt-1.5 min-h-[140px]" />
-                    </div>
-                    <Button type="submit" size="lg" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground border-0 gap-2">
-                      <Send className="w-4 h-4" /> Submit Ticket
-                    </Button>
-                  </form>
-                )}
-              </motion.div>
+                ))}
+              </div>
             </div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="space-y-6"
-            >
-              {[
-                { icon: Mail, title: "Email", info: "support@zentaritas.edu" },
-                { icon: Phone, title: "Phone", info: "+94 11 754 4801" },
-                { icon: MapPin, title: "Address", info: "ZENTARITAS University, Malabe, Sri Lanka" },
-              ].map((item) => (
-                <div key={item.title} className="bg-card rounded-xl p-6 shadow-card border border-border">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
-                    <item.icon className="w-5 h-5 text-primary" />
-                  </div>
-                  <h4 className="font-heading font-semibold text-foreground">{item.title}</h4>
-                  <p className="text-muted-foreground text-sm mt-1">{item.info}</p>
-                </div>
-              ))}
-            </motion.div>
-          </div>
+            {/* Map placeholder */}
+            <div className="rounded-xl overflow-hidden border border-border h-64 bg-muted flex items-center justify-center">
+              <iframe
+                title="Zentaritas University Location"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3961.1445440424754!2d79.97091937500577!3d6.914682!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNsKwNTQnNTIuOSJOIDc5wrA1OCcxNS4zIkU!5e0!3m2!1sen!2slk!4v1234567890"
+                className="w-full h-full border-0"
+                loading="lazy"
+              />
+            </div>
+          </motion.div>
         </div>
-      </div>
+      </section>
+
       <Footer />
     </div>
   );

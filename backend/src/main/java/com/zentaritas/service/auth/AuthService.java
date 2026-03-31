@@ -19,6 +19,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -32,6 +33,7 @@ public class AuthService implements UserDetailsService {
     private final VerificationTokenRepository verificationTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+        private final RefreshTokenService refreshTokenService;
     private final EmailService emailService;
     private final AuthenticationManager authenticationManager;
 
@@ -40,6 +42,7 @@ public class AuthService implements UserDetailsService {
             VerificationTokenRepository verificationTokenRepository,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
+                        RefreshTokenService refreshTokenService,
             EmailService emailService,
             @Lazy AuthenticationManager authenticationManager
     ) {
@@ -47,13 +50,14 @@ public class AuthService implements UserDetailsService {
         this.verificationTokenRepository = verificationTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+                this.refreshTokenService = refreshTokenService;
         this.emailService = emailService;
         this.authenticationManager = authenticationManager;
     }
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
         return org.springframework.security.core.userdetails.User.builder()
@@ -109,26 +113,47 @@ public class AuthService implements UserDetailsService {
                 )
         );
 
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmailIgnoreCase(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (!user.getIsVerified()) {
             throw new RuntimeException("Email not verified. Please verify your email first.");
         }
 
+        if (Boolean.FALSE.equals(user.getIsActive())) {
+            throw new RuntimeException("User account is inactive.");
+        }
+
         UserDetails userDetails = loadUserByUsername(user.getEmail());
-        String jwtToken = jwtService.generateToken(userDetails);
+        String accessToken = jwtService.generateAccessToken(userDetails);
+        refreshTokenService.revokeAllUserTokens(user.getId());
+        String refreshToken = refreshTokenService.issueRefreshToken(user);
 
         log.info("User logged in successfully: {}", user.getEmail());
 
-        return AuthResponse.builder()
-                .token(jwtToken)
-                .email(user.getEmail())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .role(user.getRole())
-                .isVerified(user.getIsVerified())
-                .build();
+        return buildAuthResponse(user, accessToken, refreshToken);
+    }
+
+    @Transactional
+    public AuthResponse refreshAccessToken(String refreshToken) {
+        RefreshTokenService.RefreshSession refreshSession = refreshTokenService.rotateRefreshToken(refreshToken);
+        User user = refreshSession.user();
+        UserDetails userDetails = loadUserByUsername(user.getEmail());
+
+        String accessToken = jwtService.generateAccessToken(userDetails);
+        return buildAuthResponse(user, accessToken, refreshSession.refreshToken());
+    }
+
+    @Transactional
+    public void logout(String refreshToken, String userEmail) {
+        if (StringUtils.hasText(refreshToken)) {
+            refreshTokenService.revokeByRawToken(refreshToken);
+        }
+
+        if (StringUtils.hasText(userEmail)) {
+            userRepository.findByEmail(userEmail)
+                    .ifPresent(user -> refreshTokenService.revokeAllUserTokens(user.getId()));
+        }
     }
 
     @Transactional
@@ -157,6 +182,8 @@ public class AuthService implements UserDetailsService {
 
         token.setIsUsed(true);
         verificationTokenRepository.save(token);
+
+        emailService.sendWelcomeEmail(user.getEmail(), user.getFirstName());
 
         log.info("Email verified successfully: {}", user.getEmail());
     }
@@ -250,4 +277,21 @@ public class AuthService implements UserDetailsService {
 
         verificationTokenRepository.save(verificationToken);
     }
+
+        private AuthResponse buildAuthResponse(User user, String accessToken, String refreshToken) {
+                return AuthResponse.builder()
+                                .token(accessToken)
+                                .accessToken(accessToken)
+                                .refreshToken(refreshToken)
+                                .email(user.getEmail())
+                                .firstName(user.getFirstName())
+                                .lastName(user.getLastName())
+                    .username(user.getUsername())
+                    .phoneNumber(user.getPhoneNumber())
+                    .department(user.getDepartment())
+                    .profilePicture(user.getProfilePicture())
+                                .role(user.getRole())
+                                .isVerified(user.getIsVerified())
+                                .build();
+        }
 }
