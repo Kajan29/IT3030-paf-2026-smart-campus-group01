@@ -93,17 +93,17 @@ const SettingsPage = () => {
       toast.error("Enter the 6-digit code we emailed you");
       return;
     }
-    
+
     if (!newPassword || !confirmPassword) {
       toast.error("Please fill in all password fields");
       return;
     }
-    
+
     if (newPassword !== confirmPassword) {
       toast.error("New passwords do not match");
       return;
     }
-    
+
     if (newPassword.length < 8) {
       toast.error("Password must be at least 8 characters long");
       return;
@@ -153,13 +153,44 @@ const SettingsPage = () => {
           </div>
 
           <div className="grid gap-6">
-            {/* Account Information */}
             <Card>
               <CardHeader>
-                <CardDescription>Send a one-time code to your email, then set a new password</CardDescription>
+                <div className="flex items-center gap-2">
                   <User className="h-5 w-5 text-primary" />
                   <CardTitle>Account Information</CardTitle>
                 </div>
+                <CardDescription>View your account details</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Full Name</Label>
+                  <Input value={`${user?.firstName} ${user?.lastName}`} disabled className="bg-gray-50" />
+                </div>
+                <div>
+                  <Label>Email Address</Label>
+                  <Input value={user?.email || ""} disabled className="bg-gray-50" />
+                </div>
+                <div>
+                  <Label>Role</Label>
+                  <Input
+                    value={user?.role?.split("_").map(word => word.charAt(0) + word.slice(1).toLowerCase()).join(" ")}
+                    disabled
+                    className="bg-gray-50"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Lock className="h-5 w-5 text-primary" />
+                  <CardTitle>Change Password</CardTitle>
+                </div>
+                <CardDescription>Send a one-time code to your email, then set a new password</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handlePasswordChange} className="space-y-4">
                   <div className="rounded-lg bg-primary/5 border border-primary/20 p-3 text-sm text-primary-foreground">
                     <p className="text-primary font-semibold">Secure update</p>
                     <p className="text-primary/80">We will email a 6-digit verification code to {user?.email || "your email"}.</p>
@@ -202,59 +233,6 @@ const SettingsPage = () => {
                     </Button>
                   </div>
 
-                <CardDescription>View your account details</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label>Full Name</Label>
-                  <Input 
-                    value={`${user?.firstName} ${user?.lastName}`} 
-                    disabled 
-                    className="bg-gray-50"
-                  />
-                </div>
-                <div>
-                  <Label>Email Address</Label>
-                  <Input 
-                    value={user?.email || ""} 
-                    disabled 
-                    className="bg-gray-50"
-                  />
-                </div>
-                <div>
-                  <Label>Role</Label>
-                  <Input 
-                    value={user?.role?.split('_').map(word => 
-                      word.charAt(0) + word.slice(1).toLowerCase()
-                    ).join(' ')} 
-                    disabled 
-                    className="bg-gray-50"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Password Change */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Lock className="h-5 w-5 text-primary" />
-                  <CardTitle>Change Password</CardTitle>
-                </div>
-                <CardDescription>Update your password to keep your account secure</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handlePasswordChange} className="space-y-4">
-                  <div>
-                    <Label htmlFor="current-password">Current Password</Label>
-                    <Input
-                      id="current-password"
-                      type="password"
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="Enter current password"
-                    />
-                  </div>
                   <div>
                     <Label htmlFor="new-password">New Password</Label>
                     <Input
@@ -282,7 +260,6 @@ const SettingsPage = () => {
               </CardContent>
             </Card>
 
-            {/* Notification Settings */}
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
@@ -297,9 +274,7 @@ const SettingsPage = () => {
                     <Label htmlFor="email-notifications" className="text-base">
                       Email Notifications
                     </Label>
-                    <p className="text-sm text-gray-500">
-                      Receive notifications via email
-                    </p>
+                    <p className="text-sm text-gray-500">Receive notifications via email</p>
                   </div>
                   <Switch
                     id="email-notifications"
@@ -307,15 +282,13 @@ const SettingsPage = () => {
                     onCheckedChange={setEmailNotifications}
                   />
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label htmlFor="push-notifications" className="text-base">
                       Push Notifications
                     </Label>
-                    <p className="text-sm text-gray-500">
-                      Receive push notifications in your browser
-                    </p>
+                    <p className="text-sm text-gray-500">Receive push notifications in your browser</p>
                   </div>
                   <Switch
                     id="push-notifications"
@@ -323,14 +296,13 @@ const SettingsPage = () => {
                     onCheckedChange={setPushNotifications}
                   />
                 </div>
-                
+
                 <Button onClick={handleSaveNotifications} className="w-full">
                   Save Preferences
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Security Information */}
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
@@ -350,7 +322,7 @@ const SettingsPage = () => {
                       Coming Soon
                     </Button>
                   </div>
-                  
+
                   <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div>
                       <p className="font-medium text-gray-900">Active Sessions</p>
