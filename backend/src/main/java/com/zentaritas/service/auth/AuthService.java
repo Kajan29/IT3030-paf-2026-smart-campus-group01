@@ -229,6 +229,7 @@ public class AuthService implements UserDetailsService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        refreshTokenService.revokeAllUserTokens(user.getId()); // invalidate existing sessions after password change
         userRepository.save(user);
 
         token.setIsUsed(true);
