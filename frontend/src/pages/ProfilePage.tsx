@@ -1,27 +1,39 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ComponentType, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BookOpen,
   CalendarCheck,
   CalendarDays,
+  ChevronLeft,
+  ChevronRight,
   Edit,
   Home,
   LayoutGrid,
+  LogOut,
   Mail,
   MapPin,
+  Menu,
   Moon,
   Phone,
   Settings,
   ShieldCheck,
   Ticket,
   User,
+  Bell,
+  MessageSquare,
+  Clock,
+  TrendingUp,
+  GraduationCap,
+  X,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "../context/AuthContext";
 import { userService } from "@/services/userService";
 import { toast } from "react-toastify";
+import { cn } from "@/lib/utils";
 
 type SectionId = "overview" | "bookings" | "tickets" | "profile" | "settings";
 
@@ -44,6 +56,8 @@ const ProfilePage = () => {
   const { user, logout, updateUser } = useAuth();
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState<SectionId>("overview");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [profileForm, setProfileForm] = useState({
     firstName: user?.firstName || "",
     lastName: user?.lastName || "",
@@ -235,13 +249,21 @@ const ProfilePage = () => {
     }
   };
 
-  const sectionList: Array<{ id: SectionId; label: string; icon: ComponentType<{ size?: number; className?: string }> }> = [
-    { id: "overview", label: "Overview", icon: LayoutGrid },
-    { id: "bookings", label: isStudent ? "My Bookings" : "Bookings", icon: CalendarDays },
-    { id: "tickets", label: "Tickets", icon: Ticket },
-    { id: "profile", label: "Edit Profile", icon: Edit },
-    { id: "settings", label: "Preferences", icon: Settings },
+  const sectionList = [
+    { id: "overview" as SectionId, label: "Overview", icon: LayoutGrid },
+    { id: "bookings" as SectionId, label: isStudent ? "My Bookings" : "Bookings", icon: CalendarDays },
+    { id: "tickets" as SectionId, label: "Tickets", icon: Ticket },
+    { id: "profile" as SectionId, label: "Edit Profile", icon: Edit },
+    { id: "settings" as SectionId, label: "Preferences", icon: Settings },
   ];
+
+  const pageTitles: Record<SectionId, string> = {
+    overview: "Dashboard Overview",
+    bookings: isStudent ? "My Bookings" : "Bookings Management",
+    tickets: "Support Tickets",
+    profile: "Edit Profile",
+    settings: "Preferences",
+  };
 
   const renderStatusBadge = (status: BookingItem["status"]) => {
     const styles: Record<BookingItem["status"], string> = {
@@ -261,71 +283,125 @@ const ProfilePage = () => {
     return <Badge className={`border ${styles[status]}`}>{status}</Badge>;
   };
 
+  const statIcons = [CalendarDays, MessageSquare, TrendingUp, ShieldCheck];
+
   const renderSection = () => {
     if (activeSection === "overview") {
       return (
-        <div className="space-y-5">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-            {summary.map((item) => (
-                  <div key={item.label} className="rounded-2xl border border-border bg-card shadow-card p-4">
-                    <p className="text-xs text-muted-foreground">{item.label}</p>
-                    <div className="mt-2 flex items-baseline gap-2">
-                      <span className="text-2xl md:text-3xl font-bold text-foreground">{item.value}</span>
-                      <span className="text-xs text-muted-foreground">{item.hint}</span>
+        <div className="space-y-6">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {summary.map((item, index) => {
+              const IconComponent = statIcons[index];
+              return (
+                <div key={item.label}>
+                  <Card className="border-border/50 shadow-card hover:shadow-elevated transition-all duration-300 group">
+                    <CardContent className="p-5">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="p-2.5 rounded-xl bg-primary/10 group-hover:bg-primary/15 transition-colors">
+                          <IconComponent size={18} className="text-primary" />
+                        </div>
+                        {item.label === "Status" && (
+                          <Badge className={`text-xs ${user?.isVerified ? "bg-success/10 text-success border-success/30" : "bg-warning/15 text-warning-foreground border-warning/30"}`}>
+                            {user?.isVerified ? "Active" : "Pending"}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">{item.label}</p>
+                      <p className="text-2xl md:text-3xl font-bold text-foreground mb-1">{item.value}</p>
+                      <p className="text-xs text-muted-foreground">{item.hint}</p>
+                    </CardContent>
+                  </Card>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_1fr] gap-4">
-                <div className="rounded-2xl border border-border bg-card shadow-card">
-                  <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                <div>
-                      <h3 className="font-semibold text-foreground">Upcoming</h3>
-                      <p className="text-xs text-muted-foreground">Keep track of your next commitments</p>
-                </div>
-                    <Badge className="border border-border bg-muted text-foreground">{bookings.length} items</Badge>
-              </div>
-                  <div className="p-4 space-y-3">
-                {bookings.map((booking) => (
-                  <div
-                    key={`${booking.title}-${booking.date}`}
-                        className="flex items-start justify-between gap-3 rounded-xl border border-border/60 bg-muted/60 px-3 py-3"
-                  >
-                    <div>
-                          <p className="font-semibold text-foreground">{booking.title}</p>
-                          <p className="text-sm text-muted-foreground">{booking.details}</p>
-                          <p className="text-xs text-muted-foreground">{booking.date}</p>
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+            {/* Upcoming Bookings */}
+            <div className="xl:col-span-3">
+              <Card className="border-border/50 shadow-card h-full">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-accent/10">
+                        <CalendarCheck size={18} className="text-accent" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg font-display">Upcoming Bookings</CardTitle>
+                        <CardDescription>Your scheduled reservations</CardDescription>
+                      </div>
                     </div>
-                    {renderStatusBadge(booking.status)}
+                    <Badge variant="secondary" className="bg-muted">{bookings.length} items</Badge>
                   </div>
-                ))}
-              </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {bookings.map((booking) => (
+                    <div
+                      key={`${booking.title}-${booking.date}`}
+                      className="flex items-center justify-between gap-4 p-4 rounded-xl bg-muted/40 border border-border/50 hover:bg-muted/60 transition-colors group"
+                    >
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className="hidden sm:flex h-12 w-12 rounded-xl bg-primary/10 items-center justify-center flex-shrink-0">
+                          <CalendarDays size={20} className="text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-foreground truncate">{booking.title}</p>
+                          <p className="text-sm text-muted-foreground truncate">{booking.details}</p>
+                          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                            <Clock size={12} />
+                            <span>{booking.date}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0">
+                        {renderStatusBadge(booking.status)}
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
             </div>
 
-                <div className="rounded-2xl border border-border bg-card shadow-card">
-                  <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                <div>
-                      <h3 className="font-semibold text-foreground">Profile snapshot</h3>
-                      <p className="text-xs text-muted-foreground">Basic details for your account</p>
-                </div>
-                {user?.isVerified ? (
-                      <Badge className="border bg-success/10 text-success">Verified</Badge>
-                ) : (
-                      <Badge className="border bg-warning/15 text-warning-foreground">Unverified</Badge>
-                )}
-              </div>
-              <div className="p-4 space-y-3">
-                {personalDetails.map((item) => (
-                      <div key={item.label} className="flex items-center gap-3 rounded-xl border border-border/60 px-3 py-2.5 bg-muted/60">
-                        <item.icon size={16} className="text-muted-foreground" />
-                    <div>
-                          <p className="text-xs text-muted-foreground">{item.label}</p>
-                          <p className="text-sm font-semibold text-foreground">{item.value}</p>
+            {/* Profile Snapshot */}
+            <div className="xl:col-span-2">
+              <Card className="border-border/50 shadow-card h-full">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <User size={18} className="text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg font-display">Profile Details</CardTitle>
+                        <CardDescription>Your account information</CardDescription>
+                      </div>
                     </div>
+                    {user?.isVerified ? (
+                      <Badge className="bg-success/10 text-success border-success/30">Verified</Badge>
+                    ) : (
+                      <Badge className="bg-warning/15 text-warning-foreground border-warning/30">Unverified</Badge>
+                    )}
                   </div>
-                ))}
-              </div>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {personalDetails.map((item) => (
+                    <div
+                      key={item.label}
+                      className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors group"
+                    >
+                      <div className="p-2 rounded-lg bg-muted group-hover:bg-muted/80 transition-colors">
+                        <item.icon size={14} className="text-muted-foreground" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">{item.label}</p>
+                        <p className="text-sm font-medium text-foreground truncate">{item.value}</p>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
@@ -334,304 +410,630 @@ const ProfilePage = () => {
 
     if (activeSection === "bookings") {
       return (
-        <div className="rounded-2xl border border-border bg-card shadow-card">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <div>
-              <h3 className="font-semibold text-foreground">{isStudent ? "My bookings" : "Bookings"}</h3>
-              <p className="text-xs text-muted-foreground">Manage and track your reservations</p>
+        <Card className="border-border/50 shadow-card">
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-accent/10">
+                  <CalendarDays size={20} className="text-accent" />
+                </div>
+                <div>
+                  <CardTitle className="font-display text-xl">{isStudent ? "My Bookings" : "Bookings"}</CardTitle>
+                  <CardDescription>Manage and track your reservations</CardDescription>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" className="border-border">
+                  <CalendarCheck size={16} className="mr-2" />
+                  New Booking
+                </Button>
+                <Button size="sm" className="bg-primary hover:bg-primary/90">
+                  View Calendar
+                </Button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" className="border-border text-foreground">
-                <CalendarCheck size={16} className="mr-2" />
-                New booking
-              </Button>
-              <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                View calendar
-              </Button>
-            </div>
-          </div>
-          <div className="p-4 space-y-3">
+          </CardHeader>
+          <CardContent className="space-y-3">
             {bookings.map((booking) => (
               <div
                 key={`${booking.title}-${booking.date}`}
-                className="rounded-xl border border-border p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-card"
+                className="group p-4 rounded-xl bg-muted/30 border border-border/50 hover:bg-muted/50 hover:border-border transition-all"
               >
-                <div className="space-y-1">
-                  <p className="font-semibold text-foreground">{booking.title}</p>
-                  <p className="text-sm text-muted-foreground">{booking.details}</p>
-                  <p className="text-xs text-muted-foreground">{booking.date}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  {renderStatusBadge(booking.status)}
-                  <Button variant="ghost" size="sm" className="text-foreground">
-                    Manage
-                  </Button>
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className="hidden sm:flex h-12 w-12 rounded-xl bg-primary/10 items-center justify-center flex-shrink-0 group-hover:bg-primary/15 transition-colors">
+                      <CalendarDays size={20} className="text-primary" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="font-semibold text-foreground">{booking.title}</p>
+                      <p className="text-sm text-muted-foreground">{booking.details}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Clock size={12} />
+                        <span>{booking.date}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {renderStatusBadge(booking.status)}
+                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                      Manage
+                      <ChevronRight size={14} className="ml-1" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       );
     }
 
     if (activeSection === "tickets") {
       return (
-        <div className="rounded-2xl border border-border bg-card shadow-card">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <div>
-              <h3 className="font-semibold text-foreground">Tickets</h3>
-              <p className="text-xs text-muted-foreground">Support and access requests</p>
-            </div>
-            <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground">
-              Raise ticket
-            </Button>
-          </div>
-          <div className="p-4 space-y-3">
-            {tickets.map((ticket) => (
-              <div key={ticket.id} className="rounded-xl border border-border p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-card">
-                <div className="space-y-1">
-                  <p className="font-semibold text-foreground">{ticket.subject}</p>
-                  <p className="text-xs text-muted-foreground">{ticket.id} - {ticket.channel}</p>
-                  <p className="text-xs text-muted-foreground">Updated {ticket.updated}</p>
+        <Card className="border-border/50 shadow-card">
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-primary/10">
+                  <Ticket size={20} className="text-primary" />
                 </div>
-                {renderTicketBadge(ticket.status)}
+                <div>
+                  <CardTitle className="font-display text-xl">Support Tickets</CardTitle>
+                  <CardDescription>Track your support and access requests</CardDescription>
+                </div>
+              </div>
+              <Button size="sm" className="bg-primary hover:bg-primary/90">
+                <MessageSquare size={16} className="mr-2" />
+                Raise Ticket
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {tickets.map((ticket) => (
+              <div
+                key={ticket.id}
+                className="group p-4 rounded-xl bg-muted/30 border border-border/50 hover:bg-muted/50 hover:border-border transition-all"
+              >
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className="hidden sm:flex h-12 w-12 rounded-xl bg-muted items-center justify-center flex-shrink-0 group-hover:bg-muted/80 transition-colors">
+                      <MessageSquare size={18} className="text-muted-foreground" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="font-semibold text-foreground">{ticket.subject}</p>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span className="font-mono bg-muted px-2 py-0.5 rounded">{ticket.id}</span>
+                        <span>{ticket.channel}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Clock size={12} />
+                        <span>Updated {ticket.updated}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {renderTicketBadge(ticket.status)}
+                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                      View
+                      <ChevronRight size={14} className="ml-1" />
+                    </Button>
+                  </div>
+                </div>
               </div>
             ))}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       );
     }
 
     if (activeSection === "profile") {
       return (
-        <div className="rounded-2xl border border-border bg-card shadow-card">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <div>
-              <h3 className="font-semibold text-foreground">Edit profile</h3>
-              <p className="text-xs text-muted-foreground">Update how others see you</p>
-            </div>
-            {saveState === "saved" && <Badge className="border bg-emerald-50 text-emerald-700">Saved</Badge>}
-          </div>
-          <form className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSaveProfile}>
-            <div className="space-y-2 md:col-span-2">
-              <p className="text-sm text-foreground">Profile image</p>
-              <div className="flex flex-wrap items-center gap-3">
-                <Avatar className="h-14 w-14 border-2 border-primary/50">
-                  <AvatarImage src={avatarPreview || user?.profilePicture} alt={user?.firstName} />
-                  <AvatarFallback className="bg-muted text-foreground font-semibold">{getInitials()}</AvatarFallback>
-                </Avatar>
-                <div className="flex items-center gap-3">
-                  <Button type="button" variant="outline" className="border-border text-foreground" onClick={triggerAvatarUpload}>
-                    Upload new
-                  </Button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarChange}
-                    className="hidden"
-                  />
-                  <span className="text-xs text-muted-foreground max-w-[220px] truncate" title={avatarName}>
-                    {avatarName}
-                  </span>
+        <Card className="border-border/50 shadow-card">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-primary/10">
+                  <Edit size={20} className="text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="font-display text-xl">Edit Profile</CardTitle>
+                  <CardDescription>Update how others see you</CardDescription>
                 </div>
               </div>
+              {saveState === "saved" && (
+                <Badge className="bg-success/10 text-success border-success/30">
+                  <ShieldCheck size={12} className="mr-1" />
+                  Saved
+                </Badge>
+              )}
             </div>
-            <label className="space-y-1 text-sm text-foreground">
-              First name
-              <input
-                className="mt-1 w-full rounded-lg border border-border bg-muted/50 px-3 py-2 focus:border-primary focus:outline-none"
-                value={profileForm.firstName}
-                onChange={(e) => setProfileForm((prev) => ({ ...prev, firstName: e.target.value }))}
-                placeholder="First name"
-              />
-            </label>
-            <label className="space-y-1 text-sm text-foreground">
-              Last name
-              <input
-                className="mt-1 w-full rounded-lg border border-border bg-muted/50 px-3 py-2 focus:border-primary focus:outline-none"
-                value={profileForm.lastName}
-                onChange={(e) => setProfileForm((prev) => ({ ...prev, lastName: e.target.value }))}
-                placeholder="Last name"
-              />
-            </label>
-            <label className="space-y-1 text-sm text-foreground">
-              Phone number
-              <input
-                className="mt-1 w-full rounded-lg border border-border bg-muted/50 px-3 py-2 focus:border-primary focus:outline-none"
-                value={profileForm.phoneNumber}
-                onChange={(e) => setProfileForm((prev) => ({ ...prev, phoneNumber: e.target.value }))}
-                placeholder="Add your contact"
-              />
-            </label>
-            <label className="space-y-1 text-sm text-foreground">
-              Department or program
-              <input
-                className="mt-1 w-full rounded-lg border border-border bg-muted/50 px-3 py-2 focus:border-primary focus:outline-none"
-                value={profileForm.department}
-                onChange={(e) => setProfileForm((prev) => ({ ...prev, department: e.target.value }))}
-                placeholder={isStudent ? "Course of study" : "Team or unit"}
-              />
-            </label>
-            <div className="md:col-span-2 flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="border-border text-foreground"
-                onClick={() => {
-                  setProfileForm({
-                    firstName: user?.firstName || "",
-                    lastName: user?.lastName || "",
-                    phoneNumber: user?.phoneNumber || "",
-                    department: user?.department || "",
-                  });
-                  setAvatarPreview(user?.profilePicture || "");
-                  setAvatarFile(null);
-                  setAvatarName(user?.profilePicture ? "Current image" : "No file chosen");
-                }}
-              >
-                Reset
-              </Button>
-              <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSaving}>
-                {isSaving ? "Saving..." : "Save changes"}
-              </Button>
-            </div>
-            <p className="md:col-span-2 text-xs text-muted-foreground">Changes save to your profile. Fresh uploads may take a moment to refresh.</p>
-          </form>
-        </div>
+          </CardHeader>
+          <CardContent>
+            <form className="space-y-6" onSubmit={handleSaveProfile}>
+              {/* Profile Image Section */}
+              <div className="p-5 rounded-xl bg-muted/30 border border-border/50">
+                <p className="text-sm font-medium text-foreground mb-4">Profile Image</p>
+                <div className="flex flex-wrap items-center gap-4">
+                  <Avatar className="h-20 w-20 border-4 border-primary/20 shadow-md">
+                    <AvatarImage src={avatarPreview || user?.profilePicture} alt={user?.firstName} />
+                    <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold">{getInitials()}</AvatarFallback>
+                  </Avatar>
+                  <div className="space-y-2">
+                    <Button type="button" variant="outline" className="border-border" onClick={triggerAvatarUpload}>
+                      Upload New Photo
+                    </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarChange}
+                      className="hidden"
+                    />
+                    <p className="text-xs text-muted-foreground max-w-[220px] truncate" title={avatarName}>
+                      {avatarName}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Form Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">First Name</label>
+                  <input
+                    className="w-full rounded-xl border border-border bg-muted/30 px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
+                    value={profileForm.firstName}
+                    onChange={(e) => setProfileForm((prev) => ({ ...prev, firstName: e.target.value }))}
+                    placeholder="Enter your first name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Last Name</label>
+                  <input
+                    className="w-full rounded-xl border border-border bg-muted/30 px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
+                    value={profileForm.lastName}
+                    onChange={(e) => setProfileForm((prev) => ({ ...prev, lastName: e.target.value }))}
+                    placeholder="Enter your last name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Phone Number</label>
+                  <input
+                    className="w-full rounded-xl border border-border bg-muted/30 px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
+                    value={profileForm.phoneNumber}
+                    onChange={(e) => setProfileForm((prev) => ({ ...prev, phoneNumber: e.target.value }))}
+                    placeholder="Add your contact number"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Department or Program</label>
+                  <input
+                    className="w-full rounded-xl border border-border bg-muted/30 px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
+                    value={profileForm.department}
+                    onChange={(e) => setProfileForm((prev) => ({ ...prev, department: e.target.value }))}
+                    placeholder={isStudent ? "Your course of study" : "Your team or unit"}
+                  />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-4 border-t border-border/50">
+                <p className="text-xs text-muted-foreground">Changes will be saved to your profile. Fresh uploads may take a moment to refresh.</p>
+                <div className="flex items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-border"
+                    onClick={() => {
+                      setProfileForm({
+                        firstName: user?.firstName || "",
+                        lastName: user?.lastName || "",
+                        phoneNumber: user?.phoneNumber || "",
+                        department: user?.department || "",
+                      });
+                      setAvatarPreview(user?.profilePicture || "");
+                      setAvatarFile(null);
+                      setAvatarName(user?.profilePicture ? "Current image" : "No file chosen");
+                    }}
+                  >
+                    Reset
+                  </Button>
+                  <Button type="submit" className="bg-primary hover:bg-primary/90 min-w-[120px]" disabled={isSaving}>
+                    {isSaving ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       );
     }
 
+    // Settings/Preferences section
     return (
-      <div className="rounded-2xl border border-border bg-card shadow-card">
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <div>
-            <h3 className="font-semibold text-foreground">Preferences</h3>
-            <p className="text-xs text-muted-foreground">Notification and theme settings</p>
-          </div>
-        </div>
-        <div className="p-4 space-y-3">
-          <div className="flex items-center justify-between rounded-xl border border-border p-3 bg-card">
-            <div>
-              <p className="font-semibold text-foreground">Email notifications</p>
-              <p className="text-xs text-muted-foreground">Receive booking and ticket updates</p>
+      <Card className="border-border/50 shadow-card">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-primary/10">
+              <Settings size={20} className="text-primary" />
             </div>
-            <Badge className="border bg-muted text-foreground">On</Badge>
-          </div>
-          <div className="flex items-center justify-between rounded-xl border border-border p-3 bg-card">
             <div>
-              <p className="font-semibold text-foreground">SMS alerts</p>
-              <p className="text-xs text-muted-foreground">Keep delivery only for urgent items</p>
+              <CardTitle className="font-display text-xl">Preferences</CardTitle>
+              <CardDescription>Manage your notification and display settings</CardDescription>
             </div>
-            <Badge className="border bg-muted text-muted-foreground">Off</Badge>
           </div>
-          <div className="flex items-center justify-between rounded-xl border border-border p-3 bg-card">
-            <div className="flex items-center gap-2">
-              <Moon size={16} className="text-muted-foreground" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Email Notifications */}
+          <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors">
+            <div className="flex items-center gap-4">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Bell size={18} className="text-primary" />
+              </div>
               <div>
-                <p className="font-semibold text-foreground">Appearance</p>
-                <p className="text-xs text-muted-foreground">Light / dark theme</p>
+                <p className="font-semibold text-foreground">Email Notifications</p>
+                <p className="text-sm text-muted-foreground">Receive booking and ticket updates via email</p>
               </div>
             </div>
-            <Badge className="border bg-muted text-foreground">Auto</Badge>
+            <Badge className="bg-success/10 text-success border-success/30">On</Badge>
           </div>
-        </div>
-      </div>
+
+          {/* SMS Alerts */}
+          <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors">
+            <div className="flex items-center gap-4">
+              <div className="p-2 rounded-lg bg-muted">
+                <Phone size={18} className="text-muted-foreground" />
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">SMS Alerts</p>
+                <p className="text-sm text-muted-foreground">Get text messages for urgent items only</p>
+              </div>
+            </div>
+            <Badge variant="secondary" className="bg-muted text-muted-foreground">Off</Badge>
+          </div>
+
+          {/* Appearance */}
+          <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors">
+            <div className="flex items-center gap-4">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Moon size={18} className="text-primary" />
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">Appearance</p>
+                <p className="text-sm text-muted-foreground">Switch between light and dark themes</p>
+              </div>
+            </div>
+            <Badge variant="secondary" className="bg-accent/10 text-accent border-accent/30">Auto</Badge>
+          </div>
+        </CardContent>
+      </Card>
     );
   };
 
   return (
-    <div className="min-h-screen flex bg-sidebar text-sidebar-foreground">
-      <aside className="w-72 hidden lg:flex flex-col h-screen border-r border-sidebar-border/70 shadow-[6px_0_22px_-8px_hsl(var(--foreground)/0.35)] bg-sidebar px-4 py-6">
-        <div className="flex items-center gap-3 pb-6 border-b border-sidebar-border/70">
-          <Avatar className="h-12 w-12 border-2 border-sidebar-primary">
-            <AvatarImage src={avatarPreview || user?.profilePicture} alt={user?.firstName} />
-            <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground font-semibold">{getInitials()}</AvatarFallback>
-          </Avatar>
-          <div>
-            <p className="font-semibold text-white text-sm leading-tight">{user?.firstName} {user?.lastName}</p>
-            <p className="text-xs text-sidebar-foreground/80">@{username}</p>
-            <div className="mt-1 flex items-center gap-2">
-              <Badge className="border border-white/20 bg-white/10 text-white">{roleLabel}</Badge>
-              {user?.isVerified && <ShieldCheck size={14} className="text-success" />}
+    <div className="flex h-screen bg-background overflow-hidden">
+      {/* Mobile Sidebar Overlay */}
+      {mobileSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-foreground/40 z-30 md:hidden" 
+          onClick={() => setMobileSidebarOpen(false)} 
+        />
+      )}
+
+      {/* Desktop Sidebar */}
+      <aside
+        className={cn(
+          "hidden md:flex flex-col h-screen border-r border-sidebar-border/70 shadow-[6px_0_22px_-8px_hsl(var(--foreground)/0.35)] overflow-hidden",
+          "transition-all duration-300 ease-in-out flex-shrink-0",
+          "bg-sidebar",
+          sidebarCollapsed ? "w-20" : "w-72"
+        )}
+      >
+        {/* Logo Header */}
+        <div className="relative flex items-center justify-between px-4 py-5 border-b border-sidebar-border/70">
+          <div className={cn("flex items-center gap-3 overflow-hidden", sidebarCollapsed && "justify-center")}>
+            <div className="w-10 h-10 rounded-2xl bg-sidebar-primary flex items-center justify-center flex-shrink-0 shadow-lg">
+              <GraduationCap size={20} className="text-white" />
             </div>
+            {!sidebarCollapsed && (
+              <div>
+                <span className="text-white font-bold text-lg leading-none">Zentaritas</span>
+                <p className="text-sidebar-foreground text-[10px] leading-tight mt-0.5 tracking-[0.16em] uppercase">
+                  My Profile
+                </p>
+              </div>
+            )}
           </div>
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className={cn(
+              "w-7 h-7 rounded-full bg-sidebar-accent/90 flex items-center justify-center",
+              "text-sidebar-foreground hover:text-white hover:bg-sidebar-primary transition-all duration-200",
+              sidebarCollapsed && "hidden"
+            )}
+          >
+            <ChevronLeft size={14} />
+          </button>
         </div>
 
-        <nav className="mt-4 space-y-1 text-sm flex-1">
+        {/* Expand Button when Collapsed */}
+        {sidebarCollapsed && (
+          <button
+            onClick={() => setSidebarCollapsed(false)}
+            className="mx-auto mt-3 w-9 h-9 rounded-full bg-sidebar-accent/90 flex items-center justify-center text-sidebar-foreground hover:text-white hover:bg-sidebar-primary transition-all duration-200"
+          >
+            <ChevronRight size={14} />
+          </button>
+        )}
+
+        {/* User Profile Card */}
+        {!sidebarCollapsed && (
+          <div className="mx-3 mt-4 p-3 rounded-xl bg-white/10 border border-white/15">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10 border-2 border-sidebar-primary">
+                <AvatarImage src={avatarPreview || user?.profilePicture} alt={user?.firstName} />
+                <AvatarFallback className="bg-sidebar-primary text-white font-semibold text-sm">{getInitials()}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-semibold text-sm truncate">{user?.firstName} {user?.lastName}</p>
+                <p className="text-sidebar-foreground/70 text-xs truncate">@{username}</p>
+              </div>
+              {user?.isVerified && <ShieldCheck size={14} className="text-success flex-shrink-0" />}
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <Badge className="bg-white/15 text-white text-[10px] border-white/20">{roleLabel}</Badge>
+            </div>
+          </div>
+        )}
+
+        {/* Navigation */}
+        <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto overflow-x-hidden">
+          {!sidebarCollapsed && (
+            <p className="text-sidebar-foreground text-[10px] font-semibold uppercase tracking-widest px-3 mb-3">
+              Navigation
+            </p>
+          )}
           {sectionList.map((item) => {
-            const active = activeSection === item.id;
+            const Icon = item.icon;
+            const isActive = activeSection === item.id;
             return (
               <button
                 key={item.id}
-                className={`w-full rounded-xl px-3 py-2.5 flex items-center gap-2 transition text-left ${
-                  active
-                    ? "bg-white text-primary font-semibold shadow-md"
-                    : "text-sidebar-foreground hover:bg-white/10 hover:text-white"
-                }`}
                 onClick={() => setActiveSection(item.id)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium",
+                  "transition-all duration-200 group relative",
+                  isActive
+                    ? "bg-white text-primary shadow-md"
+                    : "text-sidebar-foreground hover:bg-white/10 hover:text-white"
+                )}
               >
-                <item.icon size={15} />
-                <span className="truncate">{item.label}</span>
+                <Icon
+                  size={18}
+                  className={cn(
+                    "flex-shrink-0 transition-transform duration-200 group-hover:scale-110",
+                    isActive ? "text-primary" : ""
+                  )}
+                />
+                {!sidebarCollapsed && <span className="flex-1 text-left truncate">{item.label}</span>}
+                {sidebarCollapsed && (
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-sidebar-accent text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                    {item.label}
+                  </div>
+                )}
               </button>
             );
           })}
         </nav>
 
-        <div className="pt-4 border-t border-sidebar-border/70 space-y-2 text-sm">
+        {/* Bottom Actions */}
+        <div className="px-2 pb-4 border-t border-sidebar-border/70 pt-3 space-y-1">
+          {!sidebarCollapsed && (
+            <p className="text-sidebar-foreground text-[10px] font-semibold uppercase tracking-widest px-3 mb-2">
+              Actions
+            </p>
+          )}
           <button
-            className="w-full flex items-center gap-2 rounded-xl px-3 py-2 text-sidebar-foreground hover:bg-white/10 hover:text-white"
             onClick={() => navigate("/")}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium",
+              "text-sidebar-foreground hover:bg-white/10 hover:text-white transition-all duration-200 group relative"
+            )}
           >
-            <Home size={16} />
-            Back to home
+            <Home size={18} className="flex-shrink-0 group-hover:scale-110 transition-transform" />
+            {!sidebarCollapsed && <span>Back to Home</span>}
+            {sidebarCollapsed && (
+              <div className="absolute left-full ml-2 px-2 py-1 bg-sidebar-accent text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                Back to Home
+              </div>
+            )}
           </button>
           <button
-            className="w-full flex items-center gap-2 rounded-xl px-3 py-2 text-destructive hover:bg-destructive/20"
             onClick={() => {
               logout();
               navigate("/auth/login");
             }}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium",
+              "text-sidebar-foreground hover:bg-destructive/20 hover:text-destructive transition-all duration-200 group relative"
+            )}
           >
-            Logout
+            <LogOut size={18} className="flex-shrink-0 group-hover:translate-x-1 transition-transform" />
+            {!sidebarCollapsed && <span>Logout</span>}
+            {sidebarCollapsed && (
+              <div className="absolute left-full ml-2 px-2 py-1 bg-destructive text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                Logout
+              </div>
+            )}
           </button>
         </div>
       </aside>
 
-      <div className="flex-1 bg-background text-foreground min-h-screen">
-        <div className="py-10 px-4 md:px-8">
-          <div className="mx-auto max-w-6xl space-y-6">
-            <section className="rounded-2xl border border-border shadow-card bg-card overflow-hidden">
-              <div className="bg-gradient-to-r from-primary to-secondary px-4 md:px-6 py-5">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                  <div className="space-y-1">
-                    <p className="text-white/80 text-xs">Welcome back</p>
-                    <h1 className="text-xl md:text-2xl font-semibold text-white">{user?.firstName} {user?.lastName}</h1>
-                    <p className="text-sm text-white/80">{roleLabel} dashboard for bookings and tickets</p>
-                    <div className="flex items-center gap-2">
-                      <Badge className="border border-white/30 bg-white/10 text-white">{roleLabel}</Badge>
-                      <Badge className={`border border-white/30 bg-white/10 ${user?.isVerified ? "text-emerald-100" : "text-amber-100"}`}>
-                        {user?.isVerified ? "Verified" : "Unverified"}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button variant="secondary" className="bg-white text-primary hover:bg-secondary/90">
-                      <CalendarDays size={16} className="mr-2" />
-                      Book a space
-                    </Button>
-                    <Button variant="secondary" className="bg-white text-primary hover:bg-secondary/90">
-                      <Ticket size={16} className="mr-2" />
-                      Raise ticket
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </section>
+      {/* Mobile Sidebar */}
+      <aside
+        className={cn(
+          "fixed top-0 left-0 h-full z-40 md:hidden transition-transform duration-300 w-72",
+          "flex flex-col border-r border-sidebar-border/70 shadow-2xl bg-sidebar",
+          mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        {/* Mobile Header */}
+        <div className="flex items-center justify-between px-4 py-5 border-b border-sidebar-border/70">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-sidebar-primary flex items-center justify-center shadow-lg">
+              <GraduationCap size={20} className="text-white" />
+            </div>
+            <div>
+              <span className="text-white font-bold text-lg leading-none">Zentaritas</span>
+              <p className="text-sidebar-foreground text-[10px] leading-tight mt-0.5 tracking-[0.16em] uppercase">
+                My Profile
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setMobileSidebarOpen(false)}
+            className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sidebar-foreground hover:text-white hover:bg-white/20 transition-all"
+          >
+            <X size={16} />
+          </button>
+        </div>
 
-            {renderSection()}
+        {/* Mobile User Card */}
+        <div className="mx-3 mt-4 p-3 rounded-xl bg-white/10 border border-white/15">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10 border-2 border-sidebar-primary">
+              <AvatarImage src={avatarPreview || user?.profilePicture} alt={user?.firstName} />
+              <AvatarFallback className="bg-sidebar-primary text-white font-semibold text-sm">{getInitials()}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-semibold text-sm truncate">{user?.firstName} {user?.lastName}</p>
+              <p className="text-sidebar-foreground/70 text-xs truncate">@{username}</p>
+            </div>
+            {user?.isVerified && <ShieldCheck size={14} className="text-success flex-shrink-0" />}
+          </div>
+          <div className="mt-2">
+            <Badge className="bg-white/15 text-white text-[10px] border-white/20">{roleLabel}</Badge>
           </div>
         </div>
+
+        {/* Mobile Navigation */}
+        <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
+          <p className="text-sidebar-foreground text-[10px] font-semibold uppercase tracking-widest px-3 mb-3">
+            Navigation
+          </p>
+          {sectionList.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeSection === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setActiveSection(item.id);
+                  setMobileSidebarOpen(false);
+                }}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
+                  isActive
+                    ? "bg-white text-primary shadow-md"
+                    : "text-sidebar-foreground hover:bg-white/10 hover:text-white"
+                )}
+              >
+                <Icon size={18} className={isActive ? "text-primary" : ""} />
+                <span className="flex-1 text-left truncate">{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Mobile Bottom Actions */}
+        <div className="px-2 pb-4 border-t border-sidebar-border/70 pt-3 space-y-1">
+          <p className="text-sidebar-foreground text-[10px] font-semibold uppercase tracking-widest px-3 mb-2">
+            Actions
+          </p>
+          <button
+            onClick={() => navigate("/")}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-sidebar-foreground hover:bg-white/10 hover:text-white transition-all"
+          >
+            <Home size={18} />
+            <span>Back to Home</span>
+          </button>
+          <button
+            onClick={() => {
+              logout();
+              navigate("/auth/login");
+            }}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-sidebar-foreground hover:bg-destructive/20 hover:text-destructive transition-all"
+          >
+            <LogOut size={18} />
+            <span>Logout</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+        {/* Top Navbar */}
+        <header className="flex items-center justify-between px-4 md:px-6 py-4 bg-card border-b border-border shadow-sm">
+          {/* Mobile Menu Button */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMobileSidebarOpen(true)}
+              className="md:hidden w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-all"
+            >
+              <Menu size={20} />
+            </button>
+            <div>
+              <h1 className="font-display text-lg md:text-xl font-bold text-foreground">
+                {pageTitles[activeSection]}
+              </h1>
+              <p className="text-xs text-muted-foreground hidden sm:block">
+                {activeSection === "overview" && "Welcome to your personal dashboard"}
+                {activeSection === "bookings" && "Manage your space reservations"}
+                {activeSection === "tickets" && "Track your support requests"}
+                {activeSection === "profile" && "Update your personal information"}
+                {activeSection === "settings" && "Customize your experience"}
+              </p>
+            </div>
+          </div>
+
+          {/* Right Actions */}
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="hidden sm:flex border-border"
+              onClick={() => navigate("/book-room")}
+            >
+              <CalendarCheck size={16} className="mr-2" />
+              Book Space
+            </Button>
+            <Button
+              size="sm"
+              className="bg-primary hover:bg-primary/90"
+              onClick={() => setActiveSection("tickets")}
+            >
+              <Ticket size={16} className="mr-2 hidden sm:inline" />
+              Raise Ticket
+            </Button>
+            <div className="hidden md:flex items-center gap-2 pl-3 border-l border-border">
+              <Avatar className="h-9 w-9 border-2 border-primary/20">
+                <AvatarImage src={avatarPreview || user?.profilePicture} alt={user?.firstName} />
+                <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">{getInitials()}</AvatarFallback>
+              </Avatar>
+              <div className="hidden lg:block">
+                <p className="text-sm font-medium text-foreground">{user?.firstName}</p>
+                <p className="text-xs text-muted-foreground">{roleLabel}</p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <main className="flex-1 overflow-auto p-4 md:p-6 bg-muted/30">
+          <div className="max-w-7xl mx-auto">
+            {renderSection()}
+          </div>
+        </main>
       </div>
     </div>
   );
