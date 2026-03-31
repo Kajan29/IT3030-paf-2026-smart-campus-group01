@@ -47,7 +47,7 @@ const AddStaffModal = ({ onClose, onSuccess }: AddStaffModalProps) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState<{ password: string; emailSent: boolean } | null>(null);
+  const [success, setSuccess] = useState<{ message?: string; emailSent: boolean } | null>(null);
 
   const handleSubmit = async () => {
     if (!form.email || !form.firstName || !form.lastName) {
@@ -61,7 +61,7 @@ const AddStaffModal = ({ onClose, onSuccess }: AddStaffModalProps) => {
       const response = await adminUserService.createStaffAccount(form);
       console.log("Staff created:", response.data);
       setSuccess({ 
-        password: response.data.data.defaultPassword,
+        message: response.data.data.message,
         emailSent: response.data.data.emailSent 
       });
       setTimeout(() => {
@@ -97,20 +97,17 @@ const AddStaffModal = ({ onClose, onSuccess }: AddStaffModalProps) => {
               </div>
               <h3 className="font-bold text-foreground text-lg mb-2">Account Created!</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Staff account has been created successfully.
-                {success.emailSent && (
-                  <span className="block mt-1 text-success font-medium">
-                    ✉️ Login credentials sent to staff member's email.
-                  </span>
-                )}
+                {success.message || "Staff account has been created successfully."}
               </p>
-              <div className="bg-muted p-4 rounded-xl w-full">
-                <p className="text-xs text-muted-foreground mb-1">Default Password:</p>
-                <p className="font-mono text-sm font-bold text-foreground">{success.password}</p>
-                <p className="text-xs text-warning mt-2">
-                  {success.emailSent 
-                    ? "Password has been emailed to the staff member. Save this for your records."
-                    : "Important: Save this password and share it with the staff member manually."}
+              <div className="bg-muted p-4 rounded-xl w-full space-y-2">
+                <p className="text-sm font-medium text-foreground">
+                  {success.emailSent
+                    ? "Credentials email has been sent to the staff member."
+                    : "Credentials email could not be sent automatically."}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  For security, the default password is not shown here.
+                  {!success.emailSent && " Ask the staff member to reset their password via the login page."}
                 </p>
               </div>
             </div>

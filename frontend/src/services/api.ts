@@ -5,9 +5,7 @@ const API_URL = import.meta.env.VITE_API_URL || '/api'
 
 const api = axios.create({
   baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  withCredentials: true,
 })
 
 api.interceptors.request.use(
@@ -27,7 +25,7 @@ api.interceptors.request.use(
       authService.updateSessionActivity()
     }
     
-    const token = localStorage.getItem('token')
+    const token = authService.getAccessToken()
     if (token && config.headers) {
       ;(config.headers as Record<string, string>).Authorization = `Bearer ${token}`
     }
@@ -40,11 +38,43 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config as typeof error.config & { _retry?: boolean }
+    const isAuthEndpoint = originalRequest?.url?.includes('/auth/')
+
+    if (error.response?.status === 401 && !originalRequest?._retry && !isAuthEndpoint) {
+      originalRequest._retry = true
+      try {
+        const refreshResponse = await axios.post(
+          `${API_URL}/auth/refresh`,
+          {},
+          { withCredentials: true }
+        )
+
+        const refreshedToken =
+          refreshResponse.data?.data?.accessToken ||
+          refreshResponse.data?.data?.token
+
+        if (refreshedToken) {
+          authService.setAccessToken(refreshedToken)
+          originalRequest.headers = originalRequest.headers || {}
+          ;(originalRequest.headers as Record<string, string>).Authorization = `Bearer ${refreshedToken}`
+          return api(originalRequest)
+        }
+      } catch (refreshError) {
+        authService.logout()
+        if (!window.location.pathname.startsWith('/auth/')) {
+          window.location.href = '/auth/login'
+        }
+        return Promise.reject(refreshError)
+      }
+    }
+
     if (error.response?.status === 401) {
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      window.location.href = '/auth/login'
+      authService.logout()
+      if (!window.location.pathname.startsWith('/auth/')) {
+        window.location.href = '/auth/login'
+      }
     }
     return Promise.reject(error)
   }

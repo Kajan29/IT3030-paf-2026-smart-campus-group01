@@ -11,8 +11,8 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 
 @Service
 @RequiredArgsConstructor
@@ -33,7 +33,10 @@ public class EmailService {
     private String loadTemplate(String templateName) {
         try {
             ClassPathResource resource = new ClassPathResource("templates/" + templateName);
-            byte[] bytes = Files.readAllBytes(resource.getFile().toPath());
+            byte[] bytes;
+            try (InputStream inputStream = resource.getInputStream()) {
+                bytes = inputStream.readAllBytes();
+            }
             return new String(bytes, StandardCharsets.UTF_8);
         } catch (IOException e) {
             log.error("Failed to load email template: {}", templateName, e);
