@@ -1,12 +1,12 @@
-import { UserPlus, Trophy, Megaphone, Sparkles, BarChart3, type LucideIcon } from "lucide-react";
+import { BarChart3, Building2, DoorOpen, Layers, Wrench, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { mockQuickActions } from "@/data/mockData";
 
 const iconMap: Record<string, LucideIcon> = {
-  UserPlus,
-  Trophy,
-  Megaphone,
-  Sparkles,
+  Building2,
+  Layers,
+  DoorOpen,
+  Wrench,
   BarChart3,
 };
 

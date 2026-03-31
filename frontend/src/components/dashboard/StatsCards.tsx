@@ -1,9 +1,10 @@
 import {
+  Building2,
+  Layers,
+  DoorOpen,
   Users,
   Calendar,
-  Star,
-  Trophy,
-  FileImage,
+  Wrench,
   AlertTriangle,
   TrendingUp,
   TrendingDown,
@@ -13,11 +14,12 @@ import { cn } from "@/lib/utils";
 import { mockStats } from "@/data/mockData";
 
 const iconMap: Record<string, LucideIcon> = {
+  Building2,
+  Layers,
+  DoorOpen,
   Users,
   Calendar,
-  Star,
-  Trophy,
-  FileImage,
+  Wrench,
   AlertTriangle,
 };
 

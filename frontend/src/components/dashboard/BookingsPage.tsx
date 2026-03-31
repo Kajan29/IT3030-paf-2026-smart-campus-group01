@@ -1,11 +1,11 @@
 import { CheckCircle2, XCircle, Clock, User, Calendar } from "lucide-react";
 
 const bookings = [
-  { id: "BK001", venue: "Sports Hall A", user: "Alice Johnson", date: "Apr 11", time: "10:00-12:00", status: "Confirmed", purpose: "Football Training" },
-  { id: "BK002", venue: "Conference Room 1", user: "Dr. Smith", date: "Apr 12", time: "2:00-4:00", status: "Pending", purpose: "Faculty Meeting" },
-  { id: "BK003", venue: "Auditorium B", user: "Media Club", date: "Apr 12", time: "9:00-5:00", status: "Confirmed", purpose: "Media Showcase Setup" },
-  { id: "BK004", venue: "Lab 3B", user: "Prof. Chen", date: "Apr 13", time: "8:00-10:00", status: "Cancelled", purpose: "Lab Session" },
-  { id: "BK005", venue: "Swimming Pool", user: "Swimming Club", date: "Apr 14", time: "6:00-8:00", status: "Confirmed", purpose: "Practice Session" },
+  { id: "BK001", venue: "Lecture Hall Alpha", user: "Faculty Office", date: "Apr 11", time: "10:00-12:00", status: "Confirmed", purpose: "CS101 Lecture" },
+  { id: "BK002", venue: "Finance Meeting Room", user: "Admin Unit", date: "Apr 12", time: "2:00-4:00", status: "Pending", purpose: "Budget Review" },
+  { id: "BK003", venue: "Seminar Hall Aurora", user: "Engineering Dept", date: "Apr 12", time: "9:00-11:00", status: "Confirmed", purpose: "Research Seminar" },
+  { id: "BK004", venue: "Computer Lab C2", user: "IT Faculty", date: "Apr 13", time: "8:00-10:00", status: "Cancelled", purpose: "Programming Practical" },
+  { id: "BK005", venue: "Discussion Room L-12", user: "Library Services", date: "Apr 14", time: "1:00-2:00", status: "Confirmed", purpose: "Group Study Session" },
 ];
 
 const statusStyle: Record<string, { className: string; icon: React.ElementType }> = {
@@ -19,7 +19,7 @@ export const BookingsPage = () => (
     <div className="flex items-center justify-between">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Bookings</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Manage all venue and facility bookings</p>
+        <p className="text-sm text-muted-foreground mt-0.5">Manage room booking requests for academic and administrative spaces</p>
       </div>
     </div>
 

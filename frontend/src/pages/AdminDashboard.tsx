@@ -3,32 +3,25 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Navbar } from "@/components/dashboard/Navbar";
 import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
 import { UserManagementPage } from "@/components/dashboard/UserManagementPage";
-import { SportsManagementPage } from "@/components/dashboard/SportsManagementPage";
-import { MediaClubPage } from "@/components/dashboard/MediaClubPage";
-import { EventManagementPage } from "@/components/dashboard/EventManagementPage";
+import { BuildingManagementPage } from "@/components/dashboard/BuildingManagementPage";
+import { FloorManagementPage } from "@/components/dashboard/FloorManagementPage";
+import { RoomManagementPage } from "@/components/dashboard/RoomManagementPage";
+import { BuildingDetailsPage } from "@/components/dashboard/BuildingDetailsPage";
+import { RoomDetailsPage } from "@/components/dashboard/RoomDetailsPage";
 import { BookingsPage } from "@/components/dashboard/BookingsPage";
 import { ReportsAnalyticsPage } from "@/components/dashboard/ReportsAnalyticsPage";
 import { SettingsPage } from "@/components/dashboard/SettingsPage";
 import { Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const pageComponents: Record<string, React.ComponentType> = {
-  dashboard: DashboardOverview,
-  users: UserManagementPage,
-  sports: SportsManagementPage,
-  media: MediaClubPage,
-  events: EventManagementPage,
-  bookings: BookingsPage,
-  reports: ReportsAnalyticsPage,
-  settings: SettingsPage,
-};
-
 const pageTitles: Record<string, string> = {
   dashboard: "Dashboard",
   users: "User Management",
-  sports: "Sports Management",
-  media: "Media Club",
-  events: "Event Management",
+  buildings: "Building Management",
+  floors: "Floor Management",
+  rooms: "Room Management",
+  buildingDetails: "Building Details",
+  roomDetails: "Room Details",
   bookings: "Bookings",
   reports: "Reports & Analytics",
   settings: "Settings",
@@ -36,6 +29,9 @@ const pageTitles: Record<string, string> = {
 
 const AdminDashboard = () => {
   const [activeItem, setActiveItem] = useState("dashboard");
+  const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
+  const [selectedFloorId, setSelectedFloorId] = useState<string | null>(null);
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
@@ -47,7 +43,87 @@ const AdminDashboard = () => {
     });
   };
 
-  const PageComponent = pageComponents[activeItem];
+  const openBuildingDetails = (buildingId: string) => {
+    setSelectedBuildingId(buildingId);
+    setActiveItem("buildingDetails");
+  };
+
+  const openFloorManagement = (buildingId?: string) => {
+    if (buildingId) {
+      setSelectedBuildingId(buildingId);
+    }
+    setActiveItem("floors");
+  };
+
+  const openRoomManagement = (buildingId?: string, floorId?: string) => {
+    if (buildingId) {
+      setSelectedBuildingId(buildingId);
+    }
+    if (floorId) {
+      setSelectedFloorId(floorId);
+    }
+    setActiveItem("rooms");
+  };
+
+  const openRoomDetails = (roomId: string) => {
+    setSelectedRoomId(roomId);
+    setActiveItem("roomDetails");
+  };
+
+  const renderPage = () => {
+    switch (activeItem) {
+      case "dashboard":
+        return <DashboardOverview />;
+      case "users":
+        return <UserManagementPage />;
+      case "buildings":
+        return (
+          <BuildingManagementPage
+            onOpenBuildingDetails={openBuildingDetails}
+            onOpenFloorManagement={openFloorManagement}
+            onOpenRoomManagement={openRoomManagement}
+          />
+        );
+      case "floors":
+        return (
+          <FloorManagementPage
+            selectedBuildingId={selectedBuildingId}
+            onOpenBuildingDetails={openBuildingDetails}
+            onOpenRoomManagement={openRoomManagement}
+          />
+        );
+      case "rooms":
+        return (
+          <RoomManagementPage
+            selectedBuildingId={selectedBuildingId}
+            selectedFloorId={selectedFloorId}
+            onOpenRoomDetails={openRoomDetails}
+          />
+        );
+      case "buildingDetails":
+        return (
+          <BuildingDetailsPage
+            buildingId={selectedBuildingId}
+            onOpenFloorManagement={openFloorManagement}
+            onOpenRoomDetails={openRoomDetails}
+          />
+        );
+      case "roomDetails":
+        return <RoomDetailsPage roomId={selectedRoomId} />;
+      case "bookings":
+        return <BookingsPage />;
+      case "reports":
+        return <ReportsAnalyticsPage />;
+      case "settings":
+        return <SettingsPage />;
+      default:
+        return <DashboardOverview />;
+    }
+  };
+
+  const navActiveItem =
+    activeItem === "buildingDetails" ? "buildings" : activeItem === "roomDetails" ? "rooms" : activeItem;
+
   const pageTitle = pageTitles[activeItem] || activeItem;
 
   return (
@@ -58,7 +134,7 @@ const AdminDashboard = () => {
 
       <div className="hidden md:flex">
         <Sidebar
-          activeItem={activeItem}
+          activeItem={navActiveItem}
           onItemClick={setActiveItem}
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed((c) => !c)}
@@ -70,7 +146,7 @@ const AdminDashboard = () => {
         mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <Sidebar
-          activeItem={activeItem}
+          activeItem={navActiveItem}
           onItemClick={(id) => { setActiveItem(id); setMobileSidebarOpen(false); }}
           collapsed={false}
           onToggle={() => setMobileSidebarOpen(false)}
@@ -89,7 +165,7 @@ const AdminDashboard = () => {
         <Navbar darkMode={darkMode} onToggleDark={toggleDark} />
 
         <main className="flex-1 overflow-auto p-4 md:p-6">
-          {PageComponent ? <PageComponent /> : <DashboardOverview />}
+          {renderPage()}
         </main>
       </div>
     </div>

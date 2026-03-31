@@ -48,7 +48,7 @@ export const Navbar = ({ darkMode, onToggleDark }: NavbarProps) => {
         <Search size={16} className="text-muted-foreground flex-shrink-0" />
         <input
           type="text"
-          placeholder="Search users, events, reports..."
+          placeholder="Search buildings, floors, rooms, reports..."
           className="bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground w-full"
           onFocus={() => setSearchFocused(true)}
           onBlur={() => setSearchFocused(false)}

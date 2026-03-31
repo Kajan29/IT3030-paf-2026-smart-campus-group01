@@ -1,24 +1,24 @@
 import { Download, FileText, TrendingUp, Users, CalendarDays, AlertTriangle } from "lucide-react";
 
 const reportCards = [
-  { label: "Monthly Active Users", value: "7,842", delta: "+9.4%", tone: "text-success", icon: Users },
-  { label: "Event Attendance", value: "84%", delta: "+3.1%", tone: "text-info", icon: CalendarDays },
-  { label: "Venue Utilization", value: "71%", delta: "+6.5%", tone: "text-primary", icon: TrendingUp },
-  { label: "Open Incidents", value: "12", delta: "-4.0%", tone: "text-destructive", icon: AlertTriangle },
+  { label: "Building Utilization", value: "82%", delta: "+4.2%", tone: "text-success", icon: Users },
+  { label: "Room Occupancy", value: "76%", delta: "+2.1%", tone: "text-info", icon: CalendarDays },
+  { label: "Booking Completion", value: "91%", delta: "+5.0%", tone: "text-primary", icon: TrendingUp },
+  { label: "Maintenance Alerts", value: "9", delta: "-2.0%", tone: "text-destructive", icon: AlertTriangle },
 ];
 
 const topReports = [
-  { name: "Student Enrollment by Faculty", updated: "2 hours ago", format: "PDF" },
-  { name: "Facility Booking Heatmap", updated: "Today", format: "CSV" },
-  { name: "Sports Participation Summary", updated: "Yesterday", format: "XLSX" },
-  { name: "Media Club Content Performance", updated: "2 days ago", format: "PDF" },
+  { name: "Building Capacity by Campus", updated: "2 hours ago", format: "PDF" },
+  { name: "Room Booking Heatmap", updated: "Today", format: "CSV" },
+  { name: "Floor Accessibility Compliance", updated: "Yesterday", format: "XLSX" },
+  { name: "Maintenance Backlog by Building", updated: "2 days ago", format: "PDF" },
 ];
 
 const compliance = [
-  { metric: "Attendance policy compliance", value: 92 },
-  { metric: "Event safety checklist completion", value: 88 },
-  { metric: "Staff profile completeness", value: 95 },
-  { metric: "Booking approval SLA", value: 81 },
+  { metric: "Building safety checklist completion", value: 93 },
+  { metric: "Accessibility standards compliance", value: 89 },
+  { metric: "Room metadata completeness", value: 96 },
+  { metric: "Booking approval SLA", value: 84 },
 ];
 
 export const ReportsAnalyticsPage = () => (
@@ -26,7 +26,7 @@ export const ReportsAnalyticsPage = () => (
     <div className="flex items-center justify-between">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Reports & Analytics</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Track university operations, trends, and compliance status</p>
+        <p className="text-sm text-muted-foreground mt-0.5">Track building, floor, and room operations with compliance insights</p>
       </div>
       <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl gradient-primary text-white text-sm font-semibold hover:opacity-90 transition-opacity shadow-md">
         <Download size={16} /> Export Monthly Pack

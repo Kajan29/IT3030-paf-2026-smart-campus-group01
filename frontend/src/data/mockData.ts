@@ -12,20 +12,20 @@ export const mockUsers: User[] = [
 ];
 
 export const mockStats: StatCard[] = [
-  { id: "1", title: "Campus Users", value: 10124, growth: 10.8, icon: "Users", gradient: "gradient-primary" },
-  { id: "2", title: "Active Bookings", value: 418, growth: 7.4, icon: "Calendar", gradient: "gradient-info" },
-  { id: "3", title: "Upcoming Events", value: 16, growth: 4.2, icon: "Star", gradient: "gradient-warning" },
-  { id: "4", title: "Sports Registrations", value: 1432, growth: 18.7, icon: "Trophy", gradient: "gradient-success" },
-  { id: "5", title: "Media Publications", value: 622, growth: 11.2, icon: "FileImage", gradient: "gradient-red" },
+  { id: "1", title: "Total Buildings", value: 6, growth: 3.2, icon: "Building2", gradient: "gradient-primary" },
+  { id: "2", title: "Registered Floors", value: 21, growth: 5.7, icon: "Layers", gradient: "gradient-info" },
+  { id: "3", title: "Managed Rooms", value: 15, growth: 8.3, icon: "DoorOpen", gradient: "gradient-warning" },
+  { id: "4", title: "Active Room Bookings", value: 418, growth: 7.1, icon: "Calendar", gradient: "gradient-success" },
+  { id: "5", title: "Maintenance Tickets", value: 27, growth: -4.8, icon: "Wrench", gradient: "gradient-red" },
   { id: "6", title: "Open Alerts", value: 4, growth: -20.0, icon: "AlertTriangle", gradient: "gradient-warning" },
 ];
 
 export const mockQuickActions: QuickAction[] = [
-  { id: "1", label: "Add User", icon: "UserPlus", gradient: "gradient-primary", description: "Register a new student or staff account" },
-  { id: "2", label: "Create Tournament", icon: "Trophy", gradient: "gradient-success", description: "Plan inter-faculty sports tournaments" },
-  { id: "3", label: "Publish Event", icon: "Megaphone", gradient: "gradient-warning", description: "Post approved events to student portal" },
-  { id: "4", label: "Generate Poster", icon: "Sparkles", gradient: "gradient-red", description: "Build media artwork for campus promotions" },
-  { id: "5", label: "View Reports", icon: "BarChart3", gradient: "gradient-info", description: "Open analytics and compliance reports" },
+  { id: "1", label: "Add Building", icon: "Building2", gradient: "gradient-primary", description: "Create a new building profile with manager details" },
+  { id: "2", label: "Add Floor", icon: "Layers", gradient: "gradient-success", description: "Register a floor and its accessibility metadata" },
+  { id: "3", label: "Add Room", icon: "DoorOpen", gradient: "gradient-warning", description: "Create a room profile with facilities and capacity" },
+  { id: "4", label: "Schedule Maintenance", icon: "Wrench", gradient: "gradient-red", description: "Create preventive maintenance and repair tasks" },
+  { id: "5", label: "View Reports", icon: "BarChart3", gradient: "gradient-info", description: "Open building and room analytics dashboards" },
 ];
 
 export const mockNotifications: Notification[] = [
@@ -47,7 +47,7 @@ export const userGrowthData = [
 ];
 
 export const bookingDistribution = [
-  { name: "Sports Hall", value: 32, color: "#0f3460" },
+  { name: "Lecture Halls", value: 32, color: "#0f3460" },
   { name: "Conference Rooms", value: 24, color: "#e53935" },
   { name: "Auditorium", value: 19, color: "#2196f3" },
   { name: "Labs", value: 15, color: "#4caf50" },
@@ -57,9 +57,9 @@ export const bookingDistribution = [
 export const eventsPerMonth = [
   { month: "Oct", events: 10 },
   { month: "Nov", events: 12 },
-  { month: "Dec", events: 9 },
-  { month: "Jan", events: 11 },
+  { month: "Dec", events: 11 },
+  { month: "Jan", events: 13 },
   { month: "Feb", events: 14 },
   { month: "Mar", events: 16 },
-  { month: "Apr", events: 13 },
+  { month: "Apr", events: 15 },
 ];
