@@ -49,6 +49,10 @@ interface AuthResponse {
     email: string
     firstName: string
     lastName: string
+    username?: string
+    phoneNumber?: string
+    department?: string
+    profilePicture?: string
     role: UserRole
     isVerified: boolean
   }

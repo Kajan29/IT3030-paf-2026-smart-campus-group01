@@ -5,6 +5,10 @@ interface User {
   email: string
   firstName: string
   lastName: string
+  username?: string
+  phoneNumber?: string
+  department?: string
+  profilePicture?: string
   role: UserRole
   isVerified: boolean
 }
@@ -15,6 +19,7 @@ type AuthContextType = {
   googleLogin: (token: string, role?: UserRole) => Promise<any>
   logout: () => void
   register: (userData: any) => Promise<any>
+  updateUser: (user: User) => void
   isAuthenticated: boolean
   loading: boolean
 }
@@ -99,6 +104,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return response
   }
 
+  const updateUser = (updatedUser: User) => {
+    setUser(updatedUser)
+    const token = authService.getAccessToken()
+    if (token) {
+      authService.saveAuthData(token, updatedUser)
+    }
+  }
+
   const logout = () => {
     authService.serverLogout().catch(() => null).finally(() => {
       authService.logout()
@@ -112,6 +125,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     googleLogin,
     logout,
     register,
+    updateUser,
     isAuthenticated: !!user,
     loading,
   }

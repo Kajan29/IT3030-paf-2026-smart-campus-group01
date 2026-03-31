@@ -96,6 +96,10 @@ public class GoogleAuthService {
                     .email(user.getEmail())
                     .firstName(user.getFirstName())
                     .lastName(user.getLastName())
+                    .username(user.getUsername())
+                    .profilePicture(user.getProfilePicture())
+                    .phoneNumber(user.getPhoneNumber())
+                    .department(user.getDepartment())
                     .role(user.getRole())
                     .isVerified(user.getIsVerified())
                     .build();

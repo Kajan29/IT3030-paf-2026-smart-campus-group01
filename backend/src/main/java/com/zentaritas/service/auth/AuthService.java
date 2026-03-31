@@ -286,6 +286,10 @@ public class AuthService implements UserDetailsService {
                                 .email(user.getEmail())
                                 .firstName(user.getFirstName())
                                 .lastName(user.getLastName())
+                    .username(user.getUsername())
+                    .phoneNumber(user.getPhoneNumber())
+                    .department(user.getDepartment())
+                    .profilePicture(user.getProfilePicture())
                                 .role(user.getRole())
                                 .isVerified(user.getIsVerified())
                                 .build();

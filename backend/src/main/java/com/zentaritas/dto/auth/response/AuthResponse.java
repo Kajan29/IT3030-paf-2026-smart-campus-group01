@@ -17,6 +17,10 @@ public class AuthResponse {
     private String email;
     private String firstName;
     private String lastName;
+    private String username;
+    private String phoneNumber;
+    private String department;
+    private String profilePicture;
     private Role role;
     private Boolean isVerified;
 }
