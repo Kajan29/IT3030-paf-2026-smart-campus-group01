@@ -20,6 +20,7 @@ const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { googleLogin } = useAuth();
+  const hasGoogleClientId = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 
   const updateForm = (key: string, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -214,15 +215,19 @@ const RegisterPage = () => {
           </div>
 
           <div className="flex justify-center">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleError}
-              theme="outline"
-              size="large"
-              text="signup_with"
-              shape="rectangular"
-              width="100%"
-            />
+            {hasGoogleClientId ? (
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+                theme="outline"
+                size="large"
+                text="signup_with"
+                shape="rectangular"
+                width="100%"
+              />
+            ) : (
+              <p className="text-sm text-center text-gray-500">Google Sign Up is currently unavailable.</p>
+            )}
           </div>
 
           <p className="auth-footer-text">

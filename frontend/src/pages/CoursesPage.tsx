@@ -1,62 +1,136 @@
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { FileText, Download, Search, BookOpen, Beaker, Code, Calculator } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { motion } from "framer-motion";
-import { Code, Briefcase, FlaskConical, Palette, BarChart3, Shield, Clock, Users, Star } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import heroCampus from "@/assets/hero-campus.jpg";
 
-const allCourses = [
-  { icon: Code, faculty: "Computing", title: "BSc (Hons) in IT", duration: "4 Years", students: 450, rating: 4.8 },
-  { icon: Code, faculty: "Computing", title: "BSc in Computer Science", duration: "4 Years", students: 380, rating: 4.9 },
-  { icon: Code, faculty: "Computing", title: "BSc in Data Science", duration: "4 Years", students: 200, rating: 4.7 },
-  { icon: Briefcase, faculty: "Business", title: "BBA in Management", duration: "3 Years", students: 320, rating: 4.5 },
-  { icon: Briefcase, faculty: "Business", title: "MBA Program", duration: "2 Years", students: 150, rating: 4.8 },
-  { icon: FlaskConical, faculty: "Engineering", title: "BSc in Civil Engineering", duration: "4 Years", students: 280, rating: 4.6 },
-  { icon: FlaskConical, faculty: "Engineering", title: "BSc in Electrical Engineering", duration: "4 Years", students: 240, rating: 4.7 },
-  { icon: Palette, faculty: "Design", title: "BA in UX/UI Design", duration: "3 Years", students: 180, rating: 4.5 },
-  { icon: BarChart3, faculty: "Computing", title: "MSc in Big Data Analytics", duration: "2 Years", students: 120, rating: 4.9 },
-  { icon: Shield, faculty: "Computing", title: "BSc in Cybersecurity", duration: "4 Years", students: 160, rating: 4.8 },
+const categories = [
+  { name: "All", icon: BookOpen },
+  { name: "Computer Science", icon: Code },
+  { name: "Engineering", icon: Beaker },
+  { name: "Mathematics", icon: Calculator },
 ];
 
-const CoursesPage = () => (
-  <div className="min-h-screen bg-background">
-    <Navbar />
-    <div className="pt-24 pb-16">
-      <div className="container mx-auto px-4">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-16">
-          <span className="text-primary font-semibold text-sm uppercase tracking-wider">Programs</span>
-          <h1 className="font-heading text-4xl md:text-5xl font-bold text-foreground mt-3">All Courses & Programs</h1>
-          <p className="text-muted-foreground mt-4 max-w-xl mx-auto">Browse our comprehensive range of undergraduate and postgraduate programs.</p>
-        </motion.div>
+const courseNotes = [
+  { title: "Data Structures & Algorithms", category: "Computer Science", type: "Lecture Notes", size: "2.4 MB" },
+  { title: "Object Oriented Programming", category: "Computer Science", type: "Slides", size: "5.1 MB" },
+  { title: "Database Management Systems", category: "Computer Science", type: "Lecture Notes", size: "3.2 MB" },
+  { title: "Thermodynamics", category: "Engineering", type: "Lab Manual", size: "4.7 MB" },
+  { title: "Circuit Analysis", category: "Engineering", type: "Lecture Notes", size: "1.8 MB" },
+  { title: "Linear Algebra", category: "Mathematics", type: "Slides", size: "2.1 MB" },
+  { title: "Calculus II", category: "Mathematics", type: "Lecture Notes", size: "3.5 MB" },
+  { title: "Machine Learning Basics", category: "Computer Science", type: "Lab Manual", size: "6.2 MB" },
+];
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {allCourses.map((course, i) => (
+const ResourcesPage = () => {
+  const [activeCategory, setActiveCategory] = useState("All");
+  const [search, setSearch] = useState("");
+
+  const filtered = courseNotes.filter(
+    (n) =>
+      (activeCategory === "All" || n.category === activeCategory) &&
+      n.title.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navbar />
+
+      {/* Hero Banner */}
+      <section className="relative pt-24 pb-16 overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <img src={heroCampus} alt="Resources" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-primary/80" />
+        </div>
+        <div className="container mx-auto px-4 relative z-10 text-center py-16">
+          <motion.h1
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="font-display text-4xl md:text-5xl font-bold text-primary-foreground mb-4"
+          >
+            Course Resources
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-primary-foreground/80 text-lg max-w-2xl mx-auto"
+          >
+            Browse and download lecture notes, slides, and study materials for your courses.
+          </motion.p>
+        </div>
+      </section>
+
+      <section className="container mx-auto px-4 py-16">
+        {/* Search */}
+        <div className="max-w-md mx-auto mb-8 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search resources..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
+        {/* Category filters */}
+        <div className="flex flex-wrap gap-3 justify-center mb-10">
+          {categories.map((c) => (
+            <button
+              key={c.name}
+              onClick={() => setActiveCategory(c.name)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                activeCategory === c.name
+                  ? "bg-accent text-accent-foreground shadow-md"
+                  : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+              }`}
+            >
+              <c.icon className="h-4 w-4" />
+              {c.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Notes grid */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filtered.map((note, i) => (
             <motion.div
-              key={course.title}
-              initial={{ opacity: 0, y: 30 }}
+              key={note.title}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              className="bg-card rounded-2xl p-6 shadow-card hover:shadow-card-hover transition-all duration-300 border border-border hover:-translate-y-1"
+              className="glass-card rounded-xl p-5 flex items-start gap-4 group hover:shadow-xl transition-shadow"
             >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <course.icon className="w-5 h-5 text-primary" />
-                </div>
-                <span className="text-xs font-semibold text-primary bg-primary/10 px-3 py-1 rounded-full">{course.faculty}</span>
+              <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center text-accent group-hover:bg-accent group-hover:text-accent-foreground transition-colors">
+                <FileText className="h-6 w-6" />
               </div>
-              <h3 className="font-heading text-lg font-semibold text-foreground mb-3">{course.title}</h3>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-                <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {course.duration}</span>
-                <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {course.students}</span>
-                <span className="flex items-center gap-1"><Star className="w-3.5 h-3.5 text-yellow-500" /> {course.rating}</span>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-foreground text-sm mb-1 truncate">
+                  {note.title}
+                </h3>
+                <p className="text-xs text-muted-foreground mb-2">
+                  {note.category} · {note.type} · {note.size}
+                </p>
+                <button className="flex items-center gap-1 text-xs font-medium text-accent hover:text-accent/80 transition-colors">
+                  <Download className="h-3 w-3" />
+                  Download
+                </button>
               </div>
-              <Button variant="outline" size="sm" className="w-full">View Details</Button>
             </motion.div>
           ))}
         </div>
-      </div>
-    </div>
-    <Footer />
-  </div>
-);
 
-export default CoursesPage;
+        {filtered.length === 0 && (
+          <p className="text-center text-muted-foreground mt-10">
+            No resources found. Try a different search or category.
+          </p>
+        )}
+      </section>
+      <Footer />
+    </div>
+  );
+};
+
+export default ResourcesPage;

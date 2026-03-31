@@ -14,6 +14,11 @@ import java.util.stream.Collectors;
 @Configuration
 public class CorsConfig {
 
+    private static final List<String> DEFAULT_ORIGIN_PATTERNS = List.of(
+        "http://localhost:*",
+        "http://127.0.0.1:*"
+    );
+
     @Value("${app.cors.allowed-origins}")
     private String allowedOrigins;
 
@@ -24,6 +29,10 @@ public class CorsConfig {
             .map(String::trim)
             .filter(origin -> !origin.isEmpty())
             .collect(Collectors.toList());
+
+        if (originPatterns.isEmpty()) {
+            originPatterns = DEFAULT_ORIGIN_PATTERNS;
+        }
 
         configuration.setAllowedOriginPatterns(originPatterns);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));

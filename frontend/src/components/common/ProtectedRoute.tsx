@@ -1,13 +1,14 @@
 import { ReactNode } from 'react'
-import { Navigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { Navigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 
 interface ProtectedRouteProps {
   children: ReactNode
 }
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { isAuthenticated, loading } = useAuth()
+  const { isAuthenticated, loading, user } = useAuth()
+  const location = useLocation()
 
   if (loading) {
     return (
@@ -19,6 +20,10 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   if (!isAuthenticated) {
     return <Navigate to="/auth/login" replace />
+  }
+
+  if (user?.role === 'ADMIN' && !location.pathname.startsWith('/admin')) {
+    return <Navigate to="/admin" replace />
   }
 
   return <>{children}</>
