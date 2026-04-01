@@ -22,6 +22,7 @@ import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminProtectedRoute from './components/common/AdminProtectedRoute'
 import ProtectedRoute from './components/common/ProtectedRoute'
+import GuestOnlyRoute from './components/common/GuestOnlyRoute'
 
 function App(): JSX.Element {
   return (
@@ -37,10 +38,38 @@ function App(): JSX.Element {
         <Route path="/resources" element={<ResourcesPage />} />
 
         {/* Auth Routes */}
-        <Route path="/auth/login" element={<LoginPage />} />
-        <Route path="/auth/register" element={<RegisterPage />} />
-        <Route path="/auth/verify-otp" element={<VerifyOtpPage />} />
-        <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
+        <Route
+          path="/auth/login"
+          element={
+            <GuestOnlyRoute>
+              <LoginPage />
+            </GuestOnlyRoute>
+          }
+        />
+        <Route
+          path="/auth/register"
+          element={
+            <GuestOnlyRoute>
+              <RegisterPage />
+            </GuestOnlyRoute>
+          }
+        />
+        <Route
+          path="/auth/verify-otp"
+          element={
+            <GuestOnlyRoute>
+              <VerifyOtpPage />
+            </GuestOnlyRoute>
+          }
+        />
+        <Route
+          path="/auth/forgot-password"
+          element={
+            <GuestOnlyRoute>
+              <ForgotPasswordPage />
+            </GuestOnlyRoute>
+          }
+        />
 
         {/* Protected User Routes */}
         <Route 
