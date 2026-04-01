@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+﻿import { Routes, Route } from 'react-router-dom'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
@@ -19,8 +19,9 @@ import VerifyOtpPage from './pages/auth/VerifyOtpPage'
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
 
 // Admin Pages
-import AdminDashboard from './pages/AdminDashboard'
-import AdminProtectedRoute from './components/common/AdminProtectedRoute'
+import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminPage from './pages/admin/AdminPage'
+import AdminProtectedRoute from './components/admin/AdminProtectedRoute'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import GuestOnlyRoute from './components/common/GuestOnlyRoute'
 
@@ -94,6 +95,14 @@ function App(): JSX.Element {
           path="/admin" 
           element={
             <AdminProtectedRoute>
+              <AdminPage />
+            </AdminProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/dashboard" 
+          element={
+            <AdminProtectedRoute>
               <AdminDashboard />
             </AdminProtectedRoute>
           } 
@@ -108,3 +117,4 @@ function App(): JSX.Element {
 }
 
 export default App
+
