@@ -16,6 +16,12 @@ interface ApiEnvelope<T> {
   data: T;
 }
 
+interface FacilitySnapshot {
+  buildings: Building[];
+  floors: Floor[];
+  rooms: Room[];
+}
+
 interface ApiUserSummary {
   id: number;
   email: string;
@@ -271,7 +277,59 @@ const toRoomPayload = (payload: RoomUpsertPayload) => ({
   maintenanceHistory: payload.maintenanceHistory,
 });
 
+const SNAPSHOT_CACHE_TTL_MS = 45_000;
+
+let snapshotCache: FacilitySnapshot | null = null;
+let snapshotExpiresAt = 0;
+let snapshotInFlight: Promise<FacilitySnapshot> | null = null;
+
+const isSnapshotFresh = () => snapshotCache !== null && Date.now() < snapshotExpiresAt;
+
+const fetchFacilitySnapshot = async (): Promise<FacilitySnapshot> => {
+  if (isSnapshotFresh()) {
+    return snapshotCache as FacilitySnapshot;
+  }
+
+  if (snapshotInFlight) {
+    return snapshotInFlight;
+  }
+
+  snapshotInFlight = Promise.all([
+    api.get<ApiEnvelope<ApiBuilding[]>>("/management/facilities/buildings"),
+    api.get<ApiEnvelope<ApiFloor[]>>("/management/facilities/floors"),
+    api.get<ApiEnvelope<ApiRoom[]>>("/management/facilities/rooms"),
+  ])
+    .then(([buildingsResponse, floorsResponse, roomsResponse]) => {
+      const data: FacilitySnapshot = {
+        buildings: (buildingsResponse.data.data || []).map(mapBuilding),
+        floors: (floorsResponse.data.data || []).map(mapFloor),
+        rooms: (roomsResponse.data.data || []).map(mapRoom),
+      };
+      snapshotCache = data;
+      snapshotExpiresAt = Date.now() + SNAPSHOT_CACHE_TTL_MS;
+      return data;
+    })
+    .finally(() => {
+      snapshotInFlight = null;
+    });
+
+  return snapshotInFlight;
+};
+
+const invalidateSnapshot = () => {
+  snapshotCache = null;
+  snapshotExpiresAt = 0;
+};
+
 export const facilityService = {
+  getFacilitySnapshot: fetchFacilitySnapshot,
+
+  preloadFacilitySnapshot() {
+    return fetchFacilitySnapshot();
+  },
+
+  invalidateFacilitySnapshot: invalidateSnapshot,
+
   async getBuildings() {
     const response = await api.get<ApiEnvelope<ApiBuilding[]>>("/management/facilities/buildings");
     return (response.data.data || []).map(mapBuilding);
@@ -287,6 +345,7 @@ export const facilityService = {
     const response = await api.post<ApiEnvelope<ApiBuilding>>("/management/facilities/buildings", multipart, {
       headers: { "Content-Type": "multipart/form-data" },
     });
+    invalidateSnapshot();
     return mapBuilding(response.data.data);
   },
 
@@ -295,11 +354,14 @@ export const facilityService = {
     const response = await api.put<ApiEnvelope<ApiBuilding>>(`/management/facilities/buildings/${id}`, multipart, {
       headers: { "Content-Type": "multipart/form-data" },
     });
+    invalidateSnapshot();
     return mapBuilding(response.data.data);
   },
 
-  deleteBuilding(id: string) {
-    return api.delete(`/management/facilities/buildings/${id}`);
+  async deleteBuilding(id: string) {
+    const response = await api.delete(`/management/facilities/buildings/${id}`);
+    invalidateSnapshot();
+    return response;
   },
 
   async getFloors(buildingId?: string) {
@@ -310,16 +372,20 @@ export const facilityService = {
 
   async createFloor(payload: FloorUpsertPayload) {
     const response = await api.post<ApiEnvelope<ApiFloor>>("/management/facilities/floors", toFloorPayload(payload));
+    invalidateSnapshot();
     return mapFloor(response.data.data);
   },
 
   async updateFloor(id: string, payload: FloorUpsertPayload) {
     const response = await api.put<ApiEnvelope<ApiFloor>>(`/management/facilities/floors/${id}`, toFloorPayload(payload));
+    invalidateSnapshot();
     return mapFloor(response.data.data);
   },
 
-  deleteFloor(id: string) {
-    return api.delete(`/management/facilities/floors/${id}`);
+  async deleteFloor(id: string) {
+    const response = await api.delete(`/management/facilities/floors/${id}`);
+    invalidateSnapshot();
+    return response;
   },
 
   async getRooms(filters?: { buildingId?: string; floorId?: string }) {
@@ -346,6 +412,7 @@ export const facilityService = {
     const response = await api.post<ApiEnvelope<ApiRoom>>(`/management/facilities/rooms`, multipart, {
       headers: { "Content-Type": "multipart/form-data" },
     });
+    invalidateSnapshot();
     return mapRoom(response.data.data);
   },
 
@@ -354,11 +421,14 @@ export const facilityService = {
     const response = await api.put<ApiEnvelope<ApiRoom>>(`/management/facilities/rooms/${id}`, multipart, {
       headers: { "Content-Type": "multipart/form-data" },
     });
+    invalidateSnapshot();
     return mapRoom(response.data.data);
   },
 
-  deleteRoom(id: string) {
-    return api.delete(`/management/facilities/rooms/${id}`);
+  async deleteRoom(id: string) {
+    const response = await api.delete(`/management/facilities/rooms/${id}`);
+    invalidateSnapshot();
+    return response;
   },
 };
 

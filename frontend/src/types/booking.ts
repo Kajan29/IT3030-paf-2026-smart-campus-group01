@@ -1,0 +1,100 @@
+// Booking-related types
+
+export type BookingType = "STUDENT" | "STAFF";
+export type BookingStatus = "PENDING" | "APPROVED" | "CONFIRMED" | "CANCELLED" | "REJECTED" | "COMPLETED" | "NO_SHOW";
+export type AvailabilityStatus = "AVAILABLE" | "RESERVED" | "OCCUPIED";
+
+export interface TimeSlot {
+  startTime: string;
+  endTime: string;
+}
+
+export interface OccupancyBlock {
+  type: string;  // TIMETABLE, BLACKOUT, BOOKING
+  description: string;
+  startTime: string;
+  endTime: string;
+  details?: string;
+}
+
+export interface RoomAvailability {
+  status: AvailabilityStatus;
+  timetableConflicts: number;
+  blackoutConflicts: number;
+  bookingConflicts: number;
+}
+
+export interface BookingRequest {
+  roomId: string;
+  startTime: string;
+  endTime: string;
+  bookingType: BookingType;
+  purpose: string;
+  participantsCount?: number;
+  seatsBooked?: number;
+  isRecurring?: boolean;
+  recurringPattern?: string;
+  recurringEndDate?: string;
+}
+
+export interface BookingResponse {
+  bookingId: string;
+  status: BookingStatus;
+  requiresOverride: boolean;
+}
+
+export interface SwapRequest {
+  id: string;
+  timetableId: string;
+  requestedBy: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  lecturer: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  reason: string;
+  status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED" | "EXPIRED";
+  approvalNotes?: string;
+  rejectionReason?: string;
+  suggestedRoomId?: string;
+  createdAt: string;
+}
+
+export interface Timetable {
+  id: string;
+  roomId: string;
+  lecturerId: string;
+  moduleName: string;
+  moduleCode: string;
+  batchId: string;
+  batchName: string;
+  dayOfWeek: string;
+  startTime: string;
+  endTime: string;
+  duration: number;
+  studentCount: number;
+  description: string;
+  status: "ACTIVE" | "CANCELLED" | "RESCHEDULED";
+  recurring: boolean;
+  startDate?: string;
+  endDate?: string;
+  createdAt: string;
+}
+
+export interface BookingNotification {
+  id: string;
+  type: "BOOKING_CONFIRMED" | "BOOKING_PENDING" | "BOOKING_REJECTED" | 
+        "SWAP_REQUEST_RECEIVED" | "SWAP_REQUEST_APPROVED" | "SWAP_REQUEST_REJECTED" |
+        "BOOKING_REMINDER" | "BOOKING_CANCELLED" | "ADMIN_ALERT";
+  title: string;
+  message: string;
+  isRead: boolean;
+  eventDate?: string;
+  createdAt: string;
+}
