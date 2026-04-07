@@ -1,455 +1,218 @@
 # Zentaritas
 
-A full-stack university management web application with Google OAuth authentication, built with React (Frontend) and Spring Boot (Backend).
+Zentaritas is a full-stack university management platform with role-based access, room booking, facility management, user administration, and Google sign-in. The frontend is built with React and Vite, and the backend is a Spring Boot REST API.
 
-## Features
+## What It Does
 
-- 🔐 Email/Password Authentication
-- 🔑 Google OAuth 2.0 Authentication
-- ✉️ Email Verification with OTP
-- 🔄 Password Reset Functionality
-- 👥 Role-based Access Control (Student, Academic Staff, Non-Academic Staff, Admin)
-- 📧 SMTP Email Integration
-- 🛡️ JWT Token-based Security
-
-## Project Structure
-
-```
-Zentaritas/
-├── frontend/          # React application with Vite
-├── backend/           # Spring Boot application
-└── README.md
-```
+- Email/password authentication with email verification and password reset
+- Google OAuth login
+- JWT-based session handling with refresh tokens in HttpOnly cookies
+- Role-based access for student, academic staff, non-academic staff, and admin users
+- Room booking with availability checks, conflict detection, approvals, cancellations, and notifications
+- Facility management for buildings, floors, and rooms, including image uploads
+- Admin user management, including staff creation and Excel import
+- Profile editing, settings, and protected user pages
 
 ## Tech Stack
 
 ### Frontend
+
 - React 18
 - TypeScript
 - Vite
+- React Router
+- React Hook Form
+- TanStack Query
 - Axios
-- React Router DOM
-- @react-oauth/google
-- TailwindCSS
+- Tailwind CSS
+- Radix UI primitives
 - React Toastify
+- Google Identity / @react-oauth/google
 
 ### Backend
+
 - Java 17
-- Spring Boot 3.2
+- Spring Boot 3.5
 - Spring Security
 - Spring Data JPA
-- MySQL
-- JWT (JJWT 0.12.x)
-- Google OAuth2 Client
+- PostgreSQL
+- JWT
+- Google OAuth2 client support
 - Spring Mail
+- Cloudinary for media storage
+- Apache POI and Apache Commons CSV for imports and parsing
 
-## Getting Started
+## Project Layout
 
-### Prerequisites
-
-Ensure you have the following installed:
-
-- **Node.js 18+** and npm ([Download](https://nodejs.org/))
-- **Java 17+** ([Download](https://adoptium.net/))
-- **Maven 3.8+** ([Download](https://maven.apache.org/download.cgi))
-- **MySQL 8+** ([Download](https://dev.mysql.com/downloads/mysql/))
-- Google Cloud Console account (for OAuth setup)
-
-Verify installations:
-```bash
-node --version    # Should show v18+
-npm --version
-java -version     # Should show Java 17+
-mvn -version      # Should show Maven 3.8+
-mysql --version   # Should show MySQL 8.0+
+```text
+Zentaritas/
+├── backend/         Spring Boot API
+├── frontend/        React/Vite app
+└── README.md
 ```
 
-### Google OAuth Setup
+## Main Screens
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select existing one
-3. Enable **Google+ API** and **Google Identity Services**
-4. Navigate to **APIs & Services > Credentials**
-5. Create **OAuth 2.0 Client ID**:
-   - Application type: Web application
-   - Authorized JavaScript origins: `http://localhost:5173`
-   - Authorized redirect URIs: `http://localhost:5173`
-6. Copy the **Client ID** and **Client Secret**
+- Home, About, Contact
+- Book room and resource browsing
+- Authentication flows: login, register, OTP verification, forgot password
+- Profile and settings pages
+- Admin area and dashboard
 
-### Gmail SMTP Setup (for Email Features)
+## Prerequisites
 
-1. Enable 2-Step Verification on your Google account
-2. Go to [Google Account Security](https://myaccount.google.com/security)
-3. Navigate to **2-Step Verification > App passwords**
-4. Generate an app password for "Mail"
-5. Save the 16-character password for backend configuration
+Install the following:
 
-### Backend Setup
+- Node.js 18+ and npm
+- Java 17+
+- Maven 3.8+
+- PostgreSQL 14+
+- A Google Cloud project if you want Google sign-in
+- A SMTP account if you want email verification and password reset messages
 
-#### 1. Create MySQL Database
+## Backend Setup
 
-```sql
-CREATE DATABASE zentaritas_db;
+The backend loads environment variables from a `.env` file when present. It checks the current working directory, the `backend/` folder, and a few parent directories, so placing the file in `backend/.env` is the safest option.
 
--- Optional: Create dedicated user
-CREATE USER 'zentaritas_user'@'localhost' IDENTIFIED BY 'your_password';
-GRANT ALL PRIVILEGES ON zentaritas_db.* TO 'zentaritas_user'@'localhost';
-FLUSH PRIVILEGES;
-```
+### 1. Create the database
 
-#### 2. Configure Environment Variables
+Create the PostgreSQL database and user you want to use. The application can also create the database automatically on startup if the configured user has permission.
 
-Navigate to the backend directory:
-```bash
-cd backend
-```
-
-Create a `.env` file in the `backend/` directory with the following configuration:
+### 2. Configure `backend/.env`
 
 ```env
-# Database Configuration
 DB_HOST=localhost
-DB_PORT=3306
+DB_PORT=5432
 DB_NAME=zentaritas_db
-DB_USERNAME=root
-DB_PASSWORD=your_mysql_password
+DB_USERNAME=postgres
+DB_PASSWORD=your_postgres_password
 
-# JWT Configuration (generate a secure random string)
-JWT_SECRET=your-super-secret-jwt-key-at-least-256-bits
+JWT_SECRET=your-super-secret-jwt-key
 JWT_EXPIRATION=86400000
 
-# Email Configuration (Gmail SMTP)
 MAIL_HOST=smtp.gmail.com
 MAIL_PORT=587
 MAIL_USERNAME=your-email@gmail.com
-MAIL_PASSWORD=your-16-char-app-password
+MAIL_PASSWORD=your-app-password
 
-# Google OAuth2 Configuration
 GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 
-# Server Configuration
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-cloudinary-key
+CLOUDINARY_API_SECRET=your-cloudinary-secret
+
+FRONTEND_URL=http://localhost:5173
 SERVER_PORT=8080
 CORS_ALLOWED_ORIGINS=http://localhost:5173
+
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=change-me
+ADMIN_FIRSTNAME=System
+ADMIN_LASTNAME=Admin
 ```
 
-**Important:** Never commit the `.env` file to version control!
-
-#### 3. Install Dependencies and Run
+### 3. Run the backend
 
 ```bash
-# Install Maven dependencies
+cd backend
 mvn clean install
-
-# Run the application
 mvn spring-boot:run
 ```
 
-Alternatively, build and run the JAR:
-```bash
-mvn clean package
-java -jar target/zentaritas-backend-1.0.0.jar
-```
+The API runs at `http://localhost:8080`.
 
-**Backend will start at:** `http://localhost:8080`
+### 4. Health check
 
-#### 4. Verify Backend is Running
-
-Open your browser or use curl:
-```bash
-curl http://localhost:8080/api/public/health
-```
-
-Expected response:
-```json
-{
-  "status": "UP",
-  "message": "API is running smoothly!"
-}
-```
-
-### Frontend Setup
-
-#### 1. Navigate to Frontend Directory
-
-```bash
-cd frontend
-```
-
-#### 2. Install Dependencies
-
-```bash
-npm install
-```
-
-#### 3. Configure Environment Variables
-
-Create a `.env` file in the `frontend/` directory:
-
-```env
-VITE_API_URL=http://localhost:8080/api
-VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
-```
-
-#### 4. Start Development Server
-
-```bash
-npm run dev
-```
-
-**Frontend will start at:** `http://localhost:5173`
-🔌 API Documentation
-
-### Public Endpoints
-
-#### Health Check
 ```http
 GET /api/public/health
 ```
 
-### Authentication Endpoints
+## Frontend Setup
 
-#### Register
-```http
-POST /api/auth/register
-Content-Type: application/json
+### 1. Configure `frontend/.env`
 
-{
-  "email": "student@example.com",
-  "password": "SecurePass123!",
-  "firstName": "John",
-  "lastName": "Doe",
-  "role": "STUDENT"
-}
+```env
+VITE_API_URL=http://localhost:8080/api
+VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+VITE_APP_NAME=Zentaritas
+VITE_SESSION_TIMEOUT_MINUTES=30
 ```
 
-#### Login
-```http
-POST /api/auth/login
-Content-Type: application/json
+### 2. Run the frontend
 
-{
-  "email": "student@example.com",
-  "password": "SecurePass123!"
-}
-```
-
-#### Google Authentication
-```http
-POST /api/auth/google
-Content-Type: application/json
-
-{
-  "credential": "google_id_token"
-}
-```
-
-#### Email Verification
-```http
-POST /api/auth/verify-email
-Content-Type: application/json
-
-{
-  "email": "student@example.com",
-  "code": "123456"
-}
-```
-
-#### Resend Verification Code
-```http
-POST /api/auth/resend-verification
-Content-Type: application/json
-
-{
-  "email": "student@example.com"
-}
-```
-
-#### Forgot Password
-```http
-POST /api/auth/forgot-password
-Content-Type: application/json
-
-{
-  "email": "student@example.com"
-}
-```
-
-#### Reset Password
-```http
-POST /api/auth/reset-password
-Content-Type: application/json
-
-{
-  "email": "student@example.com",
-  "code": "123456",
-  "newPassword": "NewSecurePass123!"
-}
-```
-
-### Protected Endpoints (Requires JWT Token)
-
-Include the JWT token in the Authorization header:
-```http
-Authorization: Bearer <your_jwt_token>
-```
-
-## 🛠️ Development
-
-### Project Structure
-```
-Zentaritas/
-├── backend/                      # Spring Boot API
-│   ├── src/main/java/           # Java source code
-│   │   └── com/zentaritas/
-│   │       ├── config/          # Security, CORS, JWT config
-│   │       ├── controller/      # REST endpoints
-│   │       ├── dto/             # Data transfer objects
-│   │       ├── exception/       # Exception handling
-│   │       ├── model/           # JPA entities
-│   │       ├── repository/      # Data access layer
-│   │       └── service/         # Business logic
-│   ├── src/main/resources/      # Configuration files
-│   └── pom.xml                  # Maven dependencies
-│
-└── frontend/                     # React + Vite app
-    ├── src/
-    │   ├── components/          # Reusable components
-    │   ├── context/             # React context (Auth)
-    │   ├── hooks/               # Custom hooks
-    │   ├── layouts/             # Page layouts
-    │   ├── pages/               # Page components
-    │   ├── services/            # API services
-    │   └── utils/               # Utility functions
-    └── package.json             # NPM dependencies
-```
-
-### Running Tests
-
-#### Backend Tests
-```bash
-cd backend
-mvn test
-```
-
-#### Frontend Tests
 ```bash
 cd frontend
-npm test
-```
-
-## 🐛 Troubleshooting
-
-### Common Backend Issues
-
-#### Port 8080 Already in Use
-```bash
-# Windows
-netstat -ano | findstr :8080
-taskkill /PID <process_id> /F
-
-# Linux/Mac
-lsof -ti:8080 | xargs kill -9
-```
-
-#### Database Connection Failed
-- Verify MySQL is running
-- Check credentials in `.env` file
-- Ensure database `zentaritas_db` exists
-
-#### Email Sending Failed
-- Use App Password, not regular Gmail password
-- Enable 2-Step Verification
-- Check MAIL_USERNAME and MAIL_PASSWORD
-
-### Common Frontend Issues
-
-#### Cannot Connect to Backend
-- Ensure backend is running on port 8080
-- Check `VITE_API_URL` in frontend `.env`
-- Verify CORS settings in backend
-
-#### Google OAuth Not Working
-- Verify `VITE_GOOGLE_CLIENT_ID` matches Google Console
-- Check authorized origins in Google Console
-- Clear browser cache
-
-## 📦 Deployment
-
-### Backend Deployment
-
-Build production JAR:
-```bash
-cd backend
-mvn clean package -DskipTests
-```
-
-Run in production:
-```bash
-java -jar target/zentaritas-backend-1.0.0.jar
-```
-
-### Frontend Deployment
-
-Build for production:
-```bash
-cd frontend
-npm run build
-```
-
-The `dist/` folder can be deployed to any static hosting service (Netlify, Vercel, AWS S3, etc.)
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is developed for Zentaritas university management system.
-
-## 📞 Support
-
-For issues and questions:
-- Check the troubleshooting section above
-- Review backend logs: `backend/logs/`
-- Check browser console for frontend errors
-
-## 🙏 Acknowledgments
-
-- Spring Boot Team
-- React Team
-- Google OAuth2 Team
-# Terminal 1 - Backend
-cd backend
-mvn spring-boot:run
-
-# Terminal 2 - Frontend
-cd frontend
+npm install
 npm run dev
 ```
 
-- **Backend:** http://localhost:8080
-- **Frontend:** http://localhost:5173
+The app runs at `http://localhost:5173`.
 
-## 🔌 API Documentation
+## Backend API Highlights
 
-### Authentication
-- `POST /api/auth/register` - Register new student
-- `POST /api/auth/login` - Login with email/password
-- `POST /api/auth/google` - Login/Register with Google
-- `POST /api/auth/verify-email` - Verify email with OTP
-- `POST /api/auth/resend-verification` - Resend verification code
-- `POST /api/auth/forgot-password` - Request password reset
-- `POST /api/auth/reset-password` - Reset password with code
+### Auth
 
-## Environment Variables
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `POST /api/auth/google`
+- `POST /api/auth/verify-email`
+- `POST /api/auth/resend-verification`
+- `POST /api/auth/forgot-password`
+- `POST /api/auth/reset-password`
+- `POST /api/auth/refresh`
+- `POST /api/auth/logout`
 
-See `.env.example` files in both `frontend/` and `backend/` directories for required environment variables.
+### Profile
 
-## License
+- `GET /api/profile/me`
+- `PUT /api/profile`
 
-MIT License
+### Bookings
+
+- `GET /api/bookings/availability/{roomId}`
+- `GET /api/bookings/available-slots/{roomId}`
+- `GET /api/bookings/occupancy/{roomId}`
+- `POST /api/bookings/detect-conflicts`
+- `POST /api/bookings`
+- `GET /api/bookings/my-bookings`
+- `GET /api/bookings/pending`
+- `PUT /api/bookings/{bookingId}/approve`
+- `PUT /api/bookings/{bookingId}/reject`
+- `DELETE /api/bookings/{bookingId}`
+
+### Notifications
+
+- `GET /api/notifications`
+- `GET /api/notifications/unread`
+- `GET /api/notifications/unread/count`
+- `PUT /api/notifications/{notificationId}/read`
+- `PUT /api/notifications/read-all`
+- `DELETE /api/notifications/{notificationId}`
+
+### Facilities
+
+- `GET /api/management/facilities/buildings`
+- `GET /api/management/facilities/floors`
+- `GET /api/management/facilities/rooms`
+- CRUD endpoints for buildings, floors, and rooms
+
+### Admin Users
+
+- `GET /api/admin/users`
+- `GET /api/admin/users/students`
+- `GET /api/admin/users/staff`
+- `POST /api/admin/users/staff`
+- `POST /api/admin/users/staff/import`
+- `PATCH /api/admin/users/{id}/status`
+- `DELETE /api/admin/users/{id}`
+
+## Notes
+
+- Refresh tokens are stored in HttpOnly cookies.
+- The backend uses PostgreSQL, not MySQL.
+- If you change the frontend origin, update both `CORS_ALLOWED_ORIGINS` and `VITE_API_URL`.
+
+## Verification
+
+If both apps start successfully, you should be able to open the frontend at `http://localhost:5173` and reach the API health endpoint at `http://localhost:8080/api/public/health`.
