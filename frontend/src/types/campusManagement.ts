@@ -56,6 +56,9 @@ export interface Building {
   imageUrl?: string;
   yearEstablished: number;
   manager: string;
+  openingTime?: string;
+  closingTime?: string;
+  closedOnWeekends?: boolean;
   createdBy?: CreatedByUser;
   createdAt?: string;
   updatedAt?: string;
@@ -92,6 +95,7 @@ export interface Room {
   description: string;
   condition: RoomCondition;
   climateControl: ClimateControl;
+  closedOnWeekends?: boolean;
   smartClassroomEnabled: boolean;
   projectorAvailable: boolean;
   boardType: BoardType;
@@ -103,6 +107,8 @@ export interface Room {
   accessibilitySupport: boolean;
   maintenanceStatus: MaintenanceStatus;
   bookingAvailable: boolean;
+  openingTime?: string;
+  closingTime?: string;
   maintenanceHistory: string[];
   imageUrl?: string;
   createdBy?: CreatedByUser;

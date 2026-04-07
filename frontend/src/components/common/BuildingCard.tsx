@@ -1,4 +1,4 @@
-import { Building2, Layers, MapPin, Calendar, DoorOpen } from "lucide-react";
+import { Building2, Layers, MapPin, Calendar, DoorOpen, Clock3 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -98,6 +98,15 @@ export const BuildingCard = ({
                   <Building2 className="h-4 w-4 text-primary/70" />
                   <span>{building.campus}</span>
                 </div>
+                {(building.openingTime || building.closingTime) && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Clock3 className="h-4 w-4 text-primary/70" />
+                    <span>
+                      {building.openingTime || "08:00"} - {building.closingTime || "18:00"}
+                      {building.closedOnWeekends ? " · Weekends closed" : ""}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Stats Grid */}

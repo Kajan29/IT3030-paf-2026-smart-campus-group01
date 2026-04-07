@@ -1,8 +1,10 @@
 package com.zentaritas.service.booking;
 
 import com.zentaritas.model.booking.*;
+import com.zentaritas.model.management.Room;
 
 import com.zentaritas.repository.booking.*;
+import com.zentaritas.repository.management.RoomRepository;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +30,8 @@ public class AvailabilityEngineService {
 
     private final RoomBookingRepository roomBookingRepository;
     private final TimeslotBlackoutRepository timeslotBlackoutRepository;
+    private final RoomTimetableRepository roomTimetableRepository;
+    private final RoomRepository roomRepository;
 
     // ============= CORE AVAILABILITY CHECKS =============
 
@@ -39,22 +43,33 @@ public class AvailabilityEngineService {
     public RoomAvailabilityStatus checkRoomAvailability(Long roomId, LocalDateTime startTime, LocalDateTime endTime) {
         log.debug("Checking availability for room {} from {} to {}", roomId, startTime, endTime);
 
+        List<RoomTimetableEntry> timetableConflicts = roomTimetableRepository.findConflictingEntries(
+                roomId,
+                startTime.getDayOfWeek().name(),
+                startTime.toLocalTime(),
+                endTime.toLocalTime()
+        );
+        if (!timetableConflicts.isEmpty()) {
+            log.debug("Found timetable conflicts for room {}", roomId);
+            return new RoomAvailabilityStatus(AvailabilityStatus.RESERVED, null, null, timetableConflicts);
+        }
+
         // Check room blackouts (maintenance, cleaning, etc.)
         List<TimeslotBlackout> blackouts = timeslotBlackoutRepository.findConflictingBlackouts(roomId, startTime, endTime);
         if (!blackouts.isEmpty()) {
             log.debug("Found blackout conflicts for room {}", roomId);
-            return new RoomAvailabilityStatus(AvailabilityStatus.RESERVED, blackouts, null);
+            return new RoomAvailabilityStatus(AvailabilityStatus.RESERVED, blackouts, null, null);
         }
 
         // Check existing bookings (TEMPORARY bookings - staff/student)
         List<RoomBooking> conflictingBookings = roomBookingRepository.findConflictingBookings(roomId, startTime, endTime);
         if (!conflictingBookings.isEmpty()) {
             log.debug("Found booking conflicts for room {}", roomId);
-            return new RoomAvailabilityStatus(AvailabilityStatus.RESERVED, null, conflictingBookings);
+            return new RoomAvailabilityStatus(AvailabilityStatus.RESERVED, null, conflictingBookings, null);
         }
 
         log.debug("Room {} is available", roomId);
-        return new RoomAvailabilityStatus(AvailabilityStatus.AVAILABLE, null, null);
+        return new RoomAvailabilityStatus(AvailabilityStatus.AVAILABLE, null, null, null);
     }
 
     /**
@@ -71,8 +86,13 @@ public class AvailabilityEngineService {
         // Get all conflicts for the day
         List<TimeslotBlackout> dayBlackouts = timeslotBlackoutRepository.findConflictingBlackouts(roomId, startOfDay, endOfDay);
         List<RoomBooking> dayBookings = roomBookingRepository.findConflictingBookings(roomId, startOfDay, endOfDay);
+        List<RoomTimetableEntry> dayTimetables = roomTimetableRepository.findActiveEntriesForRoomAndDay(roomId, date.getDayOfWeek().name());
 
-        List<TimeSlot> allSlots = generateTimeSlots(date, slotDurationMinutes);
+        Room room = roomRepository.findById(roomId).orElse(null);
+        LocalTime roomOpen = room != null && room.getOpeningTime() != null ? room.getOpeningTime() : LocalTime.of(8, 0);
+        LocalTime roomClose = room != null && room.getClosingTime() != null ? room.getClosingTime() : LocalTime.of(18, 0);
+
+        List<TimeSlot> allSlots = generateTimeSlots(date, slotDurationMinutes, roomOpen, roomClose);
         List<TimeSlot> availableSlots = new ArrayList<>();
 
         for (TimeSlot slot : allSlots) {
@@ -80,7 +100,8 @@ public class AvailabilityEngineService {
 
             // Check conflicts
             if (hasConflictWithBlackout(slot, dayBlackouts) ||
-                hasConflictWithBooking(slot, dayBookings)) {
+                hasConflictWithBooking(slot, dayBookings) ||
+                hasConflictWithTimetable(slot, dayTimetables)) {
                 hasConflict = true;
             }
 
@@ -102,6 +123,15 @@ public class AvailabilityEngineService {
         LocalDateTime endOfDay = date.atTime(23, 59, 59);
 
         List<OccupancyBlock> blocks = new ArrayList<>();
+
+        roomTimetableRepository.findActiveEntriesForRoomAndDay(roomId, date.getDayOfWeek().name())
+            .forEach(entry -> blocks.add(new OccupancyBlock(
+                "TIMETABLE",
+                entry.getLectureName(),
+                date.atTime(entry.getStartTime()),
+                date.atTime(entry.getEndTime()),
+                entry.getLecturerName() + (entry.getLecturerEmail() != null ? " <" + entry.getLecturerEmail() + ">" : "")
+            )));
 
         // Add blackout blocks (MAINTENANCE - yellow)
         timeslotBlackoutRepository.findConflictingBlackouts(roomId, startOfDay, endOfDay)
@@ -142,7 +172,8 @@ public class AvailabilityEngineService {
 
         return new BookingConflictReport(
                 timeslotBlackoutRepository.findConflictingBlackouts(roomId, startTime, endTime),
-                roomBookingRepository.findConflictingBookings(roomId, startTime, endTime)
+            roomBookingRepository.findConflictingBookings(roomId, startTime, endTime),
+            roomTimetableRepository.findConflictingEntries(roomId, startTime.getDayOfWeek().name(), startTime.toLocalTime(), endTime.toLocalTime())
         );
     }
 
@@ -162,10 +193,15 @@ public class AvailabilityEngineService {
         );
     }
 
-    private List<TimeSlot> generateTimeSlots(LocalDate date, int durationMinutes) {
+    private boolean hasConflictWithTimetable(TimeSlot slot, List<RoomTimetableEntry> entries) {
+        return entries.stream().anyMatch(entry ->
+                !slot.getEndTime().toLocalTime().isBefore(entry.getStartTime()) &&
+                        !slot.getStartTime().toLocalTime().isAfter(entry.getEndTime())
+        );
+    }
+
+    private List<TimeSlot> generateTimeSlots(LocalDate date, int durationMinutes, LocalTime startTime, LocalTime endTime) {
         List<TimeSlot> slots = new ArrayList<>();
-        LocalTime startTime = LocalTime.of(8, 0);  // Start at 8 AM
-        LocalTime endTime = LocalTime.of(18, 0);  // End at 6 PM
 
         LocalDateTime current = LocalDateTime.of(date, startTime);
         LocalDateTime dayEnd = LocalDateTime.of(date, endTime);
@@ -187,12 +223,16 @@ public class AvailabilityEngineService {
         public final AvailabilityStatus status;
         public final List<TimeslotBlackout> conflictingBlackouts;
         public final List<RoomBooking> conflictingBookings;
+        public final List<RoomTimetableEntry> conflictingTimetableEntries;
 
         public RoomAvailabilityStatus(AvailabilityStatus status,
-                                      List<TimeslotBlackout> blackouts, List<RoomBooking> bookings) {
+                                      List<TimeslotBlackout> blackouts,
+                                      List<RoomBooking> bookings,
+                                      List<RoomTimetableEntry> timetableEntries) {
             this.status = status;
             this.conflictingBlackouts = blackouts;
             this.conflictingBookings = bookings;
+            this.conflictingTimetableEntries = timetableEntries;
         }
     }
 
@@ -245,13 +285,16 @@ public class AvailabilityEngineService {
     public static class BookingConflictReport {
         public final List<TimeslotBlackout> blackoutConflicts;
         public final List<RoomBooking> bookingConflicts;
+        public final List<RoomTimetableEntry> timetableConflicts;
         public final boolean hasConflicts;
 
         public BookingConflictReport(List<TimeslotBlackout> blackouts,
-                                    List<RoomBooking> bookings) {
+                                    List<RoomBooking> bookings,
+                                    List<RoomTimetableEntry> timetableEntries) {
             this.blackoutConflicts = blackouts != null ? blackouts : Collections.emptyList();
             this.bookingConflicts = bookings != null ? bookings : Collections.emptyList();
-            this.hasConflicts = !this.blackoutConflicts.isEmpty() || !this.bookingConflicts.isEmpty();
+            this.timetableConflicts = timetableEntries != null ? timetableEntries : Collections.emptyList();
+            this.hasConflicts = !this.blackoutConflicts.isEmpty() || !this.bookingConflicts.isEmpty() || !this.timetableConflicts.isEmpty();
         }
     }
 }

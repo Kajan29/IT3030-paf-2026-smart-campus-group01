@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalTime;
 
 @Service
 @RequiredArgsConstructor
@@ -160,4 +161,53 @@ public class EmailService {
             log.warn("Continuing without sending staff credentials email");
         }
     }
+
+        public void sendRoomChangeEmail(
+                        String toEmail,
+                        String lecturerName,
+                        String originalRoom,
+                        String substituteRoom,
+                        String dayOfWeek,
+                        LocalTime startTime,
+                        LocalTime endTime,
+                        String note
+        ) {
+                try {
+                        String htmlContent = """
+                                        <div style="font-family: Arial, sans-serif; background: #f8fafc; padding: 32px; color: #0f172a;">
+                                            <div style="max-width: 640px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; overflow: hidden;">
+                                                <div style="background: linear-gradient(135deg, #0f766e, #115e59); padding: 28px 32px; color: white;">
+                                                    <div style="font-size: 12px; letter-spacing: .18em; text-transform: uppercase; opacity: .85;">Zentaritas</div>
+                                                    <h2 style="margin: 8px 0 0; font-size: 26px; line-height: 1.2;">Room allocation updated</h2>
+                                                </div>
+                                                <div style="padding: 32px;">
+                                                    <p style="font-size: 16px; line-height: 1.6; margin: 0 0 16px;">Hello ${lecturerName},</p>
+                                                    <p style="font-size: 15px; line-height: 1.6; margin: 0 0 16px;">Your scheduled room has been updated by the admin team.</p>
+                                                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px 20px; margin: 20px 0;">
+                                                        <p style="margin: 0 0 8px;"><strong>Original room:</strong> ${originalRoom}</p>
+                                                        <p style="margin: 0 0 8px;"><strong>Substitute room:</strong> ${substituteRoom}</p>
+                                                        <p style="margin: 0 0 8px;"><strong>Day:</strong> ${dayOfWeek}</p>
+                                                        <p style="margin: 0 0 8px;"><strong>Time:</strong> ${startTime} - ${endTime}</p>
+                                                        <p style="margin: 0;"><strong>Note:</strong> ${note}</p>
+                                                    </div>
+                                                    <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0;">Please review the updated schedule before the next session.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        """;
+
+                        htmlContent = htmlContent.replace("${lecturerName}", lecturerName)
+                                        .replace("${originalRoom}", originalRoom)
+                                        .replace("${substituteRoom}", substituteRoom)
+                                        .replace("${dayOfWeek}", dayOfWeek)
+                                        .replace("${startTime}", startTime.toString())
+                                        .replace("${endTime}", endTime.toString())
+                                        .replace("${note}", note);
+
+                        sendHtmlEmail(toEmail, "Room update notification - Zentaritas", htmlContent);
+                } catch (Exception e) {
+                        log.error("Failed to send room change email to: {}", toEmail, e);
+                        log.warn("Continuing without sending room change email");
+                }
+        }
 }

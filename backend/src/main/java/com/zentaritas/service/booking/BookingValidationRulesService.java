@@ -3,7 +3,12 @@ package com.zentaritas.service.booking;
 import com.zentaritas.controller.booking.dto.BookingRequestDTO;
 import com.zentaritas.model.auth.Role;
 import com.zentaritas.model.auth.User;
+import com.zentaritas.model.booking.RoomBooking;
+import com.zentaritas.model.booking.TimeslotBlackout;
 import com.zentaritas.model.management.Room;
+import com.zentaritas.repository.booking.RoomBookingRepository;
+import com.zentaritas.repository.booking.RoomTimetableRepository;
+import com.zentaritas.repository.booking.TimeslotBlackoutRepository;
 import com.zentaritas.repository.management.RoomRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +16,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 /**
@@ -28,6 +35,9 @@ import java.util.*;
 public class BookingValidationRulesService {
 
     private final RoomRepository roomRepository;
+    private final RoomBookingRepository roomBookingRepository;
+    private final TimeslotBlackoutRepository timeslotBlackoutRepository;
+    private final RoomTimetableRepository roomTimetableRepository;
 
     // Business rule constants
     private static final int MAX_STUDENT_BOOKING_DURATION_HOURS = 2;
@@ -35,6 +45,19 @@ public class BookingValidationRulesService {
     private static final int MIN_BOOKING_DURATION_MINUTES = 30;
     private static final int DAYS_IN_ADVANCE_STUDENT_CAN_BOOK = 30;
     private static final int DAYS_IN_ADVANCE_STAFF_CAN_BOOK = 90;
+    private static final int NEXT_AVAILABLE_SLOT_MINUTES = 30;
+    private static final int NEXT_AVAILABLE_LOOKAHEAD_DAYS = 30;
+    private static final int MAX_DAILY_STUDENT_BOOKINGS = 2;
+    private static final int MAX_WEEKLY_STUDENT_BOOKINGS = 8;
+    private static final int MAX_MONTHLY_STUDENT_BOOKINGS = 24;
+    private static final int MAX_DAILY_STAFF_BOOKINGS = 4;
+    private static final int MAX_WEEKLY_STAFF_BOOKINGS = 20;
+    private static final int MAX_MONTHLY_STAFF_BOOKINGS = 60;
+    private static final EnumSet<RoomBooking.BookingStatus> ACTIVE_BOOKING_STATUSES = EnumSet.of(
+            RoomBooking.BookingStatus.PENDING,
+            RoomBooking.BookingStatus.APPROVED,
+            RoomBooking.BookingStatus.CONFIRMED
+    );
 
     /**
      * Main validation method
@@ -59,6 +82,7 @@ public class BookingValidationRulesService {
         Room room = roomRepository.findById(request.getRoomId()).orElse(null);
         if (room != null) {
             errors.addAll(validateRoomSuitability(request, room, booker));
+            errors.addAll(validateRoomOperatingHours(request, room));
         }
 
         return errors;
@@ -191,16 +215,72 @@ public class BookingValidationRulesService {
      * Check if user has exceeded their booking quota for a period
      */
     public boolean hasExceededBookingQuota(User user, String period) {
-        // Implement quota logic based on user role and period
-        // period: "daily", "weekly", "monthly"
-        return false; // TODO: Implement quota checking
+        if (user == null || user.getId() == null) {
+            return false;
+        }
+
+        String normalizedPeriod = period == null ? "" : period.trim().toLowerCase(Locale.ROOT);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime periodStart;
+        LocalDateTime periodEnd;
+
+        switch (normalizedPeriod) {
+            case "daily" -> {
+                periodStart = now.truncatedTo(ChronoUnit.DAYS);
+                periodEnd = periodStart.plusDays(1);
+            }
+            case "weekly" -> {
+                periodStart = now.truncatedTo(ChronoUnit.DAYS).minusDays(now.getDayOfWeek().getValue() - 1L);
+                periodEnd = periodStart.plusWeeks(1);
+            }
+            case "monthly" -> {
+                periodStart = now.withDayOfMonth(1).truncatedTo(ChronoUnit.DAYS);
+                periodEnd = periodStart.plusMonths(1);
+            }
+            default -> {
+                log.warn("Unknown booking quota period: {}", period);
+                return false;
+            }
+        }
+
+        long bookingsInPeriod = roomBookingRepository.findByBookerId(user.getId()).stream()
+                .filter(this::isActiveBooking)
+                .filter(booking -> !booking.getStartTime().isBefore(periodStart) && booking.getStartTime().isBefore(periodEnd))
+                .count();
+
+        return bookingsInPeriod >= getQuotaLimit(user.getRole(), normalizedPeriod);
     }
 
     /**
      * Get next available booking time for a room
      */
     public LocalDateTime getNextAvailableTime(Room room, LocalDateTime fromTime) {
-        // TODO: Implement logic to find next available slot
+        if (room == null || room.getId() == null || fromTime == null) {
+            return fromTime;
+        }
+
+        LocalDateTime cursor = fromTime.truncatedTo(ChronoUnit.MINUTES);
+        LocalDateTime searchEnd = cursor.plusDays(NEXT_AVAILABLE_LOOKAHEAD_DAYS);
+
+        while (!cursor.isAfter(searchEnd)) {
+            LocalDateTime slotEnd = cursor.plusMinutes(NEXT_AVAILABLE_SLOT_MINUTES);
+            boolean hasBookingConflict = !roomBookingRepository
+                    .findConflictingBookings(room.getId(), cursor, slotEnd)
+                    .isEmpty();
+            boolean hasBlackoutConflict = !timeslotBlackoutRepository
+                    .findConflictingBlackouts(room.getId(), cursor, slotEnd)
+                    .isEmpty();
+            boolean hasTimetableConflict = !roomTimetableRepository
+                .findConflictingEntries(room.getId(), cursor.getDayOfWeek().name(), cursor.toLocalTime(), slotEnd.toLocalTime())
+                .isEmpty();
+
+            if (!hasBookingConflict && !hasBlackoutConflict && !hasTimetableConflict) {
+                return cursor;
+            }
+
+            cursor = cursor.plusMinutes(NEXT_AVAILABLE_SLOT_MINUTES);
+        }
+
         return fromTime;
     }
 
@@ -208,23 +288,111 @@ public class BookingValidationRulesService {
      * Check if booking conflicts with user's other bookings
      */
     public boolean hasUserScheduleConflict(User user, LocalDateTime startTime, LocalDateTime endTime) {
-        // TODO: Check if user has overlapping bookings
-        return false;
+        if (user == null || user.getId() == null || startTime == null || endTime == null || !startTime.isBefore(endTime)) {
+            return false;
+        }
+
+        return roomBookingRepository.findByBookerId(user.getId()).stream()
+                .filter(this::isActiveBooking)
+                .anyMatch(booking -> hasTimeOverlap(startTime, endTime, booking.getStartTime(), booking.getEndTime()));
+    }
+
+    private boolean hasTimeOverlap(LocalDateTime startA, LocalDateTime endA,
+                                   LocalDateTime startB, LocalDateTime endB) {
+        return startA.isBefore(endB) && endA.isAfter(startB);
+    }
+
+    private boolean isActiveBooking(RoomBooking booking) {
+        return booking != null && booking.getStatus() != null && ACTIVE_BOOKING_STATUSES.contains(booking.getStatus());
     }
 
     /**
      * Get smart suggestions for similar available rooms
      */
     public List<Room> getSuggestedAlternativeRooms(Room originalRoom, LocalDateTime startTime, LocalDateTime endTime) {
-        // TODO: Find similar rooms that are available in the same time
-        return Collections.emptyList();
+        if (originalRoom == null || originalRoom.getBuilding() == null || startTime == null || endTime == null || !startTime.isBefore(endTime)) {
+            return Collections.emptyList();
+        }
+
+        List<Room> roomsInBuilding = roomRepository.findByBuildingIdOrderByNameAsc(originalRoom.getBuilding().getId());
+
+        return roomsInBuilding.stream()
+                .filter(room -> !Objects.equals(room.getId(), originalRoom.getId()))
+                .filter(room -> room.getBookingAvailable() != null && room.getBookingAvailable())
+                .filter(room -> equalsIgnoreCase(room.getType(), originalRoom.getType()))
+                .filter(room -> equalsIgnoreCase(room.getMaintenanceStatus(), "Operational"))
+                .filter(room -> equalsIgnoreCase(room.getCondition(), "Excellent") || equalsIgnoreCase(room.getCondition(), "Good"))
+                .filter(room -> roomBookingRepository.findConflictingBookings(room.getId(), startTime, endTime).isEmpty())
+                .filter(room -> timeslotBlackoutRepository.findConflictingBlackouts(room.getId(), startTime, endTime).isEmpty())
+                .filter(room -> roomTimetableRepository.findConflictingEntries(room.getId(), startTime.getDayOfWeek().name(), startTime.toLocalTime(), endTime.toLocalTime()).isEmpty())
+                .sorted(Comparator.comparingInt(room -> Math.abs(room.getSeatingCapacity() - originalRoom.getSeatingCapacity())))
+                .limit(5)
+                .toList();
     }
 
     /**
      * Validate room request doesn't conflict with critical events
      */
     public boolean hasConflictWithCriticalEvents(Room room, LocalDateTime startTime, LocalDateTime endTime) {
-        // TODO: Check against exams, major events, etc.
-        return false;
+        if (room == null || room.getId() == null || startTime == null || endTime == null || !startTime.isBefore(endTime)) {
+            return false;
+        }
+
+        return timeslotBlackoutRepository.findConflictingBlackouts(room.getId(), startTime, endTime).stream()
+                .map(TimeslotBlackout::getType)
+                .anyMatch(type -> type == TimeslotBlackout.BlackoutType.EVENT
+                        || type == TimeslotBlackout.BlackoutType.RESERVED
+                        || type == TimeslotBlackout.BlackoutType.EMERGENCY);
+    }
+
+    private List<String> validateRoomOperatingHours(BookingRequestDTO request, Room room) {
+        List<String> errors = new ArrayList<>();
+
+        if (request.getStartTime() == null || request.getEndTime() == null) {
+            return errors;
+        }
+
+        LocalDateTime start = request.getStartTime();
+        LocalDateTime end = request.getEndTime();
+        LocalTime roomOpen = room.getOpeningTime() != null ? room.getOpeningTime() : LocalTime.of(8, 0);
+        LocalTime roomClose = room.getClosingTime() != null ? room.getClosingTime() : LocalTime.of(18, 0);
+
+        if (start.toLocalTime().isBefore(roomOpen) || end.toLocalTime().isAfter(roomClose)) {
+            errors.add("Requested time is outside the room operating hours");
+        }
+
+        if (Boolean.TRUE.equals(room.getClosedOnWeekends())) {
+            if (start.getDayOfWeek().getValue() >= 6) {
+                errors.add("Selected building is closed on weekends");
+            }
+        }
+
+        if (!roomTimetableRepository.findConflictingEntries(room.getId(), start.getDayOfWeek().name(), start.toLocalTime(), end.toLocalTime()).isEmpty()) {
+            errors.add("Selected time overlaps with the room timetable");
+        }
+
+        return errors;
+    }
+
+    private int getQuotaLimit(Role role, String period) {
+        if (role == Role.STUDENT) {
+            return switch (period) {
+                case "daily" -> MAX_DAILY_STUDENT_BOOKINGS;
+                case "weekly" -> MAX_WEEKLY_STUDENT_BOOKINGS;
+                case "monthly" -> MAX_MONTHLY_STUDENT_BOOKINGS;
+                default -> Integer.MAX_VALUE;
+            };
+        }
+
+        return switch (period) {
+            case "daily" -> MAX_DAILY_STAFF_BOOKINGS;
+            case "weekly" -> MAX_WEEKLY_STAFF_BOOKINGS;
+            case "monthly" -> MAX_MONTHLY_STAFF_BOOKINGS;
+            default -> Integer.MAX_VALUE;
+        };
+    }
+
+    private boolean equalsIgnoreCase(String left, String right) {
+        return left != null && right != null && left.equalsIgnoreCase(right);
     }
 }

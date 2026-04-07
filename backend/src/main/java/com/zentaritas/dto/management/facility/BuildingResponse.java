@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Data
 @Builder
@@ -24,6 +25,9 @@ public class BuildingResponse {
     private String imageUrl;
     private Integer yearEstablished;
     private String manager;
+    private LocalTime openingTime;
+    private LocalTime closingTime;
+    private Boolean closedOnWeekends;
     private UserSummaryResponse createdBy;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

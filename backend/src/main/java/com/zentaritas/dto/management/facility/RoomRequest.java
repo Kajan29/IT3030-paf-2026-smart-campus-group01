@@ -3,6 +3,7 @@ package com.zentaritas.dto.management.facility;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
+import java.time.LocalTime;
 import java.util.List;
 
 @Data
@@ -96,6 +97,10 @@ public class RoomRequest {
 
     @NotNull(message = "Booking availability flag is required")
     private Boolean bookingAvailable;
+
+    private LocalTime openingTime;
+
+    private LocalTime closingTime;
 
     private List<String> maintenanceHistory;
 }

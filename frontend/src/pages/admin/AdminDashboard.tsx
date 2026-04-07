@@ -81,6 +81,11 @@ const AdminDashboard = () => {
     setActiveItem("roomDetails");
   };
 
+  const selectRoomFromAvailability = (roomId: string) => {
+    setSelectedRoomId(roomId);
+    setActiveItem("availability");
+  };
+
   const renderPage = () => {
     switch (activeItem) {
       case "dashboard":
@@ -112,7 +117,7 @@ const AdminDashboard = () => {
           />
         );
       case "availability":
-        return <RoomAvailabilityManagementPage onOpenRoomDetails={openRoomDetails} />;
+        return <RoomAvailabilityManagementPage selectedRoomId={selectedRoomId} onOpenRoomDetails={selectRoomFromAvailability} onClearRoomSelection={() => setSelectedRoomId(null)} />;
       case "buildingDetails":
         return (
           <BuildingDetailsPage

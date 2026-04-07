@@ -65,6 +65,9 @@ public class FacilityManagementService {
                 .status(request.getStatus().trim())
                 .yearEstablished(request.getYearEstablished())
                 .manager(request.getManager().trim())
+                .openingTime(request.getOpeningTime())
+                .closingTime(request.getClosingTime())
+                .closedOnWeekends(Boolean.TRUE.equals(request.getClosedOnWeekends()))
                 .createdBy(currentUser)
                 .build();
 
@@ -97,6 +100,9 @@ public class FacilityManagementService {
         building.setStatus(request.getStatus().trim());
         building.setYearEstablished(request.getYearEstablished());
         building.setManager(request.getManager().trim());
+        building.setOpeningTime(request.getOpeningTime());
+        building.setClosingTime(request.getClosingTime());
+        building.setClosedOnWeekends(Boolean.TRUE.equals(request.getClosedOnWeekends()));
 
         if (image != null && !image.isEmpty()) {
             deleteCloudinaryAssetQuietly(building.getImagePublicId());
@@ -254,6 +260,9 @@ public class FacilityManagementService {
                 .accessibilitySupport(Boolean.TRUE.equals(request.getAccessibilitySupport()))
                 .maintenanceStatus(request.getMaintenanceStatus().trim())
                 .bookingAvailable(Boolean.TRUE.equals(request.getBookingAvailable()))
+                .closedOnWeekends(Boolean.TRUE.equals(building.getClosedOnWeekends()))
+                .openingTime(request.getOpeningTime())
+                .closingTime(request.getClosingTime())
                 .maintenanceHistory(normalizeStringList(request.getMaintenanceHistory()))
                 .createdBy(currentUser)
                 .build();
@@ -315,6 +324,9 @@ public class FacilityManagementService {
         room.setAccessibilitySupport(Boolean.TRUE.equals(request.getAccessibilitySupport()));
         room.setMaintenanceStatus(request.getMaintenanceStatus().trim());
         room.setBookingAvailable(Boolean.TRUE.equals(request.getBookingAvailable()));
+        room.setClosedOnWeekends(Boolean.TRUE.equals(building.getClosedOnWeekends()));
+        room.setOpeningTime(request.getOpeningTime());
+        room.setClosingTime(request.getClosingTime());
 
         List<String> history = normalizeStringList(request.getMaintenanceHistory());
         room.setMaintenanceHistory(history.isEmpty() ? new ArrayList<>(List.of("Initial setup")) : history);
@@ -382,6 +394,9 @@ public class FacilityManagementService {
                 .imageUrl(building.getImageUrl())
                 .yearEstablished(building.getYearEstablished())
                 .manager(building.getManager())
+                .openingTime(building.getOpeningTime())
+                .closingTime(building.getClosingTime())
+                .closedOnWeekends(building.getClosedOnWeekends())
                 .createdBy(UserSummaryResponse.from(building.getCreatedBy()))
                 .createdAt(building.getCreatedAt())
                 .updatedAt(building.getUpdatedAt())
@@ -433,6 +448,9 @@ public class FacilityManagementService {
                 .accessibilitySupport(room.getAccessibilitySupport())
                 .maintenanceStatus(room.getMaintenanceStatus())
                 .bookingAvailable(room.getBookingAvailable())
+                .closedOnWeekends(room.getClosedOnWeekends())
+                .openingTime(room.getOpeningTime())
+                .closingTime(room.getClosingTime())
                 .maintenanceHistory(new ArrayList<>(Optional.ofNullable(room.getMaintenanceHistory()).orElseGet(ArrayList::new)))
                 .imageUrl(room.getImageUrl())
                 .createdBy(UserSummaryResponse.from(room.getCreatedBy()))

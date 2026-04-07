@@ -1,8 +1,8 @@
-import { DoorOpen, Users, MapPin, CheckCircle, AlertCircle, Wifi, Monitor, Projector } from "lucide-react";
+import { DoorOpen, Users, MapPin, CheckCircle, AlertCircle, Wifi, Monitor, Projector, Clock3 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import type { Room, RoomStatus } from "@/types/campusManagement";
+import type { Room } from "@/types/campusManagement";
 
 interface RoomCardProps {
   room: Room;
@@ -14,7 +14,7 @@ interface RoomCardProps {
   showDetails?: boolean;
 }
 
-const statusConfig: Record<RoomStatus, { class: string; icon: React.ReactNode; text: string }> = {
+const statusConfig: Record<string, { class: string; icon: React.ReactNode; text: string }> = {
   Available: {
     class: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800",
     icon: <CheckCircle className="h-3 w-3" />,
@@ -25,16 +25,34 @@ const statusConfig: Record<RoomStatus, { class: string; icon: React.ReactNode; t
     icon: <AlertCircle className="h-3 w-3" />,
     text: "Occupied",
   },
-  Maintenance: {
+  "Under Maintenance": {
     class: "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800",
     icon: <AlertCircle className="h-3 w-3" />,
-    text: "Maintenance",
+    text: "Under Maintenance",
   },
-  "Out of Service": {
+  Inactive: {
     class: "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700",
     icon: <AlertCircle className="h-3 w-3" />,
-    text: "Out of Service",
+    text: "Inactive",
   },
+};
+
+const fallbackStatusInfo = {
+  class: "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700",
+  icon: <AlertCircle className="h-3 w-3" />,
+  text: "Unknown",
+};
+
+const resolveStatusInfo = (status?: string) => {
+  if (!status) return fallbackStatusInfo;
+  if (statusConfig[status]) return statusConfig[status];
+
+  const normalized = status.trim().toLowerCase();
+  if (normalized.includes("maint")) return statusConfig["Under Maintenance"];
+  if (normalized.includes("occup")) return statusConfig.Occupied;
+  if (normalized.includes("inactiv") || normalized.includes("out")) return statusConfig.Inactive;
+  if (normalized.includes("avail") || normalized.includes("open")) return statusConfig.Available;
+  return { ...fallbackStatusInfo, text: status };
 };
 
 const amenityIcons: Record<string, React.ReactNode> = {
@@ -54,7 +72,8 @@ export const RoomCard = ({
   showDetails = true 
 }: RoomCardProps) => {
   const isBookable = room.status === "Available" && room.bookingAvailable;
-  const statusInfo = statusConfig[room.status];
+  const statusInfo = resolveStatusInfo(room.status);
+  const facilities = Array.isArray(room.facilities) ? room.facilities : [];
 
   return (
     <motion.div
@@ -146,6 +165,15 @@ export const RoomCard = ({
                 </div>
               )}
 
+              {(room.openingTime || room.closingTime) && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
+                  <Clock3 className="h-3 w-3 text-primary/70" />
+                  <span>
+                    {room.openingTime || "08:00"} - {room.closingTime || "18:00"}
+                  </span>
+                </div>
+              )}
+
               {/* Capacity */}
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -158,11 +186,11 @@ export const RoomCard = ({
               </div>
 
               {/* Amenities */}
-              {room.facilities && room.facilities.length > 0 && (
+              {facilities.length > 0 && (
                 <div className="pt-4 border-t border-border">
                   <p className="text-xs text-muted-foreground mb-2">Amenities</p>
                   <div className="flex flex-wrap gap-2">
-                    {room.facilities.slice(0, 4).map((amenity, i) => (
+                    {facilities.slice(0, 4).map((amenity, i) => (
                       <div
                         key={i}
                         className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-accent/10 text-accent text-xs"
@@ -171,9 +199,9 @@ export const RoomCard = ({
                         <span>{amenity}</span>
                       </div>
                     ))}
-                    {room.facilities.length > 4 && (
+                    {facilities.length > 4 && (
                       <div className="flex items-center px-2 py-1 rounded-md bg-muted text-muted-foreground text-xs">
-                        +{room.facilities.length - 4}
+                        +{facilities.length - 4}
                       </div>
                     )}
                   </div>

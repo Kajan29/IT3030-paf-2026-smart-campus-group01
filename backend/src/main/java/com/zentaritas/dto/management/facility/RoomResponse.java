@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 @Data
@@ -41,6 +42,9 @@ public class RoomResponse {
     private Boolean accessibilitySupport;
     private String maintenanceStatus;
     private Boolean bookingAvailable;
+    private Boolean closedOnWeekends;
+    private LocalTime openingTime;
+    private LocalTime closingTime;
     private List<String> maintenanceHistory;
     private String imageUrl;
     private UserSummaryResponse createdBy;

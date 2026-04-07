@@ -24,6 +24,29 @@ export interface RoomAvailability {
   bookingConflicts: number;
 }
 
+export interface RoomTimetableEntry {
+  id: string;
+  roomId: string;
+  roomCode?: string;
+  roomName?: string;
+  substituteRoomId?: string | null;
+  substituteRoomCode?: string | null;
+  substituteRoomName?: string | null;
+  dayOfWeek: string;
+  startTime: string;
+  endTime: string;
+  lectureName: string;
+  lecturerName: string;
+  lecturerEmail?: string;
+  purpose: string;
+  notes?: string;
+  entryType: string;
+  active: boolean;
+  substituteNotified: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface BookingRequest {
   roomId: string;
   startTime: string;

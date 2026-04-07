@@ -6,6 +6,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalTime;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -107,6 +108,16 @@ public class Room {
 
     @Column(name = "booking_available", nullable = false)
     private Boolean bookingAvailable;
+
+    @Column(name = "closed_on_weekends")
+    @Builder.Default
+    private Boolean closedOnWeekends = false;
+
+    @Column(name = "opening_time")
+    private LocalTime openingTime;
+
+    @Column(name = "closing_time")
+    private LocalTime closingTime;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "room_maintenance_history", joinColumns = @JoinColumn(name = "room_id"))

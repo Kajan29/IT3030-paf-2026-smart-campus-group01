@@ -3,6 +3,8 @@ package com.zentaritas.dto.management.facility;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
+import java.time.LocalTime;
+
 @Data
 public class BuildingRequest {
 
@@ -40,4 +42,10 @@ public class BuildingRequest {
 
     @NotBlank(message = "Manager is required")
     private String manager;
+
+    private LocalTime openingTime;
+
+    private LocalTime closingTime;
+
+    private Boolean closedOnWeekends = false;
 }

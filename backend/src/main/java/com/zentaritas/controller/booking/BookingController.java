@@ -54,7 +54,8 @@ public class BookingController {
         return ResponseEntity.ok(new AvailabilityResponse(
                 status.status.toString(),
                 status.conflictingBlackouts != null ? status.conflictingBlackouts.size() : 0,
-                status.conflictingBookings != null ? status.conflictingBookings.size() : 0
+            status.conflictingBookings != null ? status.conflictingBookings.size() : 0,
+            status.conflictingTimetableEntries != null ? status.conflictingTimetableEntries.size() : 0
         ));
     }
 
@@ -123,7 +124,8 @@ public class BookingController {
         return ResponseEntity.ok(new ConflictReportResponse(
                 report.hasConflicts,
                 report.blackoutConflicts.size(),
-                report.bookingConflicts.size()
+            report.bookingConflicts.size(),
+            report.timetableConflicts.size()
         ));
     }
 
@@ -268,13 +270,13 @@ public class BookingController {
 
     // ============= DTOs =============
 
-    public record AvailabilityResponse(String status, int blackoutConflicts, int bookingConflicts) {}
+    public record AvailabilityResponse(String status, int blackoutConflicts, int bookingConflicts, int timetableConflicts) {}
     public record SlotsResponse(int totalSlots, List<SlotDetail> slots) {}
     public record SlotDetail(LocalDateTime startTime, LocalDateTime endTime) {}
     public record OccupancyResponse(List<OccupancyBlockDetail> blocks) {}
     public record OccupancyBlockDetail(String type, String description, LocalDateTime startTime, LocalDateTime endTime, String details) {}
     public record ConflictDetectionRequest(Long roomId, LocalDateTime startTime, LocalDateTime endTime) {}
-    public record ConflictReportResponse(boolean hasConflicts, int blackoutCount, int bookingCount) {}
+    public record ConflictReportResponse(boolean hasConflicts, int blackoutCount, int bookingCount, int timetableCount) {}
     public record BookingDto(
             Long roomId,
             LocalDateTime startTime,

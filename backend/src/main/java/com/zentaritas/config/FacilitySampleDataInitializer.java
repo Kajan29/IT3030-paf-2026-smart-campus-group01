@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.time.LocalTime;
 
 @Configuration
 @RequiredArgsConstructor
@@ -76,6 +77,10 @@ public class FacilitySampleDataInitializer {
                         Building building;
                         if (existing.isPresent()) {
                                 building = existing.get();
+                                boolean dirty = applyBuildingHoursDefaults(building, code);
+                                if (dirty) {
+                                        building = buildingRepository.save(building);
+                                }
                         } else {
                                 Building entity = Building.builder()
                                                 .name(data.name())
@@ -89,6 +94,9 @@ public class FacilitySampleDataInitializer {
                                                 .imageUrl(data.imageUrl())
                                                 .yearEstablished(data.yearEstablished())
                                                 .manager(data.manager())
+                                                                                                .openingTime(defaultBuildingOpeningTime(code))
+                                                                                                .closingTime(defaultBuildingClosingTime(code))
+                                                                                                .closedOnWeekends(defaultBuildingClosedOnWeekends(code))
                                                 .createdBy(createdBy)
                                                 .build();
                                 building = buildingRepository.save(entity);
@@ -144,9 +152,7 @@ public class FacilitySampleDataInitializer {
 
         for (RoomSeedData data : roomSeedData()) {
             String code = data.code().trim().toUpperCase(Locale.ROOT);
-            if (roomRepository.findByCodeIgnoreCase(code).isPresent()) {
-                continue;
-            }
+                        Optional<Room> existing = roomRepository.findByCodeIgnoreCase(code);
 
             String buildingCode = data.buildingCode().trim().toUpperCase(Locale.ROOT);
             Building building = buildingByCode.get(buildingCode);
@@ -161,41 +167,53 @@ public class FacilitySampleDataInitializer {
                 continue;
             }
 
-            Room room = Room.builder()
-                    .name(data.name())
-                    .code(code)
-                    .building(building)
-                    .floor(floor)
-                    .type(data.type())
-                    .lengthMeters(data.lengthMeters())
-                    .widthMeters(data.widthMeters())
-                    .areaSqMeters(data.areaSqMeters())
-                    .areaSqFeet(data.areaSqFeet())
-                    .seatingCapacity(data.seatingCapacity())
-                    .maxOccupancy(data.maxOccupancy())
-                    .facilities(data.facilities())
-                    .status(data.status())
-                    .description(data.description())
-                    .condition(data.condition())
-                    .climateControl(data.climateControl())
-                    .smartClassroomEnabled(data.smartClassroomEnabled())
-                    .projectorAvailable(data.projectorAvailable())
-                    .boardType(data.boardType())
-                    .internetAvailable(data.internetAvailable())
-                    .chairs(data.chairs())
-                    .tables(data.tables())
-                    .labEquipmentAvailable(data.labEquipmentAvailable())
-                    .powerBackupAvailable(data.powerBackupAvailable())
-                    .accessibilitySupport(data.accessibilitySupport())
-                    .maintenanceStatus(data.maintenanceStatus())
-                    .bookingAvailable(data.bookingAvailable())
-                    .maintenanceHistory(data.maintenanceHistory())
-                    .imageUrl(data.imageUrl())
-                    .createdBy(createdBy)
-                    .build();
+                        if (existing.isPresent()) {
+                                Room room = existing.get();
+                                boolean dirty = applyRoomHoursDefaults(room, buildingCode);
+                                if (dirty) {
+                                        roomRepository.save(room);
+                                }
+                                continue;
+                        }
 
-            roomRepository.save(room);
-            created++;
+                        Room room = Room.builder()
+                                        .name(data.name())
+                                        .code(code)
+                                        .building(building)
+                                        .floor(floor)
+                                        .type(data.type())
+                                        .lengthMeters(data.lengthMeters())
+                                        .widthMeters(data.widthMeters())
+                                        .areaSqMeters(data.areaSqMeters())
+                                        .areaSqFeet(data.areaSqFeet())
+                                        .seatingCapacity(data.seatingCapacity())
+                                        .maxOccupancy(data.maxOccupancy())
+                                        .facilities(data.facilities())
+                                        .status(data.status())
+                                        .description(data.description())
+                                        .condition(data.condition())
+                                        .climateControl(data.climateControl())
+                                        .smartClassroomEnabled(data.smartClassroomEnabled())
+                                        .projectorAvailable(data.projectorAvailable())
+                                        .boardType(data.boardType())
+                                        .internetAvailable(data.internetAvailable())
+                                        .chairs(data.chairs())
+                                        .tables(data.tables())
+                                        .labEquipmentAvailable(data.labEquipmentAvailable())
+                                        .powerBackupAvailable(data.powerBackupAvailable())
+                                        .accessibilitySupport(data.accessibilitySupport())
+                                        .maintenanceStatus(data.maintenanceStatus())
+                                        .bookingAvailable(data.bookingAvailable())
+                                        .closedOnWeekends(defaultBuildingClosedOnWeekends(buildingCode))
+                                        .openingTime(defaultRoomOpeningTime(buildingCode))
+                                        .closingTime(defaultRoomClosingTime(buildingCode))
+                                        .maintenanceHistory(data.maintenanceHistory())
+                                        .imageUrl(data.imageUrl())
+                                        .createdBy(createdBy)
+                                        .build();
+
+                        roomRepository.save(room);
+                        created++;
         }
 
         log.info("Facility sample-data: rooms newly created={}", created);
@@ -522,6 +540,75 @@ public class FacilitySampleDataInitializer {
     private static String image(String seed) {
         return "https://picsum.photos/seed/" + seed + "/1200/800";
     }
+
+        private boolean applyBuildingHoursDefaults(Building building, String code) {
+                boolean dirty = false;
+                if (building.getOpeningTime() == null) {
+                        building.setOpeningTime(defaultBuildingOpeningTime(code));
+                        dirty = true;
+                }
+                if (building.getClosingTime() == null) {
+                        building.setClosingTime(defaultBuildingClosingTime(code));
+                        dirty = true;
+                }
+                if (building.getClosedOnWeekends() == null) {
+                        building.setClosedOnWeekends(defaultBuildingClosedOnWeekends(code));
+                        dirty = true;
+                }
+                return dirty;
+        }
+
+        private boolean applyRoomHoursDefaults(Room room, String buildingCode) {
+                boolean dirty = false;
+                if (room.getOpeningTime() == null) {
+                        room.setOpeningTime(defaultRoomOpeningTime(buildingCode));
+                        dirty = true;
+                }
+                if (room.getClosingTime() == null) {
+                        room.setClosingTime(defaultRoomClosingTime(buildingCode));
+                        dirty = true;
+                }
+                if (room.getClosedOnWeekends() == null) {
+                        room.setClosedOnWeekends(defaultBuildingClosedOnWeekends(buildingCode));
+                        dirty = true;
+                }
+                return dirty;
+        }
+
+        private LocalTime defaultBuildingOpeningTime(String code) {
+                return switch (code) {
+                        case "LIB" -> LocalTime.of(8, 0);
+                        case "AUD" -> LocalTime.of(8, 30);
+                        case "ITC" -> LocalTime.of(7, 30);
+                        case "ADB" -> LocalTime.of(8, 30);
+                        default -> LocalTime.of(8, 0);
+                };
+        }
+
+        private LocalTime defaultBuildingClosingTime(String code) {
+                return switch (code) {
+                        case "LIB" -> LocalTime.of(20, 0);
+                        case "AUD" -> LocalTime.of(22, 0);
+                        case "ITC" -> LocalTime.of(21, 0);
+                        case "ADB" -> LocalTime.of(17, 30);
+                        default -> LocalTime.of(18, 0);
+                };
+        }
+
+        private boolean defaultBuildingClosedOnWeekends(String code) {
+                return switch (code) {
+                        case "LIB", "ADB", "AUD" -> true;
+                        default -> false;
+                };
+        }
+
+        private LocalTime defaultRoomOpeningTime(String buildingCode) {
+                return defaultBuildingOpeningTime(buildingCode);
+        }
+
+        private LocalTime defaultRoomClosingTime(String buildingCode) {
+                return defaultBuildingClosingTime(buildingCode);
+        }
 
     private record BuildingSeedData(
             String name,

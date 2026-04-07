@@ -9,6 +9,7 @@ import type {
   RoomStatus,
   RoomType,
 } from "@/types/campusManagement";
+import type { RoomTimetableEntry as RoomTimetableEntryType } from "@/types/booking";
 
 interface ApiEnvelope<T> {
   success: boolean;
@@ -44,6 +45,9 @@ interface ApiBuilding {
   imageUrl?: string;
   yearEstablished: number;
   manager: string;
+  openingTime?: string;
+  closingTime?: string;
+  closedOnWeekends?: boolean;
   createdBy?: ApiUserSummary;
   createdAt?: string;
   updatedAt?: string;
@@ -80,6 +84,7 @@ interface ApiRoom {
   description: string;
   condition: string;
   climateControl: string;
+  closedOnWeekends?: boolean;
   smartClassroomEnabled: boolean;
   projectorAvailable: boolean;
   boardType: string;
@@ -93,9 +98,34 @@ interface ApiRoom {
   bookingAvailable: boolean;
   maintenanceHistory: string[];
   imageUrl?: string;
+  openingTime?: string;
+  closingTime?: string;
   createdBy?: ApiUserSummary;
   createdAt?: string;
   updatedAt?: string;
+}
+
+interface ApiTimetableEntry {
+  id: number;
+  roomId: number;
+  roomCode?: string;
+  roomName?: string;
+  substituteRoomId?: number | null;
+  substituteRoomCode?: string | null;
+  substituteRoomName?: string | null;
+  dayOfWeek: string;
+  startTime: string;
+  endTime: string;
+  lectureName: string;
+  lecturerName: string;
+  lecturerEmail?: string;
+  purpose: string;
+  notes?: string;
+  entryType: string;
+  active: boolean;
+  substituteNotified: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface BuildingUpsertPayload {
@@ -109,6 +139,9 @@ export interface BuildingUpsertPayload {
   status: BuildingStatus;
   yearEstablished: number;
   manager: string;
+  openingTime?: string;
+  closingTime?: string;
+  closedOnWeekends?: boolean;
 }
 
 export interface FloorUpsertPayload {
@@ -146,7 +179,24 @@ export interface RoomUpsertPayload {
   accessibilitySupport: boolean;
   maintenanceStatus: Room["maintenanceStatus"];
   bookingAvailable: boolean;
+  openingTime?: string;
+  closingTime?: string;
   maintenanceHistory: string[];
+}
+
+export interface RoomTimetablePayload {
+  roomId: string;
+  substituteRoomId?: string | null;
+  dayOfWeek: string;
+  startTime: string;
+  endTime: string;
+  lectureName: string;
+  lecturerName: string;
+  lecturerEmail?: string;
+  purpose: string;
+  notes?: string;
+  entryType: string;
+  active?: boolean;
 }
 
 const mapUser = (user?: ApiUserSummary): CreatedByUser | undefined => {
@@ -176,6 +226,9 @@ const mapBuilding = (building: ApiBuilding): Building => ({
   imageUrl: building.imageUrl,
   yearEstablished: building.yearEstablished,
   manager: building.manager,
+  openingTime: building.openingTime,
+  closingTime: building.closingTime,
+  closedOnWeekends: building.closedOnWeekends,
   createdBy: mapUser(building.createdBy),
   createdAt: building.createdAt,
   updatedAt: building.updatedAt,
@@ -212,6 +265,7 @@ const mapRoom = (room: ApiRoom): Room => ({
   description: room.description,
   condition: room.condition as Room["condition"],
   climateControl: room.climateControl as Room["climateControl"],
+  closedOnWeekends: room.closedOnWeekends,
   smartClassroomEnabled: room.smartClassroomEnabled,
   projectorAvailable: room.projectorAvailable,
   boardType: room.boardType as Room["boardType"],
@@ -223,11 +277,36 @@ const mapRoom = (room: ApiRoom): Room => ({
   accessibilitySupport: room.accessibilitySupport,
   maintenanceStatus: room.maintenanceStatus as Room["maintenanceStatus"],
   bookingAvailable: room.bookingAvailable,
+  openingTime: room.openingTime,
+  closingTime: room.closingTime,
   maintenanceHistory: room.maintenanceHistory || [],
   imageUrl: room.imageUrl,
   createdBy: mapUser(room.createdBy),
   createdAt: room.createdAt,
   updatedAt: room.updatedAt,
+});
+
+const mapTimetableEntry = (entry: ApiTimetableEntry): RoomTimetableEntryType => ({
+  id: String(entry.id),
+  roomId: String(entry.roomId),
+  roomCode: entry.roomCode,
+  roomName: entry.roomName,
+  substituteRoomId: entry.substituteRoomId != null ? String(entry.substituteRoomId) : null,
+  substituteRoomCode: entry.substituteRoomCode,
+  substituteRoomName: entry.substituteRoomName,
+  dayOfWeek: entry.dayOfWeek,
+  startTime: entry.startTime,
+  endTime: entry.endTime,
+  lectureName: entry.lectureName,
+  lecturerName: entry.lecturerName,
+  lecturerEmail: entry.lecturerEmail,
+  purpose: entry.purpose,
+  notes: entry.notes,
+  entryType: entry.entryType,
+  active: entry.active,
+  substituteNotified: entry.substituteNotified,
+  createdAt: entry.createdAt,
+  updatedAt: entry.updatedAt,
 });
 
 const toMultipartData = (payload: object, image?: File | null) => {
@@ -274,7 +353,25 @@ const toRoomPayload = (payload: RoomUpsertPayload) => ({
   accessibilitySupport: payload.accessibilitySupport,
   maintenanceStatus: payload.maintenanceStatus,
   bookingAvailable: payload.bookingAvailable,
+  openingTime: payload.openingTime,
+  closingTime: payload.closingTime,
   maintenanceHistory: payload.maintenanceHistory,
+});
+
+const toBuildingPayload = (payload: BuildingUpsertPayload) => ({
+  name: payload.name,
+  code: payload.code,
+  type: payload.type,
+  campus: payload.campus,
+  location: payload.location,
+  totalFloors: payload.totalFloors,
+  description: payload.description,
+  status: payload.status,
+  yearEstablished: payload.yearEstablished,
+  manager: payload.manager,
+  openingTime: payload.openingTime,
+  closingTime: payload.closingTime,
+  closedOnWeekends: payload.closedOnWeekends,
 });
 
 const SNAPSHOT_CACHE_TTL_MS = 45_000;
@@ -341,7 +438,7 @@ export const facilityService = {
   },
 
   async createBuilding(payload: BuildingUpsertPayload, image?: File | null) {
-    const multipart = toMultipartData(payload, image);
+    const multipart = toMultipartData(toBuildingPayload(payload), image);
     const response = await api.post<ApiEnvelope<ApiBuilding>>("/management/facilities/buildings", multipart, {
       headers: { "Content-Type": "multipart/form-data" },
     });
@@ -350,7 +447,7 @@ export const facilityService = {
   },
 
   async updateBuilding(id: string, payload: BuildingUpsertPayload, image?: File | null) {
-    const multipart = toMultipartData(payload, image);
+    const multipart = toMultipartData(toBuildingPayload(payload), image);
     const response = await api.put<ApiEnvelope<ApiBuilding>>(`/management/facilities/buildings/${id}`, multipart, {
       headers: { "Content-Type": "multipart/form-data" },
     });
@@ -423,6 +520,42 @@ export const facilityService = {
     });
     invalidateSnapshot();
     return mapRoom(response.data.data);
+  },
+
+  async getRoomTimetable(roomId: string) {
+    const response = await api.get<ApiEnvelope<ApiTimetableEntry[]>>(`/management/availability/rooms/${roomId}`);
+    return (response.data.data || []).map(mapTimetableEntry);
+  },
+
+  async getRoomTimetableForDate(roomId: string, date: string) {
+    const response = await api.get<ApiEnvelope<ApiTimetableEntry[]>>(`/management/availability/rooms/${roomId}/date`, {
+      params: { date },
+    });
+    return (response.data.data || []).map(mapTimetableEntry);
+  },
+
+  async createRoomTimetableEntry(payload: RoomTimetablePayload) {
+    const response = await api.post<ApiEnvelope<ApiTimetableEntry>>("/management/availability/entries", {
+      ...payload,
+      roomId: Number(payload.roomId),
+      substituteRoomId: payload.substituteRoomId ? Number(payload.substituteRoomId) : null,
+      active: payload.active ?? true,
+    });
+    return mapTimetableEntry(response.data.data);
+  },
+
+  async updateRoomTimetableEntry(id: string, payload: RoomTimetablePayload) {
+    const response = await api.put<ApiEnvelope<ApiTimetableEntry>>(`/management/availability/entries/${id}`, {
+      ...payload,
+      roomId: Number(payload.roomId),
+      substituteRoomId: payload.substituteRoomId ? Number(payload.substituteRoomId) : null,
+      active: payload.active ?? true,
+    });
+    return mapTimetableEntry(response.data.data);
+  },
+
+  async deleteRoomTimetableEntry(id: string) {
+    return api.delete(`/management/availability/entries/${id}`);
   },
 
   async deleteRoom(id: string) {

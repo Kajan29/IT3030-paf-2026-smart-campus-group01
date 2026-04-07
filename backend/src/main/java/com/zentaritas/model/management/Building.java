@@ -6,6 +6,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalTime;
 import java.time.LocalDateTime;
 
 @Data
@@ -55,6 +56,16 @@ public class Building {
 
     @Column(nullable = false)
     private String manager;
+
+    @Column(name = "opening_time")
+    private LocalTime openingTime;
+
+    @Column(name = "closing_time")
+    private LocalTime closingTime;
+
+    @Column(name = "closed_on_weekends")
+    @Builder.Default
+    private Boolean closedOnWeekends = false;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "created_by", nullable = false)
