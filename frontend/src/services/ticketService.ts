@@ -54,6 +54,16 @@ export interface AssignableStaff {
   profilePicture?: string
 }
 
+export interface TicketReply {
+  id: number
+  ticketId: number
+  senderName: string
+  senderEmail?: string
+  senderRole?: UserRole
+  message: string
+  createdAt: string
+}
+
 type ApiEnvelope<T> = {
   success: boolean
   message: string
@@ -67,6 +77,12 @@ export const ticketService = {
   getMyTickets: () => api.get<ApiEnvelope<TicketResponse[]>>('/tickets/my'),
 
   getAssignedTickets: () => api.get<ApiEnvelope<TicketResponse[]>>('/tickets/assigned'),
+
+  getTicketReplies: (ticketId: number) =>
+    api.get<ApiEnvelope<TicketReply[]>>(`/tickets/${ticketId}/replies`),
+
+  addTicketReply: (ticketId: number, message: string) =>
+    api.post<ApiEnvelope<TicketReply>>(`/tickets/${ticketId}/replies`, { message }),
 
   resolveAssignedTicket: (ticketId: number, resolutionNote?: string) =>
     api.patch<ApiEnvelope<TicketResponse>>(`/tickets/${ticketId}/resolve`, { resolutionNote }),

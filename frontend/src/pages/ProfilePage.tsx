@@ -5,6 +5,7 @@ import {
   CalendarCheck,
   CalendarDays,
   CheckCircle2,
+  ClipboardList,
   ChevronLeft,
   ChevronRight,
   Edit,
@@ -25,6 +26,7 @@ import {
   Bell,
   MessageSquare,
   Clock,
+  Send,
   TrendingUp,
   GraduationCap,
   X,
@@ -35,11 +37,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "../context/AuthContext";
 import { userService } from "@/services/userService";
-import ticketService, { type TicketResponse } from "@/services/ticketService";
+import ticketService, { type TicketReply, type TicketResponse } from "@/services/ticketService";
 import { toast } from "react-toastify";
 import { cn } from "@/lib/utils";
 
-type SectionId = "overview" | "bookings" | "tickets" | "profile" | "settings";
+type SectionId = "overview" | "bookings" | "tickets" | "assignedTickets" | "profile" | "settings";
 
 type BookingItem = {
   title: string;
@@ -74,21 +76,34 @@ const ProfilePage = () => {
   const [ticketSearch, setTicketSearch] = useState("");
   const [ticketStatusFilter, setTicketStatusFilter] = useState<TicketResponse["status"] | "ALL">("ALL");
   const [focusedTicketId, setFocusedTicketId] = useState<number | null>(null);
+  const [ticketRepliesByTicketId, setTicketRepliesByTicketId] = useState<Record<number, TicketReply[]>>({});
+  const [loadingRepliesForTicketId, setLoadingRepliesForTicketId] = useState<number | null>(null);
+  const [sendingReplyForTicketId, setSendingReplyForTicketId] = useState<number | null>(null);
+  const [replyDraftByTicketId, setReplyDraftByTicketId] = useState<Record<number, string>>({});
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const effectiveTicketTab: "mine" | "assigned" = activeSection === "assignedTickets" ? "assigned" : ticketTab;
+  const isStaff = user?.role === "ACADEMIC_STAFF" || user?.role === "NON_ACADEMIC_STAFF";
+  const isStudent = user?.role === "STUDENT";
+  const isNonAcademicStaff = user?.role === "NON_ACADEMIC_STAFF";
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const section = params.get("section");
     const tab = params.get("tab");
+    const allowedSections: SectionId[] = ["overview", "bookings", "tickets", "profile", "settings"];
 
-    if (section && ["overview", "bookings", "tickets", "profile", "settings"].includes(section)) {
+    if (isNonAcademicStaff) {
+      allowedSections.push("assignedTickets");
+    }
+
+    if (section && allowedSections.includes(section as SectionId)) {
       setActiveSection(section as SectionId);
     }
 
     if (tab === "mine" || tab === "assigned") {
       setTicketTab(tab);
     }
-  }, [location.search]);
+  }, [isNonAcademicStaff, location.search]);
 
   useEffect(() => {
     if (!user) return;
@@ -109,10 +124,6 @@ const ProfilePage = () => {
     if (user?.role === "ADMIN") return "Admin";
     return "Student";
   }, [user?.role]);
-
-  const isStaff = user?.role === "ACADEMIC_STAFF" || user?.role === "NON_ACADEMIC_STAFF";
-  const isStudent = user?.role === "STUDENT";
-  const isNonAcademicStaff = user?.role === "NON_ACADEMIC_STAFF";
 
   const bookings: BookingItem[] = isStaff
     ? [
@@ -274,7 +285,7 @@ const ProfilePage = () => {
   }, [user?.email, user?.role]);
 
   useEffect(() => {
-    const visible = ticketTab === "mine" ? myTickets : assignedTickets;
+    const visible = effectiveTicketTab === "mine" ? myTickets : assignedTickets;
 
     if (visible.length === 0) {
       setFocusedTicketId(null);
@@ -284,15 +295,88 @@ const ProfilePage = () => {
     if (!focusedTicketId || !visible.some((ticket) => ticket.id === focusedTicketId)) {
       setFocusedTicketId(visible[0].id);
     }
-  }, [assignedTickets, focusedTicketId, myTickets, ticketTab]);
+  }, [assignedTickets, effectiveTicketTab, focusedTicketId, myTickets]);
+
+  const getSenderTypeLabel = (reply: TicketReply) => {
+    if (reply.senderRole === "ADMIN") {
+      return "Admin Reply";
+    }
+    if (reply.senderRole === "NON_ACADEMIC_STAFF" || reply.senderRole === "ACADEMIC_STAFF") {
+      return "Staff Reply";
+    }
+    return "User Reply";
+  };
+
+  const isOwnReply = (reply: TicketReply) => {
+    if (!user?.email || !reply.senderEmail) {
+      return false;
+    }
+    return user.email.toLowerCase() === reply.senderEmail.toLowerCase();
+  };
+
+  const loadTicketReplies = async (ticketId: number) => {
+    setLoadingRepliesForTicketId(ticketId);
+    try {
+      const response = await ticketService.getTicketReplies(ticketId);
+      setTicketRepliesByTicketId((prev) => ({
+        ...prev,
+        [ticketId]: response.data.data || [],
+      }));
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Could not load ticket replies");
+    } finally {
+      setLoadingRepliesForTicketId(null);
+    }
+  };
+
+  const sendTicketReply = async (ticketId: number) => {
+    const draft = (replyDraftByTicketId[ticketId] || "").trim();
+    if (!draft) {
+      toast.warning("Ticket reply is required");
+      return;
+    }
+
+    setSendingReplyForTicketId(ticketId);
+    try {
+      await ticketService.addTicketReply(ticketId, draft);
+      setReplyDraftByTicketId((prev) => ({ ...prev, [ticketId]: "" }));
+      await loadTicketReplies(ticketId);
+      toast.success("Ticket reply sent successfully");
+      await loadTickets();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Could not send ticket reply");
+    } finally {
+      setSendingReplyForTicketId(null);
+    }
+  };
+
+  useEffect(() => {
+    const visible = effectiveTicketTab === "mine" ? myTickets : assignedTickets;
+    if (visible.length === 0) {
+      return;
+    }
+
+    const selectedTicket =
+      visible.find((ticket) => ticket.id === focusedTicketId) || visible[0];
+
+    if (selectedTicket && !ticketRepliesByTicketId[selectedTicket.id]) {
+      void loadTicketReplies(selectedTicket.id);
+    }
+  }, [assignedTickets, effectiveTicketTab, focusedTicketId, myTickets, ticketRepliesByTicketId]);
 
   const handleResolveAssignedTicket = async (ticketId: number) => {
-    const note = window.prompt("Add an optional resolution note:") || undefined;
+    const note = (replyDraftByTicketId[ticketId] || "").trim();
+    if (!note) {
+      toast.warning("Ticket reply note is required");
+      return;
+    }
     setResolvingTicketId(ticketId);
     try {
       await ticketService.resolveAssignedTicket(ticketId, note);
       toast.success("Ticket resolved successfully");
+      setReplyDraftByTicketId((prev) => ({ ...prev, [ticketId]: "" }));
       await loadTickets();
+      await loadTicketReplies(ticketId);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Could not resolve ticket");
     } finally {
@@ -300,7 +384,7 @@ const ProfilePage = () => {
     }
   };
 
-  const sectionList = [
+  const sectionList: Array<{ id: SectionId; label: string; icon: typeof LayoutGrid }> = [
     { id: "overview" as SectionId, label: "Overview", icon: LayoutGrid },
     { id: "bookings" as SectionId, label: isStudent ? "My Bookings" : "Bookings", icon: CalendarDays },
     { id: "tickets" as SectionId, label: "Tickets", icon: Ticket },
@@ -308,10 +392,19 @@ const ProfilePage = () => {
     { id: "settings" as SectionId, label: "Preferences", icon: Settings },
   ];
 
+  if (isNonAcademicStaff) {
+    sectionList.splice(3, 0, {
+      id: "assignedTickets",
+      label: "Assigned Tickets",
+      icon: ClipboardList,
+    });
+  }
+
   const pageTitles: Record<SectionId, string> = {
     overview: "Dashboard Overview",
     bookings: isStudent ? "My Bookings" : "Bookings Management",
     tickets: "Support Tickets",
+    assignedTickets: "Assigned Tickets",
     profile: "Edit Profile",
     settings: "Preferences",
   };
@@ -528,8 +621,8 @@ const ProfilePage = () => {
       );
     }
 
-    if (activeSection === "tickets") {
-      const visibleTickets = ticketTab === "mine" ? myTickets : assignedTickets;
+    if (activeSection === "tickets" || activeSection === "assignedTickets") {
+      const visibleTickets = effectiveTicketTab === "mine" ? myTickets : assignedTickets;
       const filteredTickets = visibleTickets.filter((ticket) => {
         const query = ticketSearch.trim().toLowerCase();
         const statusMatch = ticketStatusFilter === "ALL" || ticket.status === ticketStatusFilter;
@@ -586,9 +679,9 @@ const ProfilePage = () => {
         if (ticket.resolutionNote) {
           steps.push({
             id: "reply",
-            title: "Support Reply",
+            title: "Ticket Reply",
             time: formatDateTime(ticket.resolvedAt || ticket.updatedAt),
-            description: ticket.resolutionNote,
+            description: `${ticket.resolvedByName ? `Reply by ${ticket.resolvedByName}: ` : ""}${ticket.resolutionNote}`,
           });
         }
 
@@ -597,7 +690,9 @@ const ProfilePage = () => {
             id: "resolved",
             title: "Resolved",
             time: formatDateTime(ticket.resolvedAt || ticket.updatedAt),
-            description: "Ticket has been marked as resolved.",
+            description: ticket.resolvedByName
+              ? `Ticket has been marked as resolved by ${ticket.resolvedByName}.`
+              : "Ticket has been marked as resolved.",
           });
         }
 
@@ -613,20 +708,36 @@ const ProfilePage = () => {
                   <Ticket size={20} className="text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="font-display text-xl">Support Tickets</CardTitle>
+                  <CardTitle className="font-display text-xl">
+                    {activeSection === "assignedTickets" ? "Assigned Tickets" : "Support Tickets"}
+                  </CardTitle>
                   <CardDescription>
-                    {isNonAcademicStaff
+                    {activeSection === "assignedTickets"
+                      ? "Tickets assigned by admin to you. Resolve and send ticket replies to users."
+                      : isNonAcademicStaff
                       ? "Manage your own requests and tickets assigned to you"
                       : "Track your support and access requests"}
                   </CardDescription>
                 </div>
               </div>
-              <Button size="sm" className="bg-primary hover:bg-primary/90" onClick={() => navigate("/contact")}>
-                <MessageSquare size={16} className="mr-2" />
-                Raise Ticket
-              </Button>
+              {activeSection === "assignedTickets" ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-border"
+                  onClick={() => void loadTickets()}
+                  disabled={ticketLoading}
+                >
+                  Refresh Queue
+                </Button>
+              ) : (
+                <Button size="sm" className="bg-primary hover:bg-primary/90" onClick={() => navigate("/contact")}>
+                  <MessageSquare size={16} className="mr-2" />
+                  Raise Ticket
+                </Button>
+              )}
             </div>
-            {isNonAcademicStaff && (
+            {isNonAcademicStaff && activeSection === "tickets" && (
               <div className="flex items-center gap-2 mt-2">
                 <Button
                   size="sm"
@@ -674,7 +785,7 @@ const ProfilePage = () => {
               <div className="p-6 text-center text-sm text-muted-foreground">Loading tickets...</div>
             ) : filteredTickets.length === 0 ? (
               <div className="p-6 text-center text-sm text-muted-foreground">
-                {ticketTab === "assigned"
+                {effectiveTicketTab === "assigned"
                   ? "No tickets assigned to you yet."
                   : "No tickets found for this filter."}
               </div>
@@ -716,22 +827,14 @@ const ProfilePage = () => {
                               variant={selected ? "default" : "outline"}
                               size="sm"
                               className={selected ? "bg-primary hover:bg-primary/90" : "border-border"}
-                              onClick={() => setFocusedTicketId(ticket.id)}
+                              onClick={() => {
+                                setFocusedTicketId(ticket.id);
+                                void loadTicketReplies(ticket.id);
+                              }}
                             >
                               <Eye size={14} className="mr-2" />
                               View Flow
                             </Button>
-
-                            {isNonAcademicStaff && ticketTab === "assigned" && ticket.status !== "RESOLVED" && (
-                              <Button
-                                size="sm"
-                                className="bg-success hover:bg-success/90 text-success-foreground"
-                                disabled={resolvingTicketId === ticket.id}
-                                onClick={() => handleResolveAssignedTicket(ticket.id)}
-                              >
-                                {resolvingTicketId === ticket.id ? "Resolving..." : "Resolve"}
-                              </Button>
-                            )}
                           </div>
                         </div>
                       </div>
@@ -774,11 +877,113 @@ const ProfilePage = () => {
                       </div>
 
                       <div className="rounded-lg border border-success/30 bg-success/5 p-3">
-                        <p className="text-xs text-muted-foreground">Support Reply / Resolution</p>
+                        <p className="text-xs text-muted-foreground">Ticket Reply / Resolution</p>
+                        {selectedTicket.resolutionNote && selectedTicket.resolvedByName && (
+                          <p className="mt-2 text-xs text-muted-foreground">Reply by: {selectedTicket.resolvedByName}</p>
+                        )}
                         <p className="text-sm text-foreground mt-2 whitespace-pre-line">
-                          {selectedTicket.resolutionNote || "No support reply yet. Your ticket is currently being processed."}
+                          {selectedTicket.resolutionNote || "No ticket reply yet. Your ticket is currently being processed."}
                         </p>
                       </div>
+
+                      <div className="rounded-lg border border-border/60 bg-background p-3">
+                        <p className="text-xs text-muted-foreground mb-3">Ticket Replies</p>
+
+                        {loadingRepliesForTicketId === selectedTicket.id ? (
+                          <p className="text-sm text-muted-foreground">Loading ticket replies...</p>
+                        ) : (ticketRepliesByTicketId[selectedTicket.id] || []).length === 0 ? (
+                          <p className="text-sm text-muted-foreground">No ticket replies yet.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {(ticketRepliesByTicketId[selectedTicket.id] || []).map((reply) => (
+                              <div
+                                key={reply.id}
+                                className={cn(
+                                  "rounded-lg border p-3",
+                                  isOwnReply(reply)
+                                    ? "ml-4 border-primary/30 bg-primary/5"
+                                    : "mr-4 border-border bg-muted/20"
+                                )}
+                              >
+                                <p className="text-xs font-semibold text-foreground">
+                                  {getSenderTypeLabel(reply)} - {reply.senderName}
+                                </p>
+                                <p className="mt-1 text-[11px] text-muted-foreground">
+                                  {formatDateTime(reply.createdAt)}
+                                </p>
+                                <p className="mt-2 whitespace-pre-line text-sm text-foreground">{reply.message}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {!(isNonAcademicStaff && activeSection === "assignedTickets") && (
+                          <div className="mt-3 space-y-2">
+                            <textarea
+                              value={replyDraftByTicketId[selectedTicket.id] || ""}
+                              onChange={(event) =>
+                                setReplyDraftByTicketId((prev) => ({
+                                  ...prev,
+                                  [selectedTicket.id]: event.target.value,
+                                }))
+                              }
+                              placeholder="Write your ticket reply here"
+                              className="min-h-[90px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => void sendTicketReply(selectedTicket.id)}
+                              disabled={sendingReplyForTicketId === selectedTicket.id}
+                            >
+                              <Send size={14} className="mr-2" />
+                              {sendingReplyForTicketId === selectedTicket.id ? "Sending..." : "Send Ticket Reply"}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+
+                      {isNonAcademicStaff && activeSection === "assignedTickets" && selectedTicket.status !== "RESOLVED" && (
+                        <div className="rounded-lg border border-border/60 bg-background p-3 space-y-3">
+                          <p className="text-xs text-muted-foreground">Staff Action</p>
+                          <p className="text-xs text-muted-foreground">
+                            Send ticket reply updates to the requester and resolve once the issue is completed.
+                          </p>
+                          <textarea
+                            value={replyDraftByTicketId[selectedTicket.id] || ""}
+                            onChange={(event) =>
+                              setReplyDraftByTicketId((prev) => ({
+                                ...prev,
+                                [selectedTicket.id]: event.target.value,
+                              }))
+                            }
+                            placeholder="Add a clear ticket reply for the requester"
+                            className="min-h-[96px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                          />
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="border-border"
+                              onClick={() => void sendTicketReply(selectedTicket.id)}
+                              disabled={sendingReplyForTicketId === selectedTicket.id}
+                            >
+                              <Send size={14} className="mr-2" />
+                              {sendingReplyForTicketId === selectedTicket.id ? "Sending..." : "Send Ticket Reply"}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="bg-success hover:bg-success/90 text-success-foreground"
+                              disabled={resolvingTicketId === selectedTicket.id}
+                              onClick={() => void handleResolveAssignedTicket(selectedTicket.id)}
+                            >
+                              {resolvingTicketId === selectedTicket.id ? "Resolving..." : "Resolve Ticket"}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
 
                       <div className="rounded-lg border border-border/60 bg-background p-3">
                         <p className="text-xs text-muted-foreground mb-3">Ticket Flow</p>
@@ -1273,6 +1478,7 @@ const ProfilePage = () => {
                 {activeSection === "overview" && "Welcome to your personal dashboard"}
                 {activeSection === "bookings" && "Manage your space reservations"}
                 {activeSection === "tickets" && "Track your support requests"}
+                {activeSection === "assignedTickets" && "Resolve assigned tickets and send ticket replies to users"}
                 {activeSection === "profile" && "Update your personal information"}
                 {activeSection === "settings" && "Customize your experience"}
               </p>

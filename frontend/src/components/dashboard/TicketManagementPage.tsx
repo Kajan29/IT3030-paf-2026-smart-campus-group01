@@ -143,6 +143,8 @@ export const TicketManagementPage = () => {
     [filteredTickets, selectedId]
   );
 
+  const isTransferredToStaff = Boolean(selectedTicket?.assignedStaffId);
+
   const flowStages = useMemo(() => {
     if (!selectedTicket) {
       return [];
@@ -214,6 +216,11 @@ export const TicketManagementPage = () => {
   }, [tickets]);
 
   const handleAssign = async (ticketId: number) => {
+    if (isTransferredToStaff) {
+      toast.info("This ticket is already transferred to staff. Admin actions are disabled.");
+      return;
+    }
+
     const staffId = Number(actionForm.assignedStaffId);
     if (!staffId) {
       toast.warning("Please choose a staff member first");
@@ -238,6 +245,11 @@ export const TicketManagementPage = () => {
   };
 
   const handleResolve = async (ticketId: number) => {
+    if (isTransferredToStaff) {
+      toast.info("Only the assigned staff member can resolve this transferred ticket.");
+      return;
+    }
+
     setWorkingTicketId(ticketId);
     try {
       const resolutionNote = actionForm.resolutionNote.trim();
@@ -448,19 +460,26 @@ export const TicketManagementPage = () => {
                   </div>
 
                   <div className="space-y-2 rounded-xl border border-success/30 bg-success/5 p-4 lg:col-span-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Resolution Note</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Ticket Reply Note</p>
                     <p className="text-sm text-foreground whitespace-pre-line leading-6">
-                      {selectedTicket.resolutionNote || "No resolution note has been recorded yet."}
+                      {selectedTicket.resolutionNote || "No ticket reply note has been recorded yet."}
                     </p>
                   </div>
                 </div>
 
                 <div className="border-t border-border p-5 space-y-4">
                   <h4 className="text-sm font-semibold text-foreground">Admin Action</h4>
-                  <p className="text-xs text-muted-foreground">
-                    Transfer this ticket to the relevant non-academic staff member and track progress here.
-                  </p>
+                  {isTransferredToStaff ? (
+                    <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-foreground">
+                      This ticket is transferred to {selectedTicket.assignedStaffName || "assigned staff"}. Admin assign/resolve actions are hidden until staff resolves it.
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Transfer this ticket to the relevant non-academic staff member and track progress here.
+                    </p>
+                  )}
 
+                  {!isTransferredToStaff && (
                   <div>
                     <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                       Assign Staff
@@ -479,20 +498,24 @@ export const TicketManagementPage = () => {
                       ))}
                     </select>
                   </div>
+                  )}
 
+                  {!isTransferredToStaff && (
                   <div>
                     <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                      Resolution Note
+                      Ticket Reply Note
                     </label>
                     <textarea
                       rows={4}
                       value={actionForm.resolutionNote}
                       onChange={(event) => setActionForm((prev) => ({ ...prev, resolutionNote: event.target.value }))}
-                      placeholder="Add a clear resolution summary for this case"
+                      placeholder="Add a clear ticket reply note for this case"
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
                     />
                   </div>
+                  )}
 
+                  {!isTransferredToStaff && (
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
@@ -517,6 +540,7 @@ export const TicketManagementPage = () => {
                       Resolve Ticket
                     </button>
                   </div>
+                  )}
                 </div>
               </div>
             )}

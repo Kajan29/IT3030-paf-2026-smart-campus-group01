@@ -44,9 +44,10 @@ public class AdminTicketController {
     @PatchMapping("/{ticketId}/assign")
     public ResponseEntity<ApiResponse<TicketResponse>> assignTicket(
             @PathVariable Long ticketId,
-            @Valid @RequestBody TicketAssignmentRequest request) {
+            @Valid @RequestBody TicketAssignmentRequest request,
+            Authentication authentication) {
         return ResponseEntity.ok(ApiResponse.success(
-                ticketService.assignTicket(ticketId, request.getStaffId()),
+                ticketService.assignTicket(ticketId, request.getStaffId(), authentication.getName()),
                 "Ticket assigned successfully"
         ));
     }

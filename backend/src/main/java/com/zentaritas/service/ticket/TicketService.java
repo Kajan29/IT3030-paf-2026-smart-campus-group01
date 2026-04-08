@@ -2,14 +2,17 @@ package com.zentaritas.service.ticket;
 
 import com.zentaritas.dto.management.facility.UserSummaryResponse;
 import com.zentaritas.dto.ticket.CreateTicketRequest;
+import com.zentaritas.dto.ticket.TicketMessageResponse;
 import com.zentaritas.dto.ticket.TicketResponse;
 import com.zentaritas.exception.ResourceNotFoundException;
 import com.zentaritas.model.auth.Role;
 import com.zentaritas.model.auth.User;
 import com.zentaritas.model.ticket.Ticket;
+import com.zentaritas.model.ticket.TicketMessage;
 import com.zentaritas.model.ticket.TicketPriority;
 import com.zentaritas.model.ticket.TicketStatus;
 import com.zentaritas.repository.auth.UserRepository;
+import com.zentaritas.repository.ticket.TicketMessageRepository;
 import com.zentaritas.repository.ticket.TicketRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,6 +33,7 @@ import java.util.stream.Collectors;
 public class TicketService {
 
     private final TicketRepository ticketRepository;
+    private final TicketMessageRepository ticketMessageRepository;
     private final UserRepository userRepository;
 
     @Transactional
@@ -137,12 +141,15 @@ public class TicketService {
     }
 
     @Transactional
-    public TicketResponse assignTicket(Long ticketId, Long staffId) {
+    public TicketResponse assignTicket(Long ticketId, Long staffId, String adminEmail) {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
 
         if (ticket.getStatus() == TicketStatus.RESOLVED) {
             throw new IllegalArgumentException("Resolved tickets cannot be reassigned");
+        }
+        if (ticket.getAssignedTo() != null && ticket.getStatus() == TicketStatus.IN_PROGRESS) {
+            throw new IllegalArgumentException("This ticket is already transferred to staff and cannot be reassigned by admin");
         }
 
         User staff = userRepository.findById(staffId)
@@ -155,6 +162,10 @@ public class TicketService {
             throw new IllegalArgumentException("Cannot assign ticket to an inactive staff member");
         }
 
+        User actingAdmin = userRepository.findByEmailIgnoreCase(adminEmail).orElse(null);
+        String actingAdminName = resolveDisplayName(actingAdmin, "Admin Team");
+        String assignedStaffName = resolveDisplayName(staff, staff.getEmail());
+
         ticket.setAssignedTo(staff);
         ticket.setAssignedAt(LocalDateTime.now());
         if (ticket.getStatus() == TicketStatus.OPEN) {
@@ -165,6 +176,14 @@ public class TicketService {
         ticket.setResolutionNote(null);
 
         Ticket savedTicket = ticketRepository.save(ticket);
+        addTicketMessageInternal(
+            savedTicket,
+            actingAdmin,
+            actingAdminName,
+            actingAdmin != null ? actingAdmin.getEmail() : null,
+            actingAdmin != null ? actingAdmin.getRole() : Role.ADMIN,
+            "Ticket transferred to " + assignedStaffName + ". Please continue updates in this conversation thread."
+        );
         return toResponse(savedTicket);
     }
 
@@ -172,6 +191,10 @@ public class TicketService {
     public TicketResponse resolveTicketByAdmin(Long ticketId, String resolutionNote, String adminEmail) {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
+
+        if (ticket.getAssignedTo() != null) {
+            throw new IllegalArgumentException("Transferred tickets must be resolved by the assigned staff member");
+        }
 
         User adminUser = userRepository.findByEmailIgnoreCase(adminEmail)
                 .orElse(null);
@@ -183,6 +206,16 @@ public class TicketService {
         ticket.setResolvedByName(adminName);
 
         Ticket savedTicket = ticketRepository.save(ticket);
+        if (StringUtils.hasText(savedTicket.getResolutionNote())) {
+            addTicketMessageInternal(
+                    savedTicket,
+                    adminUser,
+                    adminName,
+                    adminUser != null ? adminUser.getEmail() : null,
+                    adminUser != null ? adminUser.getRole() : Role.ADMIN,
+                    savedTicket.getResolutionNote()
+            );
+        }
         return toResponse(savedTicket);
     }
 
@@ -201,6 +234,9 @@ public class TicketService {
         if (ticket.getAssignedTo() == null || !ticket.getAssignedTo().getId().equals(staff.getId())) {
             throw new IllegalArgumentException("You can only resolve tickets assigned to you");
         }
+        if (!StringUtils.hasText(resolutionNote)) {
+            throw new IllegalArgumentException("Resolution note is required when resolving a transferred ticket");
+        }
 
         String staffName = resolveDisplayName(staff, staff.getEmail());
 
@@ -210,8 +246,57 @@ public class TicketService {
         ticket.setResolvedByName(staffName);
 
         Ticket savedTicket = ticketRepository.save(ticket);
+        addTicketMessageInternal(
+            savedTicket,
+            staff,
+            staffName,
+            staff.getEmail(),
+            staff.getRole(),
+            savedTicket.getResolutionNote()
+        );
         return toResponse(savedTicket);
     }
+
+    @Transactional(readOnly = true)
+    public List<TicketMessageResponse> getTicketReplies(Long ticketId, String authenticatedEmail) {
+        User actor = userRepository.findByEmailIgnoreCase(authenticatedEmail)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        Ticket ticket = ticketRepository.findById(ticketId)
+            .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
+
+        ensureCanAccessTicket(actor, ticket);
+
+        return ticketMessageRepository.findByTicketOrderByCreatedAtAsc(ticket)
+            .stream()
+            .map(this::toMessageResponse)
+            .collect(Collectors.toList());
+        }
+
+    @Transactional
+    public TicketMessageResponse addTicketReply(Long ticketId, String authenticatedEmail, String message) {
+        User actor = userRepository.findByEmailIgnoreCase(authenticatedEmail)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        Ticket ticket = ticketRepository.findById(ticketId)
+            .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
+
+        ensureCanAccessTicket(actor, ticket);
+
+        String trimmedMessage = trimToNull(message);
+        if (!StringUtils.hasText(trimmedMessage)) {
+            throw new IllegalArgumentException("Ticket reply is required");
+        }
+
+        TicketMessage saved = addTicketMessageInternal(
+            ticket,
+            actor,
+            resolveDisplayName(actor, actor.getEmail()),
+            actor.getEmail(),
+            actor.getRole(),
+            trimmedMessage
+        );
+
+        return toMessageResponse(saved);
+        }
 
     private String generateTicketNumber() {
         int currentYear = Year.now().getValue();
@@ -283,6 +368,55 @@ public class TicketService {
             return user.getEmail();
         }
         return fallback;
+    }
+
+    private TicketMessageResponse toMessageResponse(TicketMessage message) {
+        return TicketMessageResponse.builder()
+                .id(message.getId())
+                .ticketId(message.getTicket().getId())
+                .senderName(message.getSenderName())
+                .senderEmail(message.getSenderEmail())
+                .senderRole(message.getSenderRole())
+                .message(message.getMessage())
+                .createdAt(message.getCreatedAt())
+                .build();
+    }
+
+    private void ensureCanAccessTicket(User actor, Ticket ticket) {
+        if (actor.getRole() == Role.ADMIN) {
+            return;
+        }
+
+        boolean requesterMatchesUser = ticket.getRequesterUser() != null
+                && ticket.getRequesterUser().getId().equals(actor.getId());
+        boolean requesterMatchesEmail = StringUtils.hasText(ticket.getRequesterEmail())
+                && ticket.getRequesterEmail().equalsIgnoreCase(actor.getEmail());
+        boolean isAssignedStaff = ticket.getAssignedTo() != null
+                && ticket.getAssignedTo().getId().equals(actor.getId());
+
+        if (!(requesterMatchesUser || requesterMatchesEmail || isAssignedStaff)) {
+            throw new IllegalArgumentException("You do not have access to this ticket conversation");
+        }
+    }
+
+    private TicketMessage addTicketMessageInternal(
+            Ticket ticket,
+            User senderUser,
+            String senderName,
+            String senderEmail,
+            Role senderRole,
+            String message
+    ) {
+        TicketMessage entry = TicketMessage.builder()
+                .ticket(ticket)
+                .senderUser(senderUser)
+                .senderName(senderName)
+                .senderEmail(senderEmail)
+                .senderRole(senderRole)
+                .message(message)
+                .build();
+
+        return ticketMessageRepository.save(entry);
     }
 
     private String trimToNull(String value) {
