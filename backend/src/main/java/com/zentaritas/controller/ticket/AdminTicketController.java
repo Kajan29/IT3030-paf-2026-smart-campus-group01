@@ -3,6 +3,7 @@ package com.zentaritas.controller.ticket;
 import com.zentaritas.dto.management.facility.UserSummaryResponse;
 import com.zentaritas.dto.response.ApiResponse;
 import com.zentaritas.dto.ticket.TicketAssignmentRequest;
+import com.zentaritas.dto.ticket.TicketRejectRequest;
 import com.zentaritas.dto.ticket.TicketResolveRequest;
 import com.zentaritas.dto.ticket.TicketResponse;
 import com.zentaritas.model.ticket.TicketStatus;
@@ -60,6 +61,27 @@ public class AdminTicketController {
         return ResponseEntity.ok(ApiResponse.success(
                 ticketService.resolveTicketByAdmin(ticketId, request.getResolutionNote(), authentication.getName()),
             "Ticket resolved successfully"
+        ));
+    }
+
+    @PatchMapping("/{ticketId}/reject")
+    public ResponseEntity<ApiResponse<TicketResponse>> rejectTicket(
+            @PathVariable Long ticketId,
+            @Valid @RequestBody TicketRejectRequest request,
+            Authentication authentication) {
+        return ResponseEntity.ok(ApiResponse.success(
+                ticketService.rejectTicketByAdmin(ticketId, request.getReason(), authentication.getName()),
+                "Ticket rejected successfully"
+        ));
+    }
+
+    @PatchMapping("/{ticketId}/close")
+    public ResponseEntity<ApiResponse<TicketResponse>> closeTicket(
+            @PathVariable Long ticketId,
+            Authentication authentication) {
+        return ResponseEntity.ok(ApiResponse.success(
+                ticketService.closeTicket(ticketId, authentication.getName()),
+                "Ticket closed successfully"
         ));
     }
 }

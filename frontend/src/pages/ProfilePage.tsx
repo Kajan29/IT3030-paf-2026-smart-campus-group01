@@ -125,6 +125,7 @@ const ProfilePage = () => {
   const [assignedTickets, setAssignedTickets] = useState<TicketResponse[]>([]);
   const [ticketLoading, setTicketLoading] = useState(false);
   const [resolvingTicketId, setResolvingTicketId] = useState<number | null>(null);
+  const [closingTicketId, setClosingTicketId] = useState<number | null>(null);
   const [ticketTab, setTicketTab] = useState<"mine" | "assigned">("mine");
   const [ticketSearch, setTicketSearch] = useState("");
   const [ticketStatusFilter, setTicketStatusFilter] = useState<TicketResponse["status"] | "ALL">("ALL");
@@ -402,7 +403,7 @@ const ProfilePage = () => {
     return grouped;
   }, [academicAllocations]);
 
-  const openTicketCount = myTickets.filter((ticket) => ticket.status !== "RESOLVED").length;
+  const openTicketCount = myTickets.filter((ticket) => !["RESOLVED", "CLOSED", "REJECTED"].includes(ticket.status)).length;
 
   const summary = [
     {
@@ -625,6 +626,20 @@ const ProfilePage = () => {
     }
   };
 
+  const handleCloseTicket = async (ticketId: number) => {
+    setClosingTicketId(ticketId);
+    try {
+      await ticketService.closeTicket(ticketId);
+      toast.success("Ticket closed successfully");
+      await loadTickets();
+      await loadTicketReplies(ticketId);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Could not close ticket");
+    } finally {
+      setClosingTicketId(null);
+    }
+  };
+
   const sectionList: Array<{ id: SectionId; label: string; icon: typeof LayoutGrid }> = [
     { id: "overview" as SectionId, label: "Overview", icon: LayoutGrid },
     {
@@ -668,6 +683,8 @@ const ProfilePage = () => {
       OPEN: "bg-primary/10 text-primary border-primary/30",
       RESOLVED: "bg-success/10 text-success border-success/30",
       IN_PROGRESS: "bg-warning/15 text-warning-foreground border-warning/30",
+      CLOSED: "bg-muted text-foreground border-border",
+      REJECTED: "bg-destructive/10 text-destructive border-destructive/30",
     };
     const label = status.replace("_", " ").toLowerCase().replace(/\b\w/g, (s) => s.toUpperCase());
     return <Badge className={`border ${styles[status]}`}>{label}</Badge>;
@@ -1088,6 +1105,26 @@ const ProfilePage = () => {
           });
         }
 
+        if (ticket.status === "CLOSED") {
+          steps.push({
+            id: "closed",
+            title: "Closed",
+            time: formatDateTime(ticket.closedAt || ticket.updatedAt),
+            description: ticket.closedByName
+              ? `Ticket has been closed by ${ticket.closedByName}.`
+              : "Ticket has been closed.",
+          });
+        }
+
+        if (ticket.status === "REJECTED") {
+          steps.push({
+            id: "rejected",
+            title: "Rejected",
+            time: formatDateTime(ticket.updatedAt),
+            description: ticket.rejectionReason || "Ticket was rejected by admin.",
+          });
+        }
+
         return steps;
       };
 
@@ -1169,6 +1206,8 @@ const ProfilePage = () => {
                 <option value="OPEN">Open</option>
                 <option value="IN_PROGRESS">In Progress</option>
                 <option value="RESOLVED">Resolved</option>
+                <option value="CLOSED">Closed</option>
+                <option value="REJECTED">Rejected</option>
               </select>
             </div>
           </CardHeader>
@@ -1268,6 +1307,29 @@ const ProfilePage = () => {
                         <p className="text-sm text-foreground mt-2 whitespace-pre-line">{selectedTicket.description}</p>
                       </div>
 
+                      {!!selectedTicket.attachments?.length && (
+                        <div className="rounded-lg border border-border/60 bg-background p-3">
+                          <p className="text-xs text-muted-foreground">Evidence Attachments</p>
+                          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            {selectedTicket.attachments.map((attachment) => (
+                              <a
+                                key={attachment.id}
+                                href={attachment.imageUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="block overflow-hidden rounded-lg border border-border hover:opacity-90"
+                              >
+                                <img
+                                  src={attachment.imageUrl}
+                                  alt={attachment.originalFileName || "Ticket evidence"}
+                                  className="h-32 w-full object-cover"
+                                />
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       <div className="rounded-lg border border-success/30 bg-success/5 p-3">
                         <p className="text-xs text-muted-foreground">Ticket Reply / Resolution</p>
                         {selectedTicket.resolutionNote && selectedTicket.resolvedByName && (
@@ -1276,6 +1338,20 @@ const ProfilePage = () => {
                         <p className="text-sm text-foreground mt-2 whitespace-pre-line">
                           {selectedTicket.resolutionNote || "No ticket reply yet. Your ticket is currently being processed."}
                         </p>
+                        {selectedTicket.status === "RESOLVED" && (
+                          <div className="mt-3">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="border-border"
+                              onClick={() => void handleCloseTicket(selectedTicket.id)}
+                              disabled={closingTicketId === selectedTicket.id}
+                            >
+                              {closingTicketId === selectedTicket.id ? "Closing..." : "Close Ticket"}
+                            </Button>
+                          </div>
+                        )}
                       </div>
 
                       <div className="rounded-lg border border-border/60 bg-background p-3">
@@ -1335,7 +1411,7 @@ const ProfilePage = () => {
                         )}
                       </div>
 
-                      {isNonAcademicStaff && activeSection === "assignedTickets" && selectedTicket.status !== "RESOLVED" && (
+                      {isNonAcademicStaff && activeSection === "assignedTickets" && selectedTicket.status !== "RESOLVED" && selectedTicket.status !== "CLOSED" && selectedTicket.status !== "REJECTED" && (
                         <div className="rounded-lg border border-border/60 bg-background p-3 space-y-3">
                           <p className="text-xs text-muted-foreground">Staff Action</p>
                           <p className="text-xs text-muted-foreground">

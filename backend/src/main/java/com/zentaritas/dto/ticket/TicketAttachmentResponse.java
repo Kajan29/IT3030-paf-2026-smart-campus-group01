@@ -1,6 +1,5 @@
 package com.zentaritas.dto.ticket;
 
-import com.zentaritas.model.auth.Role;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,14 +11,9 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class TicketMessageResponse {
+public class TicketAttachmentResponse {
     private Long id;
-    private Long ticketId;
-    private Long senderUserId;
-    private String senderName;
-    private String senderEmail;
-    private Role senderRole;
-    private String message;
-    private LocalDateTime editedAt;
+    private String imageUrl;
+    private String originalFileName;
     private LocalDateTime createdAt;
 }

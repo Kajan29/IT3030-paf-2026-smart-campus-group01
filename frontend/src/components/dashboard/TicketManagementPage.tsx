@@ -24,6 +24,8 @@ const statusOptions: Array<{ value: TicketStatus | "ALL"; label: string }> = [
   { value: "OPEN", label: "Open" },
   { value: "IN_PROGRESS", label: "In Progress" },
   { value: "RESOLVED", label: "Resolved" },
+  { value: "CLOSED", label: "Closed" },
+  { value: "REJECTED", label: "Rejected" },
 ];
 
 const audienceOptions: Array<{ value: TicketAudience | "ALL"; label: string }> = [
@@ -45,6 +47,8 @@ const statusClass: Record<TicketStatus, string> = {
   OPEN: "bg-primary/10 text-primary border-primary/30",
   IN_PROGRESS: "bg-warning/15 text-warning-foreground border-warning/30",
   RESOLVED: "bg-success/10 text-success border-success/30",
+  CLOSED: "bg-muted text-foreground border-border",
+  REJECTED: "bg-destructive/10 text-destructive border-destructive/30",
 };
 
 const pretty = (value?: string) => {
@@ -62,6 +66,7 @@ const formatDateTime = (value?: string) => {
 };
 
 export const TicketManagementPage = () => {
+  const [activeAdminAction, setActiveAdminAction] = useState<"TRANSFER" | "RESOLVE" | "REJECT" | null>(null);
   const [tickets, setTickets] = useState<TicketResponse[]>([]);
   const [staff, setStaff] = useState<AssignableStaff[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -76,9 +81,10 @@ export const TicketManagementPage = () => {
     audience: "ALL",
     category: "ALL",
   });
-  const [actionForm, setActionForm] = useState<{ assignedStaffId: string; resolutionNote: string }>({
+  const [actionForm, setActionForm] = useState<{ assignedStaffId: string; resolutionNote: string; rejectionReason: string }>({
     assignedStaffId: "",
     resolutionNote: "",
+    rejectionReason: "",
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -144,6 +150,10 @@ export const TicketManagementPage = () => {
   );
 
   const isTransferredToStaff = Boolean(selectedTicket?.assignedStaffId);
+  const isTicketFinalized =
+    selectedTicket?.status === "RESOLVED" ||
+    selectedTicket?.status === "CLOSED" ||
+    selectedTicket?.status === "REJECTED";
 
   const flowStages = useMemo(() => {
     if (!selectedTicket) {
@@ -172,7 +182,14 @@ export const TicketManagementPage = () => {
         title: "Resolved",
         happenedAt: selectedTicket.resolvedAt,
         detail: selectedTicket.resolvedByName || "Pending resolution",
-        complete: selectedTicket.status === "RESOLVED",
+        complete: selectedTicket.status === "RESOLVED" || selectedTicket.status === "CLOSED",
+      },
+      {
+        key: "closed",
+        title: "Closed",
+        happenedAt: selectedTicket.closedAt,
+        detail: selectedTicket.closedByName || "Pending closure",
+        complete: selectedTicket.status === "CLOSED",
       },
     ];
   }, [selectedTicket]);
@@ -195,13 +212,16 @@ export const TicketManagementPage = () => {
 
   useEffect(() => {
     if (!selectedTicket) {
-      setActionForm({ assignedStaffId: "", resolutionNote: "" });
+      setActiveAdminAction(null);
+      setActionForm({ assignedStaffId: "", resolutionNote: "", rejectionReason: "" });
       return;
     }
 
+    setActiveAdminAction(null);
     setActionForm({
       assignedStaffId: selectedTicket.assignedStaffId ? String(selectedTicket.assignedStaffId) : "",
       resolutionNote: selectedTicket.resolutionNote || "",
+      rejectionReason: selectedTicket.rejectionReason || "",
     });
   }, [selectedTicket]);
 
@@ -211,7 +231,9 @@ export const TicketManagementPage = () => {
       open: tickets.filter((t) => t.status === "OPEN").length,
       progress: tickets.filter((t) => t.status === "IN_PROGRESS").length,
       resolved: tickets.filter((t) => t.status === "RESOLVED").length,
-      unassigned: tickets.filter((t) => !t.assignedStaffId && t.status !== "RESOLVED").length,
+      closed: tickets.filter((t) => t.status === "CLOSED").length,
+      rejected: tickets.filter((t) => t.status === "REJECTED").length,
+      unassigned: tickets.filter((t) => !t.assignedStaffId && t.status !== "RESOLVED" && t.status !== "CLOSED" && t.status !== "REJECTED").length,
     };
   }, [tickets]);
 
@@ -263,6 +285,38 @@ export const TicketManagementPage = () => {
     }
   };
 
+  const handleReject = async (ticketId: number) => {
+    const reason = actionForm.rejectionReason.trim();
+    if (!reason) {
+      toast.warning("Rejection reason is required");
+      return;
+    }
+
+    setWorkingTicketId(ticketId);
+    try {
+      await ticketService.rejectTicketByAdmin(ticketId, reason);
+      toast.success("Ticket rejected");
+      await loadData(false);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to reject ticket");
+    } finally {
+      setWorkingTicketId(null);
+    }
+  };
+
+  const handleClose = async (ticketId: number) => {
+    setWorkingTicketId(ticketId);
+    try {
+      await ticketService.closeTicketByAdmin(ticketId);
+      toast.success("Ticket closed successfully");
+      await loadData(false);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to close ticket");
+    } finally {
+      setWorkingTicketId(null);
+    }
+  };
+
   return (
     <div className="space-y-5 animate-fade-in">
       <div className="grid grid-cols-2 xl:grid-cols-5 gap-3">
@@ -271,6 +325,8 @@ export const TicketManagementPage = () => {
           { label: "Open", value: stats.open, icon: AlertCircle },
           { label: "In Progress", value: stats.progress, icon: Loader2 },
           { label: "Resolved", value: stats.resolved, icon: CheckCheck },
+            { label: "Closed", value: stats.closed, icon: ShieldCheck },
+            { label: "Rejected", value: stats.rejected, icon: AlertCircle },
           { label: "Unassigned", value: stats.unassigned, icon: ShieldCheck },
         ].map((item) => (
           <div key={item.label} className="glass-card rounded-xl border border-border p-4">
@@ -459,10 +515,40 @@ export const TicketManagementPage = () => {
                     <p className="text-sm text-foreground whitespace-pre-line leading-6">{selectedTicket.description}</p>
                   </div>
 
+                  {!!selectedTicket.attachments?.length && (
+                    <div className="space-y-2 rounded-xl border border-border p-4 lg:col-span-2">
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Evidence Attachments</p>
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {selectedTicket.attachments.map((attachment) => (
+                          <a
+                            key={attachment.id}
+                            href={attachment.imageUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block overflow-hidden rounded-lg border border-border hover:opacity-90"
+                          >
+                            <img
+                              src={attachment.imageUrl}
+                              alt={attachment.originalFileName || "Ticket evidence"}
+                              className="h-32 w-full object-cover"
+                            />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-2 rounded-xl border border-success/30 bg-success/5 p-4 lg:col-span-2">
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Ticket Reply Note</p>
                     <p className="text-sm text-foreground whitespace-pre-line leading-6">
                       {selectedTicket.resolutionNote || "No ticket reply note has been recorded yet."}
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 rounded-xl border border-destructive/30 bg-destructive/5 p-4 lg:col-span-2">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Rejection Reason</p>
+                    <p className="text-sm text-foreground whitespace-pre-line leading-6">
+                      {selectedTicket.rejectionReason || "No rejection reason recorded."}
                     </p>
                   </div>
                 </div>
@@ -480,66 +566,151 @@ export const TicketManagementPage = () => {
                   )}
 
                   {!isTransferredToStaff && (
-                  <div>
-                    <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                      Assign Staff
-                    </label>
-                    <select
-                      value={actionForm.assignedStaffId}
-                      onChange={(event) => setActionForm((prev) => ({ ...prev, assignedStaffId: event.target.value }))}
-                      disabled={selectedTicket.status === "RESOLVED"}
-                      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground disabled:opacity-70"
-                    >
-                      <option value="">Select non-academic staff</option>
-                      {staff.map((member) => (
-                        <option key={member.id} value={member.id}>
-                          {`${member.firstName || ""} ${member.lastName || ""}`.trim() || member.email}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  )}
+                    <>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={workingTicketId === selectedTicket.id || isTicketFinalized || staff.length === 0}
+                          onClick={() => setActiveAdminAction("TRANSFER")}
+                          className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors disabled:opacity-60 ${
+                            activeAdminAction === "TRANSFER"
+                              ? "border-primary/40 bg-primary/15 text-primary"
+                              : "border-primary/30 bg-primary/10 text-primary hover:bg-primary/20"
+                          }`}
+                        >
+                          <ArrowRightLeft size={14} />
+                          Transfer To Staff
+                        </button>
+                        <button
+                          type="button"
+                          disabled={workingTicketId === selectedTicket.id || isTicketFinalized}
+                          onClick={() => setActiveAdminAction("RESOLVE")}
+                          className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors disabled:opacity-60 ${
+                            activeAdminAction === "RESOLVE"
+                              ? "border-success/40 bg-success/15 text-success"
+                              : "border-success/30 bg-success/10 text-success hover:bg-success/20"
+                          }`}
+                        >
+                          <CheckCheck size={14} />
+                          Resolve Ticket
+                        </button>
+                        <button
+                          type="button"
+                          disabled={workingTicketId === selectedTicket.id || isTicketFinalized}
+                          onClick={() => setActiveAdminAction("REJECT")}
+                          className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors disabled:opacity-60 ${
+                            activeAdminAction === "REJECT"
+                              ? "border-destructive/40 bg-destructive/15 text-destructive"
+                              : "border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20"
+                          }`}
+                        >
+                          Reject Ticket
+                        </button>
+                      </div>
 
-                  {!isTransferredToStaff && (
-                  <div>
-                    <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                      Ticket Reply Note
-                    </label>
-                    <textarea
-                      rows={4}
-                      value={actionForm.resolutionNote}
-                      onChange={(event) => setActionForm((prev) => ({ ...prev, resolutionNote: event.target.value }))}
-                      placeholder="Add a clear ticket reply note for this case"
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-                    />
-                  </div>
-                  )}
+                      {activeAdminAction === "TRANSFER" && (
+                        <div className="space-y-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                          <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                            Assign Staff
+                          </label>
+                          <select
+                            value={actionForm.assignedStaffId}
+                            onChange={(event) => setActionForm((prev) => ({ ...prev, assignedStaffId: event.target.value }))}
+                            disabled={isTicketFinalized}
+                            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground disabled:opacity-70"
+                          >
+                            <option value="">Select non-academic staff</option>
+                            {staff.map((member) => (
+                              <option key={member.id} value={member.id}>
+                                {`${member.firstName || ""} ${member.lastName || ""}`.trim() || member.email}
+                              </option>
+                            ))}
+                          </select>
 
-                  {!isTransferredToStaff && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      disabled={workingTicketId === selectedTicket.id || selectedTicket.status === "RESOLVED" || staff.length === 0}
-                      onClick={() => void handleAssign(selectedTicket.id)}
-                      className="inline-flex items-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary hover:bg-primary/20 disabled:opacity-60"
-                    >
-                      <ArrowRightLeft size={14} />
-                      Transfer To Staff
-                    </button>
-                    <button
-                      type="button"
-                      disabled={workingTicketId === selectedTicket.id || selectedTicket.status === "RESOLVED"}
-                      onClick={() => void handleResolve(selectedTicket.id)}
-                      className="inline-flex items-center gap-2 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success hover:bg-success/20 disabled:opacity-60"
-                    >
-                      {workingTicketId === selectedTicket.id ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : (
-                        <CheckCheck size={14} />
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              disabled={workingTicketId === selectedTicket.id || isTicketFinalized || staff.length === 0}
+                              onClick={() => void handleAssign(selectedTicket.id)}
+                              className="inline-flex items-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary hover:bg-primary/20 disabled:opacity-60"
+                            >
+                              <ArrowRightLeft size={14} />
+                              Transfer To Staff
+                            </button>
+                          </div>
+                        </div>
                       )}
-                      Resolve Ticket
-                    </button>
-                  </div>
+
+                      {activeAdminAction === "RESOLVE" && (
+                        <div className="space-y-3 rounded-lg border border-success/20 bg-success/5 p-3">
+                          <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                            Ticket Reply Note
+                          </label>
+                          <textarea
+                            rows={4}
+                            value={actionForm.resolutionNote}
+                            onChange={(event) => setActionForm((prev) => ({ ...prev, resolutionNote: event.target.value }))}
+                            placeholder="Add a clear ticket reply note for this case"
+                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                          />
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              disabled={workingTicketId === selectedTicket.id || isTicketFinalized}
+                              onClick={() => void handleResolve(selectedTicket.id)}
+                              className="inline-flex items-center gap-2 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success hover:bg-success/20 disabled:opacity-60"
+                            >
+                              {workingTicketId === selectedTicket.id ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : (
+                                <CheckCheck size={14} />
+                              )}
+                              Resolve Ticket
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {activeAdminAction === "REJECT" && (
+                        <div className="space-y-3 rounded-lg border border-destructive/20 bg-destructive/5 p-3">
+                          <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                            Reject Reason
+                          </label>
+                          <textarea
+                            rows={3}
+                            value={actionForm.rejectionReason}
+                            onChange={(event) => setActionForm((prev) => ({ ...prev, rejectionReason: event.target.value }))}
+                            placeholder="If rejecting, provide the reason"
+                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                          />
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              disabled={workingTicketId === selectedTicket.id || isTicketFinalized}
+                              onClick={() => void handleReject(selectedTicket.id)}
+                              className="inline-flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive hover:bg-destructive/20 disabled:opacity-60"
+                            >
+                              Reject Ticket
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {selectedTicket.status === "RESOLVED" && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={workingTicketId === selectedTicket.id}
+                        onClick={() => void handleClose(selectedTicket.id)}
+                        className="inline-flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-foreground hover:bg-muted/60 disabled:opacity-60"
+                      >
+                        Close Ticket
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>

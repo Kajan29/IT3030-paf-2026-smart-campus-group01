@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -25,7 +25,19 @@ import { toast } from "sonner";
 import heroCampus from "@/assets/hero-campus.jpg";
 import { useAuth } from "@/context/AuthContext";
 import aiTicketService, { type TicketDraftResult } from "@/services/aiTicketService";
-import ticketService, { type TicketAudience, type TicketCategory } from "@/services/ticketService";
+import facilityService from "@/services/facilityService";
+import ticketService, {
+  MAX_TICKET_ATTACHMENTS,
+  validateTicketAttachments,
+  type TicketAudience,
+  type TicketCategory,
+} from "@/services/ticketService";
+
+type ResourceLocationOption = {
+  value: string;
+  label: string;
+  kind: "building" | "room";
+};
 
 const ticketCategories: Array<{ label: string; value: TicketCategory }> = [
   { label: "IT Support", value: "IT_SUPPORT" },
@@ -62,8 +74,11 @@ const ContactPage = () => {
     email: "",
     category: "IT_SUPPORT" as TicketCategory,
     audience: "STUDENT" as TicketAudience,
+    resourceLocation: "",
+    preferredContactDetails: "",
     subject: "",
     message: "",
+    attachments: [] as File[],
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState<{ ticketNumber?: string; message: string } | null>(null);
@@ -72,6 +87,8 @@ const ContactPage = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiDraft, setAiDraft] = useState<TicketDraftResult | null>(null);
   const [aiMessages, setAiMessages] = useState<AiChatMessage[]>(getInitialAiMessages);
+  const [resourceLocationOptions, setResourceLocationOptions] = useState<ResourceLocationOption[]>([]);
+  const [resourceLocationLoading, setResourceLocationLoading] = useState(false);
 
   const aiConfigured = Boolean(import.meta.env.VITE_OPENAI_API_KEY);
 
@@ -101,6 +118,74 @@ const ContactPage = () => {
       ? "Open Admin Ticket Queue"
       : "Track My Tickets"
     : "Login to Track Tickets";
+
+  const showResourceLocationField = form.category === "FACILITIES" || form.category === "ROOM_BOOKING";
+  const useResourceDropdown = showResourceLocationField;
+
+  const filteredResourceLocationOptions = useMemo(() => {
+    if (form.category === "ROOM_BOOKING") {
+      return resourceLocationOptions.filter((option) => option.kind === "room");
+    }
+
+    if (form.category === "FACILITIES") {
+      return resourceLocationOptions;
+    }
+
+    return [];
+  }, [form.category, resourceLocationOptions]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadResourceLocations = async () => {
+      setResourceLocationLoading(true);
+      try {
+        const snapshot = await facilityService.getFacilitySnapshot();
+        if (!active) {
+          return;
+        }
+
+        const buildingById = new Map(snapshot.buildings.map((building) => [building.id, building]));
+        const floorById = new Map(snapshot.floors.map((floor) => [floor.id, floor]));
+
+        const buildingOptions: ResourceLocationOption[] = snapshot.buildings.map((building) => ({
+          value: `${building.code} - ${building.name} (${building.campus})`,
+          label: `${building.code} - ${building.name} (${building.location})`,
+          kind: "building",
+        }));
+
+        const roomOptions: ResourceLocationOption[] = snapshot.rooms.map((room) => {
+          const building = buildingById.get(room.buildingId);
+          const floor = floorById.get(room.floorId);
+          const floorLabel = floor?.floorName || (floor ? `Floor ${floor.floorNumber}` : "Floor");
+          const buildingLabel = building ? `${building.code}` : "Building";
+
+          return {
+            value: `${room.code} - ${room.name} (${buildingLabel}, ${floorLabel})`,
+            label: `${room.code} - ${room.name} (${buildingLabel}, ${floorLabel})`,
+            kind: "room",
+          };
+        });
+
+        setResourceLocationOptions([...buildingOptions, ...roomOptions]);
+      } catch {
+        if (!active) {
+          return;
+        }
+        setResourceLocationOptions([]);
+      } finally {
+        if (active) {
+          setResourceLocationLoading(false);
+        }
+      }
+    };
+
+    void loadResourceLocations();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const resetAiDialogState = () => {
     setAiInput("");
@@ -186,6 +271,18 @@ const ContactPage = () => {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
+    if (showResourceLocationField && !form.resourceLocation.trim()) {
+      toast.error("Resource / Location is required for Facilities and Room Booking tickets.");
+      return;
+    }
+
+    const attachmentError = validateTicketAttachments(form.attachments);
+    if (attachmentError) {
+      toast.error(attachmentError);
+      return;
+    }
+
     setSubmitting(true);
     setSubmitSuccess(null);
 
@@ -199,8 +296,11 @@ const ContactPage = () => {
         audience: inferredAudience,
         subject: form.subject,
         description: form.message,
+        resourceLocation: showResourceLocationField ? form.resourceLocation : "",
+        preferredContactDetails: form.preferredContactDetails,
         name: requesterName,
         email: requesterEmail,
+        attachments: form.attachments,
       });
 
       toast.success("Ticket submitted successfully. Our support team will respond soon.");
@@ -212,8 +312,11 @@ const ContactPage = () => {
         ...prev,
         name: "",
         email: "",
+        resourceLocation: "",
+        preferredContactDetails: isAuthenticated ? user?.email || "" : "",
         subject: "",
         message: "",
+        attachments: [],
       }));
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Could not submit ticket");
@@ -341,7 +444,15 @@ const ContactPage = () => {
               )}
               <Select
                 value={form.category}
-                onValueChange={(v) => setForm({ ...form, category: v as TicketCategory })}
+                onValueChange={(v) => {
+                  const nextCategory = v as TicketCategory;
+                  const shouldShowLocation = nextCategory === "FACILITIES" || nextCategory === "ROOM_BOOKING";
+                  setForm((prev) => ({
+                    ...prev,
+                    category: nextCategory,
+                    resourceLocation: shouldShowLocation ? prev.resourceLocation : "",
+                  }));
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select Category" />
@@ -371,6 +482,44 @@ const ContactPage = () => {
                   </SelectContent>
                 </Select>
               )}
+              {showResourceLocationField && (
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-foreground">Resource / Location</label>
+                  <Input
+                    list={useResourceDropdown ? "resource-location-options" : undefined}
+                    placeholder={
+                      form.category === "ROOM_BOOKING"
+                        ? "Search room by code, name, or building"
+                        : "Search building or room location"
+                    }
+                    value={form.resourceLocation}
+                    onChange={(e) => setForm({ ...form, resourceLocation: e.target.value })}
+                    required
+                  />
+
+                  {useResourceDropdown && (
+                    <datalist id="resource-location-options">
+                      {filteredResourceLocationOptions.map((option) => (
+                        <option key={option.value} value={option.value} label={option.label} />
+                      ))}
+                    </datalist>
+                  )}
+
+                  <p className="text-xs text-muted-foreground">
+                    {resourceLocationLoading
+                      ? "Loading available buildings and rooms..."
+                      : filteredResourceLocationOptions.length > 0
+                      ? `Search from ${filteredResourceLocationOptions.length} available locations.`
+                      : "No campus locations loaded. You can still type the location manually."}
+                  </p>
+                </div>
+              )}
+              <Input
+                placeholder="Preferred Contact Details (phone/email/time window)"
+                value={form.preferredContactDetails}
+                onChange={(e) => setForm({ ...form, preferredContactDetails: e.target.value })}
+                required
+              />
               <Input
                 placeholder="Subject"
                 value={form.subject}
@@ -384,6 +533,32 @@ const ContactPage = () => {
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
                 required
               />
+              <div className="rounded-xl border border-border bg-muted/20 p-3">
+                <label className="mb-2 block text-sm font-medium text-foreground">
+                  Evidence Images (max {MAX_TICKET_ATTACHMENTS}, up to 5MB each)
+                </label>
+                <Input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  multiple
+                  onChange={(event) => {
+                    const files = Array.from(event.target.files || []);
+                    const validationError = validateTicketAttachments(files);
+                    if (validationError) {
+                      toast.error(validationError);
+                      event.currentTarget.value = "";
+                      return;
+                    }
+
+                    setForm((prev) => ({ ...prev, attachments: files.slice(0, MAX_TICKET_ATTACHMENTS) }));
+                  }}
+                />
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {form.attachments.length > 0
+                    ? `${form.attachments.length} image${form.attachments.length > 1 ? "s" : ""} selected`
+                    : "Attach clear photos/screenshots of the issue if available."}
+                </p>
+              </div>
               <Button
                 type="submit"
                 disabled={submitting}

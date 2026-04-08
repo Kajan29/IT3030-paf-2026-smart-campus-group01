@@ -23,12 +23,16 @@ const statusOptions: Array<{ value: TicketStatus | "ALL"; label: string }> = [
   { value: "OPEN", label: "Open" },
   { value: "IN_PROGRESS", label: "In Progress" },
   { value: "RESOLVED", label: "Resolved" },
+  { value: "CLOSED", label: "Closed" },
+  { value: "REJECTED", label: "Rejected" },
 ];
 
 const statusClasses: Record<TicketStatus, string> = {
   OPEN: "bg-primary/10 text-primary border-primary/30",
   IN_PROGRESS: "bg-warning/15 text-warning-foreground border-warning/30",
   RESOLVED: "bg-success/10 text-success border-success/30",
+  CLOSED: "bg-muted text-foreground border-border",
+  REJECTED: "bg-destructive/10 text-destructive border-destructive/30",
 };
 
 const pretty = (value?: string) => {
@@ -57,6 +61,11 @@ const MyTicketsPage = () => {
   const [loadingRepliesForTicketId, setLoadingRepliesForTicketId] = useState<number | null>(null);
   const [sendingReplyForTicketId, setSendingReplyForTicketId] = useState<number | null>(null);
   const [replyDraftByTicketId, setReplyDraftByTicketId] = useState<Record<number, string>>({});
+  const [closingTicketId, setClosingTicketId] = useState<number | null>(null);
+  const [editingReplyId, setEditingReplyId] = useState<number | null>(null);
+  const [editingReplyText, setEditingReplyText] = useState("");
+  const [updatingReplyId, setUpdatingReplyId] = useState<number | null>(null);
+  const [deletingReplyId, setDeletingReplyId] = useState<number | null>(null);
 
   const loadTickets = async (showPrimaryLoader = true) => {
     if (showPrimaryLoader) {
@@ -144,12 +153,73 @@ const MyTicketsPage = () => {
     }
   };
 
+  const closeTicket = async (ticketId: number) => {
+    setClosingTicketId(ticketId);
+    try {
+      await ticketService.closeTicket(ticketId);
+      toast.success("Ticket closed successfully");
+      await loadTickets(false);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to close ticket");
+    } finally {
+      setClosingTicketId(null);
+    }
+  };
+
+  const startEditingReply = (reply: TicketReply) => {
+    setEditingReplyId(reply.id);
+    setEditingReplyText(reply.message);
+  };
+
+  const cancelEditingReply = () => {
+    setEditingReplyId(null);
+    setEditingReplyText("");
+  };
+
+  const saveEditedReply = async (ticketId: number, messageId: number) => {
+    const message = editingReplyText.trim();
+    if (!message) {
+      toast.warning("Ticket reply is required");
+      return;
+    }
+
+    setUpdatingReplyId(messageId);
+    try {
+      await ticketService.updateTicketReply(ticketId, messageId, message);
+      toast.success("Ticket reply updated");
+      await loadTicketReplies(ticketId);
+      cancelEditingReply();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to update ticket reply");
+    } finally {
+      setUpdatingReplyId(null);
+    }
+  };
+
+  const deleteReply = async (ticketId: number, messageId: number) => {
+    setDeletingReplyId(messageId);
+    try {
+      await ticketService.deleteTicketReply(ticketId, messageId);
+      toast.success("Ticket reply deleted");
+      await loadTicketReplies(ticketId);
+      if (editingReplyId === messageId) {
+        cancelEditingReply();
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to delete ticket reply");
+    } finally {
+      setDeletingReplyId(null);
+    }
+  };
+
   const stats = useMemo(
     () => ({
       total: tickets.length,
       open: tickets.filter((ticket) => ticket.status === "OPEN").length,
       inProgress: tickets.filter((ticket) => ticket.status === "IN_PROGRESS").length,
       resolved: tickets.filter((ticket) => ticket.status === "RESOLVED").length,
+      closed: tickets.filter((ticket) => ticket.status === "CLOSED").length,
+      rejected: tickets.filter((ticket) => ticket.status === "REJECTED").length,
     }),
     [tickets]
   );
@@ -224,6 +294,8 @@ const MyTicketsPage = () => {
             { label: "Open", value: stats.open, icon: AlertCircle },
             { label: "In Progress", value: stats.inProgress, icon: Clock3 },
             { label: "Resolved", value: stats.resolved, icon: ShieldCheck },
+            { label: "Closed", value: stats.closed, icon: BadgeCheck },
+            { label: "Rejected", value: stats.rejected, icon: AlertCircle },
           ].map((item) => (
             <div key={item.label} className="rounded-2xl border border-border bg-card p-4 shadow-card">
               <item.icon className="h-5 w-5 text-primary" />
@@ -321,8 +393,41 @@ const MyTicketsPage = () => {
                     {ticket.resolvedByName && (
                       <p className="text-xs text-muted-foreground">Resolved by: {ticket.resolvedByName}</p>
                     )}
+                    {ticket.status === "RESOLVED" && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => void closeTicket(ticket.id)}
+                        disabled={closingTicketId === ticket.id}
+                      >
+                        {closingTicketId === ticket.id ? "Closing..." : "Close Ticket"}
+                      </Button>
+                    )}
                   </div>
                 </div>
+
+                {!!ticket.attachments?.length && (
+                  <div className="mt-4 rounded-xl border border-border bg-muted/10 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Evidence Attachments</p>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {ticket.attachments.map((attachment) => (
+                        <a
+                          key={attachment.id}
+                          href={attachment.imageUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block overflow-hidden rounded-lg border border-border hover:opacity-90"
+                        >
+                          <img
+                            src={attachment.imageUrl}
+                            alt={attachment.originalFileName || "Ticket evidence"}
+                            className="h-32 w-full object-cover"
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {ticket.resolutionNote && (
                   <div className="mt-4 rounded-xl border border-success/30 bg-success/5 p-4">
@@ -367,7 +472,51 @@ const MyTicketsPage = () => {
                             >
                               <p className="text-xs font-semibold text-foreground">{getSenderTypeLabel(reply)} - {reply.senderName}</p>
                               <p className="mt-1 text-[11px] text-muted-foreground">{dateTime(reply.createdAt)}</p>
-                              <p className="mt-2 whitespace-pre-line text-sm text-foreground">{reply.message}</p>
+                              {reply.editedAt && (
+                                <p className="mt-1 text-[11px] text-muted-foreground">Edited {dateTime(reply.editedAt)}</p>
+                              )}
+
+                              {editingReplyId === reply.id ? (
+                                <div className="mt-2 space-y-2">
+                                  <textarea
+                                    value={editingReplyText}
+                                    onChange={(event) => setEditingReplyText(event.target.value)}
+                                    className="min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                                  />
+                                  <div className="flex gap-2">
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      onClick={() => void saveEditedReply(ticket.id, reply.id)}
+                                      disabled={updatingReplyId === reply.id}
+                                    >
+                                      {updatingReplyId === reply.id ? "Saving..." : "Save"}
+                                    </Button>
+                                    <Button type="button" size="sm" variant="outline" onClick={cancelEditingReply}>
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="mt-2 whitespace-pre-line text-sm text-foreground">{reply.message}</p>
+                              )}
+
+                              {isOwnReply(reply) && editingReplyId !== reply.id && (
+                                <div className="mt-2 flex gap-2">
+                                  <Button type="button" size="sm" variant="outline" onClick={() => startEditingReply(reply)}>
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => void deleteReply(ticket.id, reply.id)}
+                                    disabled={deletingReplyId === reply.id}
+                                  >
+                                    {deletingReplyId === reply.id ? "Deleting..." : "Delete"}
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>

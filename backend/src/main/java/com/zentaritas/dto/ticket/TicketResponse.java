@@ -11,6 +11,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -21,6 +22,8 @@ public class TicketResponse {
     private String ticketNumber;
     private String subject;
     private String description;
+    private String resourceLocation;
+    private String preferredContactDetails;
     private TicketCategory category;
     private TicketAudience audience;
     private TicketPriority priority;
@@ -33,8 +36,12 @@ public class TicketResponse {
     private String assignedStaffEmail;
     private LocalDateTime assignedAt;
     private String resolutionNote;
+    private String rejectionReason;
     private String resolvedByName;
+    private String closedByName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime resolvedAt;
+    private LocalDateTime closedAt;
+    private List<TicketAttachmentResponse> attachments;
 }

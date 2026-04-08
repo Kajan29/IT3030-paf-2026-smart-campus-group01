@@ -39,6 +39,56 @@
       "name": "app.jwt.expiration",
       "type": "java.lang.Long",
       "description": "JWT expiration duration in milliseconds."
+    },
+    {
+      "name": "app.jwt.access-expiration",
+      "type": "java.lang.Long",
+      "description": "Access token expiration duration in milliseconds."
+    },
+    {
+      "name": "app.jwt.refresh-expiration-days",
+      "type": "java.lang.Long",
+      "description": "Refresh token expiration duration in days."
+    },
+    {
+      "name": "app.jwt.refresh-cookie-name",
+      "type": "java.lang.String",
+      "description": "HTTP cookie name used to store refresh token."
+    },
+    {
+      "name": "app.jwt.refresh-cookie-max-age-days",
+      "type": "java.lang.Long",
+      "description": "Refresh token cookie max age in days."
+    },
+    {
+      "name": "app.jwt.refresh-cookie-secure",
+      "type": "java.lang.Boolean",
+      "description": "Whether refresh token cookie should be marked Secure."
+    },
+    {
+      "name": "app.jwt.refresh-cookie-same-site",
+      "type": "java.lang.String",
+      "description": "SameSite attribute for refresh token cookie (None, Lax, Strict)."
+    },
+    {
+      "name": "app.auth.google.allowed-client-ids",
+      "type": "java.lang.String",
+      "description": "Comma-separated Google OAuth client IDs allowed for token verification."
+    },
+    {
+      "name": "cloudinary.cloud-name",
+      "type": "java.lang.String",
+      "description": "Cloudinary cloud name used for media uploads."
+    },
+    {
+      "name": "cloudinary.api-key",
+      "type": "java.lang.String",
+      "description": "Cloudinary API key used for media uploads."
+    },
+    {
+      "name": "cloudinary.api-secret",
+      "type": "java.lang.String",
+      "description": "Cloudinary API secret used for media uploads."
     }
   ]
 }

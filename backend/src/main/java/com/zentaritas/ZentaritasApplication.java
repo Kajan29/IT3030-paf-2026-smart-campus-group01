@@ -103,7 +103,10 @@ public class ZentaritasApplication {
         return hasValue(dotenv.get("DB_HOST"))
             || hasValue(dotenv.get("DB_NAME"))
             || hasValue(dotenv.get("JWT_SECRET"))
-            || hasValue(dotenv.get("GOOGLE_CLIENT_ID"));
+            || hasValue(dotenv.get("GOOGLE_CLIENT_ID"))
+            || hasValue(dotenv.get("CLOUDINARY_CLOUD_NAME"))
+            || hasValue(dotenv.get("CLOUDINARY_API_KEY"))
+            || hasValue(dotenv.get("CLOUDINARY_API_SECRET"));
     }
 
     private static boolean hasValue(String value) {

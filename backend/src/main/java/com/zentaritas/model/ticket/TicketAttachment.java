@@ -1,11 +1,7 @@
 package com.zentaritas.model.ticket;
 
-import com.zentaritas.model.auth.Role;
-import com.zentaritas.model.auth.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -26,8 +22,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "ticket_messages")
-public class TicketMessage {
+@Table(name = "ticket_attachments")
+public class TicketAttachment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -37,25 +33,14 @@ public class TicketMessage {
     @JoinColumn(name = "ticket_id", nullable = false)
     private Ticket ticket;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "sender_user_id")
-    private User senderUser;
+    @Column(name = "image_url", nullable = false, columnDefinition = "TEXT")
+    private String imageUrl;
 
-    @Column(name = "sender_name", nullable = false)
-    private String senderName;
+    @Column(name = "public_id", nullable = false)
+    private String publicId;
 
-    @Column(name = "sender_email")
-    private String senderEmail;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "sender_role")
-    private Role senderRole;
-
-    @Column(name = "message", nullable = false, columnDefinition = "TEXT")
-    private String message;
-
-    @Column(name = "edited_at")
-    private LocalDateTime editedAt;
+    @Column(name = "original_file_name")
+    private String originalFileName;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

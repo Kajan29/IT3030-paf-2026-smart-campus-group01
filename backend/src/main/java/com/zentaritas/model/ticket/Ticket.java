@@ -33,6 +33,12 @@ public class Ticket {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "resource_location", columnDefinition = "TEXT")
+    private String resourceLocation;
+
+    @Column(name = "preferred_contact_details", columnDefinition = "TEXT")
+    private String preferredContactDetails;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private TicketCategory category;
@@ -75,11 +81,20 @@ public class Ticket {
     @Column(name = "resolution_note", columnDefinition = "TEXT")
     private String resolutionNote;
 
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    private String rejectionReason;
+
     @Column(name = "resolved_at")
     private LocalDateTime resolvedAt;
 
     @Column(name = "resolved_by_name")
     private String resolvedByName;
+
+    @Column(name = "closed_at")
+    private LocalDateTime closedAt;
+
+    @Column(name = "closed_by_name")
+    private String closedByName;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
