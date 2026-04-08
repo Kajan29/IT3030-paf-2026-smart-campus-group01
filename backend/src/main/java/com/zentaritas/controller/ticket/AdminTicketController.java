@@ -1,0 +1,62 @@
+package com.zentaritas.controller.ticket;
+
+import com.zentaritas.dto.management.facility.UserSummaryResponse;
+import com.zentaritas.dto.response.ApiResponse;
+import com.zentaritas.dto.ticket.TicketAssignmentRequest;
+import com.zentaritas.dto.ticket.TicketResolveRequest;
+import com.zentaritas.dto.ticket.TicketResponse;
+import com.zentaritas.model.ticket.TicketStatus;
+import com.zentaritas.service.ticket.TicketService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/admin/tickets")
+@PreAuthorize("hasRole('ADMIN')")
+@RequiredArgsConstructor
+public class AdminTicketController {
+
+    private final TicketService ticketService;
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<TicketResponse>>> getAllTickets(
+            @RequestParam(required = false) TicketStatus status) {
+        return ResponseEntity.ok(ApiResponse.success(ticketService.getAllTickets(status)));
+    }
+
+    @GetMapping("/assignable-staff")
+    public ResponseEntity<ApiResponse<List<UserSummaryResponse>>> getAssignableStaff() {
+        return ResponseEntity.ok(ApiResponse.success(ticketService.getAssignableNonAcademicStaff()));
+    }
+
+    @PatchMapping("/{ticketId}/assign")
+    public ResponseEntity<ApiResponse<TicketResponse>> assignTicket(
+            @PathVariable Long ticketId,
+            @Valid @RequestBody TicketAssignmentRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                ticketService.assignTicket(ticketId, request.getStaffId()),
+                "Ticket assigned successfully"
+        ));
+    }
+
+    @PatchMapping("/{ticketId}/resolve")
+    public ResponseEntity<ApiResponse<TicketResponse>> resolveTicket(
+            @PathVariable Long ticketId,
+            @Valid @RequestBody TicketResolveRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                ticketService.resolveTicketByAdmin(ticketId, request.getResolutionNote()),
+                "Ticket resolved successfully"
+        ));
+    }
+}

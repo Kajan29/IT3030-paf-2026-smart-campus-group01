@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
+  Ticket,
   Building2,
   Layers,
   DoorOpen,
@@ -30,6 +31,7 @@ interface SidebarProps {
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "users", label: "User Management", icon: Users, badge: 5 },
+  { id: "tickets", label: "Ticket Management", icon: Ticket },
   { id: "buildings", label: "Building Management", icon: Building2 },
   { id: "floors", label: "Floor Management", icon: Layers },
   { id: "rooms", label: "Room Management", icon: DoorOpen, badge: 12 },

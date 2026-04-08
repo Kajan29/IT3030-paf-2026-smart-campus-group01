@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Sidebar } from "@/components/admin/dashboard/Sidebar";
 import { Navbar } from "@/components/admin/dashboard/Navbar";
 import { DashboardOverview } from "@/components/admin/dashboard/DashboardOverview";
@@ -21,6 +21,7 @@ import facilityService from "@/services/facilityService";
 const pageTitles: Record<string, string> = {
   dashboard: "Dashboard",
   users: "User Management",
+  tickets: "Ticket Management",
   buildings: "Building Management",
   floors: "Floor Management",
   rooms: "Room Management",
@@ -92,6 +93,8 @@ const AdminDashboard = () => {
         return <DashboardOverview />;
       case "users":
         return <UserManagementPage />;
+      case "tickets":
+        return <TicketManagementPage />;
       case "buildings":
         return (
           <BuildingManagementPage
