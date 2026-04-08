@@ -1,4 +1,4 @@
-﻿import { Routes, Route } from 'react-router-dom'
+﻿import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
@@ -23,11 +23,15 @@ import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard'
-import AdminPage from './pages/admin/AdminPage'
 import AdminProtectedRoute from './components/admin/AdminProtectedRoute'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import GuestOnlyRoute from './components/common/GuestOnlyRoute'
 import StudentProtectedRoute from './components/common/StudentProtectedRoute'
+
+function LegacyAdminDashboardRedirect(): JSX.Element {
+  const location = useLocation()
+  return <Navigate to={`/admin${location.search}${location.hash}`} replace />
+}
 
 function App(): JSX.Element {
   return (
@@ -116,18 +120,11 @@ function App(): JSX.Element {
           path="/admin" 
           element={
             <AdminProtectedRoute>
-              <AdminPage />
-            </AdminProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/admin/dashboard" 
-          element={
-            <AdminProtectedRoute>
               <AdminDashboard />
             </AdminProtectedRoute>
           } 
         />
+        <Route path="/admin/dashboard" element={<LegacyAdminDashboardRedirect />} />
 
         {/* Catch all route */}
         <Route path="*" element={<NotFoundPage />} />

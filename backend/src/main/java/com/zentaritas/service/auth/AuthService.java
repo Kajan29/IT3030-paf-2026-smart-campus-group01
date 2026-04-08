@@ -102,7 +102,7 @@ public class AuthService implements UserDetailsService {
             user.getFirstName() + " " + user.getLastName() + " (" + user.getEmail() + ") created a new account.",
             null,
             null,
-            "/admin/dashboard?view=users"
+            "/admin?view=users"
         );
 
         // Generate and send verification code

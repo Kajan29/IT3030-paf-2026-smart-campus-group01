@@ -10,31 +10,31 @@ export const resolveNotificationPath = (
   }
 
   if (notification.relatedTicketId != null) {
-    if (role === "ADMIN") return "/admin/dashboard?view=tickets";
+    if (role === "ADMIN") return "/admin?view=tickets";
     if (role === "NON_ACADEMIC_STAFF") return "/profile?section=assignedTickets&tab=assigned";
     return "/my-tickets";
   }
 
   if (notification.relatedBookingId != null) {
-    if (role === "ADMIN") return "/admin/dashboard?view=bookings";
+    if (role === "ADMIN") return "/admin?view=bookings";
     return "/book-room";
   }
 
   switch (notification.type) {
     case "STUDENT_REGISTERED":
-      return "/admin/dashboard?view=users";
+      return "/admin?view=users";
     case "TICKET_CREATED":
     case "TICKET_ASSIGNED":
     case "TICKET_REPLY":
     case "TICKET_STATUS_UPDATED":
-      if (role === "ADMIN") return "/admin/dashboard?view=tickets";
+      if (role === "ADMIN") return "/admin?view=tickets";
       if (role === "NON_ACADEMIC_STAFF") return "/profile?section=assignedTickets&tab=assigned";
       return "/my-tickets";
     case "BOOKING_PENDING":
-      if (role === "ADMIN") return "/admin/dashboard?view=bookings";
+      if (role === "ADMIN") return "/admin?view=bookings";
       return "/book-room";
     default:
-      if (role === "ADMIN") return "/admin/dashboard?view=notifications";
+      if (role === "ADMIN") return "/admin?view=notifications";
       return "/profile";
   }
 };

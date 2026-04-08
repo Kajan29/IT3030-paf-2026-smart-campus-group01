@@ -195,7 +195,7 @@ export const Navbar = ({ darkMode, onToggleDark }: NavbarProps) => {
                   className="w-full text-center text-xs font-medium text-primary hover:underline"
                   onClick={() => {
                     setShowNotifications(false);
-                    navigate("/admin/dashboard?view=notifications");
+                    navigate("/admin?view=notifications");
                   }}
                 >
                   View all notifications
