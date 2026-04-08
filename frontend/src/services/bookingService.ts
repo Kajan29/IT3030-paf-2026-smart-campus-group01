@@ -89,6 +89,16 @@ const bookingService = {
   },
 
   /**
+   * Get all bookings for admin management
+   */
+  getAllBookings: async (status?: string) => {
+    const response = await api.get(`/bookings/admin/all`, {
+      params: status ? { status } : undefined,
+    });
+    return response.data;
+  },
+
+  /**
    * Get current user's bookings
    */
   getMyBookings: async () => {

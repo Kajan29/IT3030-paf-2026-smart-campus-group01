@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  Building2,
   BookOpen,
   CalendarCheck,
   CalendarDays,
@@ -14,6 +15,7 @@ import {
   MapPin,
   Menu,
   Moon,
+  Layers,
   Phone,
   Settings,
   ShieldCheck,
@@ -32,17 +34,64 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "../context/AuthContext";
 import { userService } from "@/services/userService";
+import bookingService from "@/services/bookingService";
+import facilityService from "@/services/facilityService";
 import ticketService, { type TicketResponse } from "@/services/ticketService";
+import type { RoomTimetableEntry } from "@/types/booking";
 import { toast } from "react-toastify";
 import { cn } from "@/lib/utils";
 
 type SectionId = "overview" | "bookings" | "tickets" | "profile" | "settings";
 
 type BookingItem = {
+  id: string;
   title: string;
   date: string;
   status: "Confirmed" | "Pending" | "Cancelled";
   details: string;
+  rawStatus: string;
+  startTime?: string;
+  endTime?: string;
+  purpose?: string;
+  cancelledReason?: string;
+  canCancel: boolean;
+};
+
+type BackendBooking = {
+  id: number;
+  status: string;
+  startTime?: string;
+  endTime?: string;
+  purpose?: string;
+  bookingType?: string;
+  seatsBooked?: number;
+  cancelledReason?: string;
+  room?: {
+    name?: string;
+    code?: string;
+  };
+};
+
+type DayKey = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
+
+const dayOrder: DayKey[] = [
+  "MONDAY",
+  "TUESDAY",
+  "WEDNESDAY",
+  "THURSDAY",
+  "FRIDAY",
+  "SATURDAY",
+  "SUNDAY",
+];
+
+const dayLabelMap: Record<DayKey, string> = {
+  MONDAY: "Monday",
+  TUESDAY: "Tuesday",
+  WEDNESDAY: "Wednesday",
+  THURSDAY: "Thursday",
+  FRIDAY: "Friday",
+  SATURDAY: "Saturday",
+  SUNDAY: "Sunday",
 };
 
 const ProfilePage = () => {
@@ -62,11 +111,18 @@ const ProfilePage = () => {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>(user?.profilePicture || "");
   const [avatarName, setAvatarName] = useState<string>(user?.profilePicture ? "Current image" : "No file chosen");
+  const [studentBookings, setStudentBookings] = useState<BookingItem[]>([]);
+  const [bookingsLoading, setBookingsLoading] = useState(false);
+  const [bookingActionId, setBookingActionId] = useState<string | null>(null);
+  const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
   const [myTickets, setMyTickets] = useState<TicketResponse[]>([]);
   const [assignedTickets, setAssignedTickets] = useState<TicketResponse[]>([]);
   const [ticketLoading, setTicketLoading] = useState(false);
   const [resolvingTicketId, setResolvingTicketId] = useState<number | null>(null);
   const [ticketTab, setTicketTab] = useState<"mine" | "assigned">("mine");
+  const [academicAllocations, setAcademicAllocations] = useState<RoomTimetableEntry[]>([]);
+  const [allocationsLoading, setAllocationsLoading] = useState(false);
+  const [selectedAllocation, setSelectedAllocation] = useState<RoomTimetableEntry | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -91,51 +147,236 @@ const ProfilePage = () => {
 
   const isStaff = user?.role === "ACADEMIC_STAFF" || user?.role === "NON_ACADEMIC_STAFF";
   const isStudent = user?.role === "STUDENT";
+  const isAcademicStaff = user?.role === "ACADEMIC_STAFF";
+
+  const formatDateTime = (value?: string) => {
+    if (!value) return "Time not available";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString(undefined, {
+      month: "short",
+      day: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const mapBackendStatus = (status?: string): BookingItem["status"] => {
+    if (status === "APPROVED" || status === "CONFIRMED" || status === "COMPLETED") {
+      return "Confirmed";
+    }
+    if (status === "CANCELLED" || status === "REJECTED" || status === "NO_SHOW") {
+      return "Cancelled";
+    }
+    return "Pending";
+  };
+
+  const canCancelBooking = (status?: string) => {
+    if (!status) return false;
+    return !["CANCELLED", "REJECTED", "COMPLETED", "NO_SHOW"].includes(status);
+  };
+
+  const mapBackendBooking = (booking: BackendBooking): BookingItem => {
+    const roomName = booking.room?.name || "Study Room";
+    const roomCode = booking.room?.code ? `${booking.room.code} • ` : "";
+    const details = booking.purpose || `${booking.bookingType || "STUDENT"} booking`;
+
+    return {
+      id: String(booking.id),
+      title: `${roomCode}${roomName}`,
+      date: formatDateTime(booking.startTime),
+      status: mapBackendStatus(booking.status),
+      details,
+      rawStatus: booking.status || "PENDING",
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+      purpose: booking.purpose,
+      cancelledReason: booking.cancelledReason,
+      canCancel: canCancelBooking(booking.status),
+    };
+  };
+
+  const formatClockTime = (value?: string) => {
+    if (!value) return "-";
+    const [hourRaw, minuteRaw] = value.split(":");
+    const hour = Number(hourRaw);
+    const minute = Number(minuteRaw);
+    if (!Number.isFinite(hour) || !Number.isFinite(minute)) return value;
+
+    const period = hour >= 12 ? "PM" : "AM";
+    const normalizedHour = hour % 12 === 0 ? 12 : hour % 12;
+    return `${String(normalizedHour).padStart(2, "0")}:${String(minute).padStart(2, "0")} ${period}`;
+  };
+
+  const getAllocationDateLabel = (allocation: RoomTimetableEntry) => {
+    const dayValue = (allocation.dayOfWeek || "").toUpperCase() as DayKey;
+    const dayLabel = dayLabelMap[dayValue] || allocation.dayOfWeek || "Unscheduled";
+    return `${dayLabel} · ${formatClockTime(allocation.startTime)} - ${formatClockTime(allocation.endTime)}`;
+  };
+
+  const loadStudentBookings = useCallback(async () => {
+    if (!isStudent) return;
+
+    setBookingsLoading(true);
+    try {
+      const response = await bookingService.getMyBookings();
+      const source = Array.isArray(response)
+        ? response
+        : Array.isArray(response?.content)
+        ? response.content
+        : [];
+
+      const mappedBookings = (source as BackendBooking[])
+        .map(mapBackendBooking)
+        .sort((a, b) => {
+          const aTime = a.startTime ? new Date(a.startTime).getTime() : 0;
+          const bTime = b.startTime ? new Date(b.startTime).getTime() : 0;
+          return bTime - aTime;
+        });
+
+      setStudentBookings(mappedBookings);
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.details?.[0] ||
+        error?.response?.data?.message ||
+        "Failed to load your bookings.";
+      toast.error(message);
+      setStudentBookings([]);
+    } finally {
+      setBookingsLoading(false);
+    }
+  }, [isStudent]);
+
+  useEffect(() => {
+    if (!isStudent) return;
+    void loadStudentBookings();
+  }, [isStudent, loadStudentBookings]);
+
+  useEffect(() => {
+    if (!isStudent || activeSection !== "bookings") return;
+    void loadStudentBookings();
+  }, [isStudent, activeSection, loadStudentBookings]);
+
+  const loadAcademicAllocations = useCallback(async () => {
+    if (!isAcademicStaff) return;
+
+    setAllocationsLoading(true);
+    try {
+      const data = await facilityService.getMyTimetableAllocations();
+      setAcademicAllocations(data);
+    } catch (error: any) {
+      const message = error?.response?.data?.message || "Failed to load classroom allocations.";
+      toast.error(message);
+      setAcademicAllocations([]);
+    } finally {
+      setAllocationsLoading(false);
+    }
+  }, [isAcademicStaff]);
+
+  useEffect(() => {
+    if (!isAcademicStaff) return;
+    void loadAcademicAllocations();
+  }, [isAcademicStaff, loadAcademicAllocations]);
+
+  useEffect(() => {
+    if (!isAcademicStaff || activeSection !== "bookings") return;
+    void loadAcademicAllocations();
+  }, [isAcademicStaff, activeSection, loadAcademicAllocations]);
+
+  const handleCancelBooking = async (bookingId: string) => {
+    const shouldCancel = window.confirm("Are you sure you want to cancel this booking?");
+    if (!shouldCancel) return;
+
+    setBookingActionId(bookingId);
+    try {
+      await bookingService.cancelBooking(bookingId, "Cancelled by student from profile");
+      toast.success("Booking cancelled successfully.");
+      await loadStudentBookings();
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.details?.[0] ||
+        error?.response?.data?.message ||
+        "Failed to cancel booking.";
+      toast.error(message);
+    } finally {
+      setBookingActionId(null);
+    }
+  };
   const isNonAcademicStaff = user?.role === "NON_ACADEMIC_STAFF";
 
-  const bookings: BookingItem[] = isStaff
+  const bookings: BookingItem[] = isAcademicStaff
+    ? academicAllocations.map((allocation) => ({
+        id: allocation.id,
+        title: `${allocation.roomCode || "Room"} • ${allocation.roomName || "Classroom"}`,
+        date: getAllocationDateLabel(allocation),
+        status: "Confirmed",
+        details: allocation.lectureName || allocation.purpose || "Class allocation",
+        rawStatus: "ALLOCATED",
+        startTime: allocation.startTime,
+        endTime: allocation.endTime,
+        purpose: allocation.purpose,
+        canCancel: false,
+      }))
+    : isStaff
     ? [
         {
+          id: "staff-1",
           title: "Auditorium A",
           date: "Apr 02, 2026 - 10:00",
           status: "Confirmed",
           details: "Approved for Faculty of Science",
+          rawStatus: "CONFIRMED",
+          canCancel: false,
         },
         {
+          id: "staff-2",
           title: "Media Room B",
           date: "Apr 04, 2026 - 14:00",
           status: "Pending",
           details: "Awaiting confirmation from admin",
+          rawStatus: "PENDING",
+          canCancel: false,
         },
       ]
-    : [
-        {
-          title: "Library Quiet Pod",
-          date: "Apr 02, 2026 - 09:00",
-          status: "Confirmed",
-          details: "Seat 12, Ground Floor",
-        },
-        {
-          title: "Study Room 3",
-          date: "Apr 05, 2026 - 12:00",
-          status: "Pending",
-          details: "Team project booking",
-        },
-        {
-          title: "Sports Complex Court",
-          date: "Apr 09, 2026 - 18:00",
-          status: "Cancelled",
-          details: "Cancelled by requester",
-        },
-      ];
+    : studentBookings;
+
+  const activeBookingCount = bookings.filter((booking) => booking.status !== "Cancelled").length;
+  const pendingBookingCount = bookings.filter((booking) => booking.status === "Pending").length;
+  const confirmedBookingCount = bookings.filter((booking) => booking.status === "Confirmed").length;
+
+  const allocationsByDay = useMemo(() => {
+    const grouped: Record<DayKey, RoomTimetableEntry[]> = {
+      MONDAY: [],
+      TUESDAY: [],
+      WEDNESDAY: [],
+      THURSDAY: [],
+      FRIDAY: [],
+      SATURDAY: [],
+      SUNDAY: [],
+    };
+
+    for (const allocation of academicAllocations) {
+      const dayKey = (allocation.dayOfWeek || "").toUpperCase() as DayKey;
+      if (grouped[dayKey]) {
+        grouped[dayKey].push(allocation);
+      }
+    }
+
+    for (const day of dayOrder) {
+      grouped[day].sort((a, b) => (a.startTime || "").localeCompare(b.startTime || ""));
+    }
+
+    return grouped;
+  }, [academicAllocations]);
 
   const openTicketCount = myTickets.filter((ticket) => ticket.status !== "RESOLVED").length;
 
   const summary = [
     {
-      label: "Upcoming bookings",
-      value: isStaff ? "4" : "3",
-      hint: isStaff ? "2 need confirmation" : "Next on Apr 2",
+      label: isAcademicStaff ? "Allocated classes" : "Upcoming bookings",
+      value: String(activeBookingCount),
+      hint: pendingBookingCount > 0 ? `${pendingBookingCount} awaiting action` : "No pending items",
     },
     {
       label: "Open tickets",
@@ -144,8 +385,8 @@ const ProfilePage = () => {
     },
     {
       label: "Completed",
-      value: isStaff ? "27" : "14",
-      hint: isStaff ? "Events closed" : "Bookings completed",
+      value: String(confirmedBookingCount),
+      hint: isStaff ? "Events closed" : "Confirmed bookings",
     },
     {
       label: "Status",
@@ -268,7 +509,11 @@ const ProfilePage = () => {
 
   const sectionList = [
     { id: "overview" as SectionId, label: "Overview", icon: LayoutGrid },
-    { id: "bookings" as SectionId, label: isStudent ? "My Bookings" : "Bookings", icon: CalendarDays },
+    {
+      id: "bookings" as SectionId,
+      label: isAcademicStaff ? "Class Allocations" : isStudent ? "My Bookings" : "Bookings",
+      icon: CalendarDays,
+    },
     { id: "tickets" as SectionId, label: "Tickets", icon: Ticket },
     { id: "profile" as SectionId, label: "Edit Profile", icon: Edit },
     { id: "settings" as SectionId, label: "Preferences", icon: Settings },
@@ -276,7 +521,7 @@ const ProfilePage = () => {
 
   const pageTitles: Record<SectionId, string> = {
     overview: "Dashboard Overview",
-    bookings: isStudent ? "My Bookings" : "Bookings Management",
+    bookings: isAcademicStaff ? "Classroom Allocations" : isStudent ? "My Bookings" : "Bookings Management",
     tickets: "Support Tickets",
     profile: "Edit Profile",
     settings: "Preferences",
@@ -299,14 +544,6 @@ const ProfilePage = () => {
     };
     const label = status.replace("_", " ").toLowerCase().replace(/\b\w/g, (s) => s.toUpperCase());
     return <Badge className={`border ${styles[status]}`}>{label}</Badge>;
-  };
-
-  const formatDateTime = (value: string) => {
-    try {
-      return new Date(value).toLocaleString();
-    } catch {
-      return value;
-    }
   };
 
   const statIcons = [CalendarDays, MessageSquare, TrendingUp, ShieldCheck];
@@ -355,37 +592,47 @@ const ProfilePage = () => {
                         <CalendarCheck size={18} className="text-accent" />
                       </div>
                       <div>
-                        <CardTitle className="text-lg font-display">Upcoming Bookings</CardTitle>
-                        <CardDescription>Your scheduled reservations</CardDescription>
+                        <CardTitle className="text-lg font-display">{isAcademicStaff ? "Upcoming Allocations" : "Upcoming Bookings"}</CardTitle>
+                        <CardDescription>{isAcademicStaff ? "Your scheduled classroom allocations" : "Your scheduled reservations"}</CardDescription>
                       </div>
                     </div>
                     <Badge variant="secondary" className="bg-muted">{bookings.length} items</Badge>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {bookings.map((booking) => (
-                    <div
-                      key={`${booking.title}-${booking.date}`}
-                      className="flex items-center justify-between gap-4 p-4 rounded-xl bg-muted/40 border border-border/50 hover:bg-muted/60 transition-colors group"
-                    >
-                      <div className="flex items-center gap-4 min-w-0">
-                        <div className="hidden sm:flex h-12 w-12 rounded-xl bg-primary/10 items-center justify-center flex-shrink-0">
-                          <CalendarDays size={20} className="text-primary" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-semibold text-foreground truncate">{booking.title}</p>
-                          <p className="text-sm text-muted-foreground truncate">{booking.details}</p>
-                          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                            <Clock size={12} />
-                            <span>{booking.date}</span>
+                  {isStudent && bookingsLoading ? (
+                    <div className="rounded-xl border border-border/50 bg-muted/40 p-4 text-sm text-muted-foreground">
+                      Loading your bookings...
+                    </div>
+                  ) : bookings.length === 0 ? (
+                    <div className="rounded-xl border border-border/50 bg-muted/40 p-4 text-sm text-muted-foreground">
+                      No bookings found yet. Create one from Book Space.
+                    </div>
+                  ) : (
+                    bookings.map((booking) => (
+                      <div
+                        key={booking.id}
+                        className="flex items-center justify-between gap-4 p-4 rounded-xl bg-muted/40 border border-border/50 hover:bg-muted/60 transition-colors group"
+                      >
+                        <div className="flex items-center gap-4 min-w-0">
+                          <div className="hidden sm:flex h-12 w-12 rounded-xl bg-primary/10 items-center justify-center flex-shrink-0">
+                            <CalendarDays size={20} className="text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-foreground truncate">{booking.title}</p>
+                            <p className="text-sm text-muted-foreground truncate">{booking.details}</p>
+                            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                              <Clock size={12} />
+                              <span>{booking.date}</span>
+                            </div>
                           </div>
                         </div>
+                        <div className="flex-shrink-0">
+                          {renderStatusBadge(booking.status)}
+                        </div>
                       </div>
-                      <div className="flex-shrink-0">
-                        {renderStatusBadge(booking.status)}
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -435,6 +682,85 @@ const ProfilePage = () => {
     }
 
     if (activeSection === "bookings") {
+      if (isAcademicStaff) {
+        return (
+          <Card className="border-border/50 shadow-card">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-accent/10">
+                    <CalendarDays size={20} className="text-accent" />
+                  </div>
+                  <div>
+                    <CardTitle className="font-display text-xl">Classroom Allocation Timetable</CardTitle>
+                    <CardDescription>
+                      View your allocated classes by day and click any slot for building, floor, room, and time details.
+                    </CardDescription>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-border"
+                    onClick={() => void loadAcademicAllocations()}
+                  >
+                    Refresh
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              {allocationsLoading ? (
+                <div className="rounded-xl border border-border/50 bg-muted/30 p-4 text-sm text-muted-foreground">
+                  Loading your class allocations...
+                </div>
+              ) : academicAllocations.length === 0 ? (
+                <div className="rounded-xl border border-border/50 bg-muted/30 p-4 text-sm text-muted-foreground">
+                  No class allocations are available for your account yet.
+                </div>
+              ) : (
+                dayOrder
+                  .filter((day) => allocationsByDay[day].length > 0)
+                  .map((day) => (
+                    <div key={day} className="rounded-xl border border-border/50 bg-muted/20 p-4">
+                      <div className="mb-3 flex items-center justify-between">
+                        <h3 className="text-sm font-semibold tracking-wide text-foreground">{dayLabelMap[day]}</h3>
+                        <Badge variant="secondary" className="bg-muted text-muted-foreground">
+                          {allocationsByDay[day].length} slot{allocationsByDay[day].length > 1 ? "s" : ""}
+                        </Badge>
+                      </div>
+
+                      <div className="space-y-2">
+                        {allocationsByDay[day].map((allocation) => (
+                          <button
+                            key={allocation.id}
+                            onClick={() => setSelectedAllocation(allocation)}
+                            className="w-full rounded-lg border border-border/60 bg-card p-3 text-left transition hover:border-primary/40 hover:bg-muted/40"
+                          >
+                            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                              <div>
+                                <p className="font-semibold text-foreground">{allocation.lectureName}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {allocation.roomCode || "Room"} • {allocation.roomName || "Classroom"}
+                                </p>
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {formatClockTime(allocation.startTime)} - {formatClockTime(allocation.endTime)}
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+              )}
+            </CardContent>
+          </Card>
+        );
+      }
+
       return (
         <Card className="border-border/50 shadow-card">
           <CardHeader>
@@ -449,46 +775,112 @@ const ProfilePage = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="border-border">
-                  <CalendarCheck size={16} className="mr-2" />
-                  New Booking
-                </Button>
-                <Button size="sm" className="bg-primary hover:bg-primary/90">
-                  View Calendar
-                </Button>
+                {isStudent && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-border"
+                    onClick={() => navigate("/book-room")}
+                  >
+                    <CalendarCheck size={16} className="mr-2" />
+                    New Booking
+                  </Button>
+                )}
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            {bookings.map((booking) => (
-              <div
-                key={`${booking.title}-${booking.date}`}
-                className="group p-4 rounded-xl bg-muted/30 border border-border/50 hover:bg-muted/50 hover:border-border transition-all"
-              >
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <div className="flex items-start gap-4">
-                    <div className="hidden sm:flex h-12 w-12 rounded-xl bg-primary/10 items-center justify-center flex-shrink-0 group-hover:bg-primary/15 transition-colors">
-                      <CalendarDays size={20} className="text-primary" />
-                    </div>
-                    <div className="space-y-1">
-                      <p className="font-semibold text-foreground">{booking.title}</p>
-                      <p className="text-sm text-muted-foreground">{booking.details}</p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Clock size={12} />
-                        <span>{booking.date}</span>
+            {isStudent && bookingsLoading ? (
+              <div className="rounded-xl border border-border/50 bg-muted/30 p-4 text-sm text-muted-foreground">
+                Loading your bookings...
+              </div>
+            ) : bookings.length === 0 ? (
+              <div className="rounded-xl border border-border/50 bg-muted/30 p-4 text-sm text-muted-foreground">
+                You do not have any bookings yet.
+              </div>
+            ) : (
+              bookings.map((booking) => (
+                <div
+                  key={booking.id}
+                  className="group p-4 rounded-xl bg-muted/30 border border-border/50 hover:bg-muted/50 hover:border-border transition-all"
+                >
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                      <div className="hidden sm:flex h-12 w-12 rounded-xl bg-primary/10 items-center justify-center flex-shrink-0 group-hover:bg-primary/15 transition-colors">
+                        <CalendarDays size={20} className="text-primary" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="font-semibold text-foreground">{booking.title}</p>
+                        <p className="text-sm text-muted-foreground">{booking.details}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Clock size={12} />
+                          <span>{booking.date}</span>
+                        </div>
                       </div>
                     </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {renderStatusBadge(booking.status)}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground hover:text-foreground"
+                        onClick={() =>
+                          setExpandedBookingId((current) =>
+                            current === booking.id ? null : booking.id
+                          )
+                        }
+                      >
+                        {expandedBookingId === booking.id ? "Hide" : "View"}
+                        <ChevronRight size={14} className="ml-1" />
+                      </Button>
+                      {isStudent && booking.canCancel && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                          disabled={bookingActionId === booking.id}
+                          onClick={() => void handleCancelBooking(booking.id)}
+                        >
+                          {bookingActionId === booking.id ? "Cancelling..." : "Cancel"}
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    {renderStatusBadge(booking.status)}
-                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-                      Manage
-                      <ChevronRight size={14} className="ml-1" />
-                    </Button>
-                  </div>
+                  {expandedBookingId === booking.id && (
+                    <div className="mt-4 rounded-lg border border-border/50 bg-muted/40 p-3 text-sm space-y-1">
+                      <p>
+                        <span className="font-medium text-foreground">Status:</span>{" "}
+                        <span className="text-muted-foreground">{booking.rawStatus}</span>
+                      </p>
+                      {booking.startTime && (
+                        <p>
+                          <span className="font-medium text-foreground">Start:</span>{" "}
+                          <span className="text-muted-foreground">{formatDateTime(booking.startTime)}</span>
+                        </p>
+                      )}
+                      {booking.endTime && (
+                        <p>
+                          <span className="font-medium text-foreground">End:</span>{" "}
+                          <span className="text-muted-foreground">{formatDateTime(booking.endTime)}</span>
+                        </p>
+                      )}
+                      {booking.purpose && (
+                        <p>
+                          <span className="font-medium text-foreground">Purpose:</span>{" "}
+                          <span className="text-muted-foreground">{booking.purpose}</span>
+                        </p>
+                      )}
+                      {booking.cancelledReason && (
+                        <p>
+                          <span className="font-medium text-foreground">Cancellation reason:</span>{" "}
+                          <span className="text-muted-foreground">{booking.cancelledReason}</span>
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </CardContent>
         </Card>
       );
@@ -1061,7 +1453,7 @@ const ProfilePage = () => {
               </h1>
               <p className="text-xs text-muted-foreground hidden sm:block">
                 {activeSection === "overview" && "Welcome to your personal dashboard"}
-                {activeSection === "bookings" && "Manage your space reservations"}
+                {activeSection === "bookings" && (isAcademicStaff ? "View your allocated classroom timetable" : "Manage your space reservations")}
                 {activeSection === "tickets" && "Track your support requests"}
                 {activeSection === "profile" && "Update your personal information"}
                 {activeSection === "settings" && "Customize your experience"}
@@ -1071,15 +1463,17 @@ const ProfilePage = () => {
 
           {/* Right Actions */}
           <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              className="hidden sm:flex border-border"
-              onClick={() => navigate("/book-room")}
-            >
-              <CalendarCheck size={16} className="mr-2" />
-              Book Space
-            </Button>
+            {isStudent && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden sm:flex border-border"
+                onClick={() => navigate("/book-room")}
+              >
+                <CalendarCheck size={16} className="mr-2" />
+                Book Space
+              </Button>
+            )}
             <Button
               size="sm"
               className="bg-primary hover:bg-primary/90"
@@ -1108,6 +1502,80 @@ const ProfilePage = () => {
           </div>
         </main>
       </div>
+
+      {selectedAllocation && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/45 p-4"
+          onClick={() => setSelectedAllocation(null)}
+        >
+          <div
+            className="w-full max-w-xl rounded-2xl border border-border bg-card p-5 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">{selectedAllocation.lectureName}</h3>
+                <p className="text-sm text-muted-foreground">Classroom allocation details</p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setSelectedAllocation(null)}>
+                <X size={16} />
+              </Button>
+            </div>
+
+            <div className="space-y-3 text-sm">
+              <div className="flex items-start gap-2 text-foreground">
+                <Clock size={16} className="mt-0.5 text-primary" />
+                <div>
+                  <p className="font-medium">Time</p>
+                  <p className="text-muted-foreground">
+                    {dayLabelMap[(selectedAllocation.dayOfWeek || "").toUpperCase() as DayKey] || selectedAllocation.dayOfWeek} · {formatClockTime(selectedAllocation.startTime)} - {formatClockTime(selectedAllocation.endTime)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2 text-foreground">
+                <Building2 size={16} className="mt-0.5 text-primary" />
+                <div>
+                  <p className="font-medium">Building</p>
+                  <p className="text-muted-foreground">
+                    {selectedAllocation.buildingCode ? `${selectedAllocation.buildingCode} • ` : ""}
+                    {selectedAllocation.buildingName || "Not specified"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2 text-foreground">
+                <Layers size={16} className="mt-0.5 text-primary" />
+                <div>
+                  <p className="font-medium">Floor</p>
+                  <p className="text-muted-foreground">
+                    {selectedAllocation.floorName || "Floor"}
+                    {selectedAllocation.floorNumber != null ? ` (Level ${selectedAllocation.floorNumber})` : ""}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2 text-foreground">
+                <MapPin size={16} className="mt-0.5 text-primary" />
+                <div>
+                  <p className="font-medium">Room</p>
+                  <p className="text-muted-foreground">
+                    {selectedAllocation.roomCode ? `${selectedAllocation.roomCode} • ` : ""}
+                    {selectedAllocation.roomName || "Not specified"}
+                  </p>
+                </div>
+              </div>
+
+              {selectedAllocation.purpose && (
+                <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Purpose</p>
+                  <p className="mt-1 text-foreground">{selectedAllocation.purpose}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

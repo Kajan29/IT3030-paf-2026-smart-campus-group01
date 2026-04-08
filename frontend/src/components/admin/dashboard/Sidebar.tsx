@@ -12,6 +12,7 @@ import {
   Bell,
   BarChart3,
   Settings,
+  House,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -50,6 +51,10 @@ export const Sidebar = ({ activeItem, onItemClick, collapsed, onToggle }: Sideba
   const handleLogout = () => {
     logout();
     navigate("/auth/login");
+  };
+
+  const handleBackToHome = () => {
+    navigate("/");
   };
 
   return (
@@ -157,6 +162,19 @@ export const Sidebar = ({ activeItem, onItemClick, collapsed, onToggle }: Sideba
       </nav>
 
       <div className="relative px-2 pb-4 border-t border-sidebar-border/70 pt-3">
+        <button
+          onClick={handleBackToHome}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-sidebar-foreground hover:bg-white/10 hover:text-white transition-all duration-200 group relative"
+        >
+          <House size={18} className="flex-shrink-0 group-hover:-translate-x-1 transition-transform duration-200" />
+          {!collapsed && <span className="animate-fade-in">Back to Home</span>}
+          {collapsed && (
+            <div className="absolute left-full ml-2 px-2 py-1 bg-sidebar-accent text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+              Back to Home
+            </div>
+          )}
+        </button>
+
         <button
           onClick={handleLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-sidebar-foreground hover:bg-destructive/20 hover:text-destructive-foreground transition-all duration-200 group"

@@ -71,4 +71,10 @@ public interface RoomBookingRepository extends JpaRepository<RoomBooking, Long> 
 
     // Find bookings by status
     List<RoomBooking> findByStatus(RoomBooking.BookingStatus status);
+
+        // Admin dashboard listing (latest first)
+        List<RoomBooking> findAllByOrderByCreatedAtDesc();
+
+        // Admin dashboard listing by status (latest first)
+        List<RoomBooking> findByStatusOrderByCreatedAtDesc(RoomBooking.BookingStatus status);
 }

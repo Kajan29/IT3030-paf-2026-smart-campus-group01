@@ -9,7 +9,9 @@ import { BuildingCard } from "@/components/common/BuildingCard";
 import { FloorCard } from "@/components/common/FloorCard";
 import { RoomCard } from "@/components/common/RoomCard";
 import facilityService from "@/services/facilityService";
+import bookingService from "@/services/bookingService";
 import type { Building, Floor, Room } from "@/types/campusManagement";
+import { toast } from "react-toastify";
 import {
   buildings as fallbackBuildings,
   floors as fallbackFloors,
@@ -19,11 +21,56 @@ import heroCampus from "@/assets/hero-campus.jpg";
 
 type BookingStep = "building" | "floor" | "room" | "confirm";
 
+const STUDY_ROOM_TYPE_KEYWORDS = [
+  "study",
+  "library",
+  "discussion",
+  "tutorial",
+  "research",
+  "common",
+  "seminar",
+  "computer lab",
+];
+
+const normalizeRoomStatus = (status?: string) => (status || "").trim().toLowerCase();
+
+const isStudyAreaRoom = (room: Room) => {
+  const normalizedType = (room.type || "").trim().toLowerCase();
+  const normalizedCode = (room.code || "").trim().toLowerCase();
+  return (
+    STUDY_ROOM_TYPE_KEYWORDS.some((keyword) => normalizedType.includes(keyword)) ||
+    normalizedCode.startsWith("sr-")
+  );
+};
+
+const isRoomBookableForStudents = (room: Room) => {
+  const normalizedStatus = normalizeRoomStatus(room.status);
+  const statusBookable = normalizedStatus === "available" || normalizedStatus === "open";
+  return statusBookable && room.bookingAvailable !== false;
+};
+
 const timeSlots = [
   "08:00 AM", "09:00 AM", "10:00 AM", "11:00 AM", 
   "12:00 PM", "01:00 PM", "02:00 PM", "03:00 PM", 
   "04:00 PM", "05:00 PM"
 ];
+
+const to24HourTime = (slot: string): string => {
+  const [timePart, period] = slot.split(" ");
+  const [rawHour, rawMinute] = timePart.split(":").map(Number);
+  let hour = rawHour;
+
+  if (period === "PM" && hour !== 12) hour += 12;
+  if (period === "AM" && hour === 12) hour = 0;
+
+  return `${String(hour).padStart(2, "0")}:${String(rawMinute).padStart(2, "0")}`;
+};
+
+const addOneHour = (time24: string): string => {
+  const [hour, minute] = time24.split(":").map(Number);
+  const nextHour = (hour + 1) % 24;
+  return `${String(nextHour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+};
 
 const BookRoomPage = () => {
   const [step, setStep] = useState<BookingStep>("building");
@@ -33,6 +80,7 @@ const BookRoomPage = () => {
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [booked, setBooked] = useState(false);
+  const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
 
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [floors, setFloors] = useState<Floor[]>([]);
@@ -75,22 +123,30 @@ const BookRoomPage = () => {
     return () => { mounted = false; };
   }, []);
 
-  const availableFloors = floors.filter(f => 
-    f.buildingId === selectedBuilding?.id
+  const studyBookableRooms = rooms.filter(
+    (room) => isRoomBookableForStudents(room) && isStudyAreaRoom(room)
   );
 
-  const availableRooms = rooms.filter(r => 
-    r.floorId === selectedFloor?.id && 
-    r.status === "Available" && 
-    r.bookingAvailable
+  const availableBuildings = buildings.filter((building) =>
+    studyBookableRooms.some((room) => room.buildingId === building.id)
+  );
+
+  const availableFloors = floors.filter(
+    (floor) =>
+      floor.buildingId === selectedBuilding?.id &&
+      studyBookableRooms.some((room) => room.floorId === floor.id)
+  );
+
+  const availableRooms = studyBookableRooms.filter(
+    (room) => room.floorId === selectedFloor?.id
   );
 
   const getBuildingRoomCount = (buildingId: string) => {
-    return rooms.filter(r => r.buildingId === buildingId).length;
+    return studyBookableRooms.filter((room) => room.buildingId === buildingId).length;
   };
 
   const roomCounts = new Map<string, number>();
-  rooms.forEach(room => {
+  studyBookableRooms.forEach((room) => {
     const count = roomCounts.get(room.floorId) || 0;
     roomCounts.set(room.floorId, count + 1);
   });
@@ -126,9 +182,37 @@ const BookRoomPage = () => {
     }
   };
 
-  const handleBook = () => {
-    if (selectedRoom && selectedDate && selectedTime) {
+  const handleBook = async () => {
+    if (!selectedRoom || !selectedDate || !selectedTime) {
+      return;
+    }
+
+    setIsSubmittingBooking(true);
+    try {
+      const roomIdAsNumber = Number(selectedRoom.id);
+      if (!Number.isFinite(roomIdAsNumber)) {
+        throw new Error("This room cannot be booked right now. Please refresh and try again.");
+      }
+
+      const startClock = to24HourTime(selectedTime);
+      const endClock = addOneHour(startClock);
+
+      const response = await bookingService.createBooking({
+        roomId: String(roomIdAsNumber),
+        startTime: `${selectedDate}T${startClock}:00`,
+        endTime: `${selectedDate}T${endClock}:00`,
+        bookingType: "STUDENT",
+        purpose: `Study booking for ${selectedRoom.name}`,
+        seatsBooked: 1,
+      });
+
       setBooked(true);
+      if (response?.status === "PENDING") {
+        toast.success("Booking request submitted. Waiting for admin approval.");
+      } else {
+        toast.success("Booking submitted successfully.");
+      }
+
       setTimeout(() => {
         setBooked(false);
         // Reset to start
@@ -139,6 +223,16 @@ const BookRoomPage = () => {
         setSelectedDate("");
         setSelectedTime("");
       }, 3000);
+    } catch (error: any) {
+      const apiMessage =
+        error?.response?.data?.details?.[0] ||
+        error?.response?.data?.error ||
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to create booking.";
+      toast.error(apiMessage);
+    } finally {
+      setIsSubmittingBooking(false);
     }
   };
 
@@ -187,7 +281,7 @@ const BookRoomPage = () => {
             transition={{ delay: 0.2 }}
             className="text-primary-foreground/80 text-lg max-w-2xl mx-auto"
           >
-            Select your building, floor, and room in just a few clicks
+            Student bookings are limited to study areas and are submitted for admin approval.
           </motion.p>
         </div>
       </section>
@@ -265,7 +359,7 @@ const BookRoomPage = () => {
                 </div>
               ) : (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {buildings.map((building, index) => (
+                  {availableBuildings.map((building, index) => (
                     <BuildingCard
                       key={building.id}
                       building={building}
@@ -275,6 +369,11 @@ const BookRoomPage = () => {
                       roomCount={getBuildingRoomCount(building.id)}
                     />
                   ))}
+                </div>
+              )}
+              {!loading && availableBuildings.length === 0 && (
+                <div className="text-center py-12 text-muted-foreground">
+                  No study-related rooms are available for booking right now.
                 </div>
               )}
             </motion.div>
@@ -413,11 +512,15 @@ const BookRoomPage = () => {
               <div className="text-center">
                 <Button
                   size="lg"
-                  disabled={!selectedDate || !selectedTime || booked}
+                  disabled={!selectedDate || !selectedTime || booked || isSubmittingBooking}
                   onClick={handleBook}
                   className="bg-primary text-primary-foreground hover:bg-primary/90 px-12 py-6 text-lg font-bold"
                 >
-                  {booked ? "✓ Booking Confirmed!" : "Confirm Booking"}
+                  {booked
+                    ? "Booking Request Submitted"
+                    : isSubmittingBooking
+                    ? "Submitting..."
+                    : "Submit Booking Request"}
                 </Button>
                 {(!selectedDate || !selectedTime) && !booked && (
                   <p className="text-muted-foreground text-sm mt-3">
