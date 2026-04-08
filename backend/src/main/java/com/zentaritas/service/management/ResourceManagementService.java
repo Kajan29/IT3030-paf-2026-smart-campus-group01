@@ -26,11 +26,23 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ResourceManagementService {
+
+    private static final Set<String> ALLOWED_RESOURCE_TYPES = Set.of(
+            "chair",
+            "table",
+            "projector",
+            "ac_unit",
+            "light",
+            "power_plug",
+            "window"
+    );
 
     private final BuildingRepository buildingRepository;
     private final FloorRepository floorRepository;
@@ -71,10 +83,12 @@ public class ResourceManagementService {
     @Transactional
     public ResourceResponse createResource(ResourceRequest request) {
         Room room = getRoomEntity(request.getRoomId());
+        String name = sanitizeName(request.getName());
+        String type = normalizeAndValidateType(request.getType());
 
         RoomResource resource = RoomResource.builder()
-                .name(request.getName().trim())
-                .type(request.getType().trim())
+            .name(name)
+            .type(type)
                 .quantity(request.getQuantity())
                 .room(room)
                 .build();
@@ -100,9 +114,11 @@ public class ResourceManagementService {
     public ResourceResponse updateResource(Long id, ResourceRequest request) {
         RoomResource resource = getResourceEntity(id);
         Room room = getRoomEntity(request.getRoomId());
+        String name = sanitizeName(request.getName());
+        String type = normalizeAndValidateType(request.getType());
 
-        resource.setName(request.getName().trim());
-        resource.setType(request.getType().trim());
+        resource.setName(name);
+        resource.setType(type);
         resource.setQuantity(request.getQuantity());
         resource.setRoom(room);
 
@@ -192,6 +208,29 @@ public class ResourceManagementService {
     private RoomResource getResourceEntity(Long resourceId) {
         return roomResourceRepository.findById(resourceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Resource not found with id: " + resourceId));
+    }
+
+    private String sanitizeName(String name) {
+        String normalized = name == null ? "" : name.trim();
+        if (normalized.isBlank()) {
+            throw new IllegalArgumentException("Resource name is required");
+        }
+        if (normalized.length() > 100) {
+            throw new IllegalArgumentException("Resource name must not exceed 100 characters");
+        }
+        return normalized;
+    }
+
+    private String normalizeAndValidateType(String type) {
+        String normalized = type == null
+                ? ""
+                : type.trim().toLowerCase(Locale.ROOT).replace(" ", "_");
+
+        if (!ALLOWED_RESOURCE_TYPES.contains(normalized)) {
+            throw new IllegalArgumentException("Invalid resource type. Allowed values: chair, table, projector, ac_unit, light, power_plug, window");
+        }
+
+        return normalized;
     }
 
     private BuildingResponse toBuildingResponse(Building building) {

@@ -59,20 +59,20 @@ public class ResourceManagementController {
     }
 
     @PostMapping("/resources")
-    @PreAuthorize("hasAnyRole('ADMIN','ACADEMIC_STAFF','NON_ACADEMIC_STAFF')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<ResourceResponse>> createResource(@Valid @RequestBody ResourceRequest request) {
         ResourceResponse response = resourceManagementService.createResource(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response, "Resource created successfully"));
     }
 
     @PutMapping("/resources/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','ACADEMIC_STAFF','NON_ACADEMIC_STAFF')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<ResourceResponse>> updateResource(@PathVariable Long id, @Valid @RequestBody ResourceRequest request) {
         return ResponseEntity.ok(ApiResponse.success(resourceManagementService.updateResource(id, request), "Resource updated successfully"));
     }
 
     @DeleteMapping("/resources/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','ACADEMIC_STAFF','NON_ACADEMIC_STAFF')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteResource(@PathVariable Long id) {
         resourceManagementService.deleteResource(id);
         return ResponseEntity.ok(ApiResponse.success(null, "Resource deleted successfully"));

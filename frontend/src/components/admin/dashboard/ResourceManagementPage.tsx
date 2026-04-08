@@ -1,18 +1,17 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { Box, Loader2, Pencil, Plus, Save, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Loader2, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import type { Building, Floor, Room } from "@/types/campusManagement";
-import type { ResourceLayout, ResourceLayoutEditorItem, ResourceViewMode, RoomResource } from "@/types/resourceManagement";
+import type { RoomResource } from "@/types/resourceManagement";
 import resourceManagementService from "@/services/resourceManagementService";
 import { BuildingSelector } from "@/components/admin/dashboard/resource-management/BuildingSelector";
 import { FloorSelector } from "@/components/admin/dashboard/resource-management/FloorSelector";
 import { RoomSelector } from "@/components/admin/dashboard/resource-management/RoomSelector";
-import { ViewToggle } from "@/components/admin/dashboard/resource-management/ViewToggle";
-import { ResourceToolbar } from "@/components/admin/dashboard/resource-management/ResourceToolbar";
-import { Canvas2DEditor } from "@/components/admin/dashboard/resource-management/Canvas2DEditor";
-import { normalize2DTo3D, normalize3DTo2D } from "@/utils/resourceLayoutTransform";
+import { useAuth } from "@/context/AuthContext";
 
-const Canvas3DEditor = lazy(() => import("@/components/admin/dashboard/resource-management/Canvas3DEditor"));
-const RESOURCE_TYPES = ["chair", "table", "desk", "projector", "podium", "screen", "speaker"];
+const RESOURCE_TYPES = ["chair", "table", "projector", "ac_unit", "light", "power_plug", "window"];
+
+const normalizeType = (value: string) => value.trim().toLowerCase().replace(/\s+/g, "_");
+const toLabel = (value: string) => value.replace(/_/g, " ").replace(/\b\w/g, (entry) => entry.toUpperCase());
 
 const getApiError = (error: unknown) => {
   if (typeof error === "object" && error !== null) {
@@ -25,8 +24,14 @@ const getApiError = (error: unknown) => {
 };
 
 export const ResourceManagementPage = () => {
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const { isAuthenticated, user, loading: authLoading } = useAuth();
+  const canManage = isAuthenticated && user?.role === "ADMIN";
+
+  const [loadingHierarchy, setLoadingHierarchy] = useState(false);
+  const [loadingResources, setLoadingResources] = useState(false);
+  const [creatingResource, setCreatingResource] = useState(false);
+  const [updatingResourceId, setUpdatingResourceId] = useState<string | null>(null);
+  const [deletingResourceId, setDeletingResourceId] = useState<string | null>(null);
 
   const [selectedBuilding, setSelectedBuilding] = useState("");
   const [selectedFloor, setSelectedFloor] = useState("");
@@ -35,252 +40,246 @@ export const ResourceManagementPage = () => {
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [floors, setFloors] = useState<Floor[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
-
   const [resources, setResources] = useState<RoomResource[]>([]);
-  const [layoutData, setLayoutData] = useState<ResourceLayout[]>([]);
 
-  const [viewMode, setViewMode] = useState<ResourceViewMode>("2D");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const [newResource, setNewResource] = useState<{ name: string; type: string; quantity: number }>({
+    name: "",
+    type: RESOURCE_TYPES[0],
+    quantity: 1,
+  });
+
   const [editingResourceId, setEditingResourceId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<{ name: string; type: string; quantity: number }>({
     name: "",
-    type: "chair",
+    type: RESOURCE_TYPES[0],
     quantity: 1,
   });
-  const [newResource, setNewResource] = useState<{ name: string; type: string; quantity: number }>({
-    name: "",
-    type: "chair",
-    quantity: 1,
-  });
-
-  const saveTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
+    if (authLoading || !canManage) {
+      return;
+    }
+
     const loadBuildings = async () => {
-      setLoading(true);
+      setLoadingHierarchy(true);
       try {
+        setErrorMessage(null);
         const list = await resourceManagementService.getBuildings();
         setBuildings(list);
       } catch (error) {
-        window.alert(getApiError(error));
+        setErrorMessage(getApiError(error));
       } finally {
-        setLoading(false);
+        setLoadingHierarchy(false);
       }
     };
 
     void loadBuildings();
-  }, []);
+  }, [authLoading, canManage]);
 
   useEffect(() => {
-    if (buildings.length === 0) {
+    if (!canManage) {
+      setSelectedBuilding("");
+      setSelectedFloor("");
+      setSelectedRoom("");
+      setBuildings([]);
+      setFloors([]);
+      setRooms([]);
+      setResources([]);
       return;
     }
+
+    if (buildings.length === 0) {
+      setSelectedBuilding("");
+      setSelectedFloor("");
+      setSelectedRoom("");
+      setFloors([]);
+      setRooms([]);
+      setResources([]);
+      return;
+    }
+
     const selectedExists = buildings.some((entry) => entry.id === selectedBuilding);
     if (!selectedBuilding || !selectedExists) {
       setSelectedBuilding(buildings[0].id);
     }
-  }, [buildings, selectedBuilding]);
+  }, [buildings, selectedBuilding, canManage]);
 
   useEffect(() => {
+    if (!canManage) {
+      return;
+    }
+
     if (!selectedBuilding) {
       setFloors([]);
       setSelectedFloor("");
       setRooms([]);
       setSelectedRoom("");
+      setResources([]);
       return;
     }
 
     const loadFloors = async () => {
-      setLoading(true);
+      setLoadingHierarchy(true);
       try {
+        setErrorMessage(null);
         const list = await resourceManagementService.getFloors(selectedBuilding);
         setFloors(list);
       } catch (error) {
-        window.alert(getApiError(error));
+        setErrorMessage(getApiError(error));
       } finally {
-        setLoading(false);
+        setLoadingHierarchy(false);
       }
     };
 
     void loadFloors();
-  }, [selectedBuilding]);
+  }, [selectedBuilding, canManage]);
 
   useEffect(() => {
-    if (floors.length === 0) {
+    if (!canManage) {
       return;
     }
+
+    if (floors.length === 0) {
+      setSelectedFloor("");
+      setRooms([]);
+      setSelectedRoom("");
+      setResources([]);
+      return;
+    }
+
     const selectedExists = floors.some((entry) => entry.id === selectedFloor);
     if (!selectedFloor || !selectedExists) {
       setSelectedFloor(floors[0].id);
     }
-  }, [floors, selectedFloor]);
+  }, [floors, selectedFloor, canManage]);
 
   useEffect(() => {
+    if (!canManage) {
+      return;
+    }
+
     if (!selectedFloor) {
       setRooms([]);
       setSelectedRoom("");
+      setResources([]);
       return;
     }
 
     const loadRooms = async () => {
-      setLoading(true);
+      setLoadingHierarchy(true);
       try {
+        setErrorMessage(null);
         const list = await resourceManagementService.getRooms(selectedFloor);
         setRooms(list);
       } catch (error) {
-        window.alert(getApiError(error));
+        setErrorMessage(getApiError(error));
       } finally {
-        setLoading(false);
+        setLoadingHierarchy(false);
       }
     };
 
     void loadRooms();
-  }, [selectedFloor]);
+  }, [selectedFloor, canManage]);
 
   useEffect(() => {
-    if (rooms.length === 0) {
+    if (!canManage) {
       return;
     }
+
+    if (rooms.length === 0) {
+      setSelectedRoom("");
+      setResources([]);
+      return;
+    }
+
     const selectedExists = rooms.some((entry) => entry.id === selectedRoom);
     if (!selectedRoom || !selectedExists) {
       setSelectedRoom(rooms[0].id);
     }
-  }, [rooms, selectedRoom]);
+  }, [rooms, selectedRoom, canManage]);
 
   useEffect(() => {
+    if (!canManage) {
+      return;
+    }
+
     if (!selectedRoom) {
       setResources([]);
-      setLayoutData([]);
       return;
     }
 
-    const loadRoomData = async () => {
-      setLoading(true);
+    const loadResources = async () => {
+      setLoadingResources(true);
       try {
-        const [resourceList, layouts] = await Promise.all([
-          resourceManagementService.getResources(selectedRoom),
-          resourceManagementService.getLayout(selectedRoom),
-        ]);
-        setResources(resourceList);
-        setLayoutData(layouts);
+        setErrorMessage(null);
+        const list = await resourceManagementService.getResources(selectedRoom);
+        setResources(list);
       } catch (error) {
-        window.alert(getApiError(error));
+        setErrorMessage(getApiError(error));
       } finally {
-        setLoading(false);
+        setLoadingResources(false);
       }
     };
 
-    void loadRoomData();
-  }, [selectedRoom]);
+    void loadResources();
+  }, [selectedRoom, canManage]);
 
-  useEffect(() => {
-    return () => {
-      if (saveTimerRef.current) {
-        window.clearTimeout(saveTimerRef.current);
+  const inventoryByType = useMemo(() => {
+    const summary = new Map<string, number>();
+    RESOURCE_TYPES.forEach((type) => summary.set(type, 0));
+
+    for (const resource of resources) {
+      const key = normalizeType(resource.type);
+      if (!summary.has(key)) {
+        continue;
       }
-    };
-  }, []);
-
-  const editorItems = useMemo<ResourceLayoutEditorItem[]>(() => {
-    return resources.map((resource) => {
-      const layout = layoutData.find((entry) => entry.resourceId === resource.id) ?? {
-        id: `tmp-${resource.id}`,
-        resourceId: resource.id,
-        roomId: selectedRoom,
-        x: 0,
-        y: 0,
-        z: 0,
-        rotation: 0,
-        scale: 1,
-      };
-
-      return {
-        resource,
-        layout,
-      };
-    });
-  }, [resources, layoutData, selectedRoom]);
-
-  const queueSave = (nextLayouts: ResourceLayout[]) => {
-    if (!selectedRoom || nextLayouts.length === 0) {
-      return;
+      summary.set(key, (summary.get(key) || 0) + resource.quantity);
     }
 
-    if (saveTimerRef.current) {
-      window.clearTimeout(saveTimerRef.current);
-    }
+    return Array.from(summary.entries()).map(([key, quantity]) => ({
+      key,
+      label: toLabel(key),
+      quantity,
+    }));
+  }, [resources]);
 
-    saveTimerRef.current = window.setTimeout(async () => {
-      try {
-        setSaving(true);
-        const saved = await resourceManagementService.saveLayout({ roomId: selectedRoom, layouts: nextLayouts });
-        setLayoutData(saved);
-      } catch (error) {
-        window.alert(getApiError(error));
-      } finally {
-        setSaving(false);
-      }
-    }, 500);
-  };
-
-  const updateLayoutItem = (
-    resourceId: string,
-    changes: { x: number; z: number; rotation: number; scale: number } | { x: number; y: number; z: number; rotation: number; scale: number }
-  ) => {
-    setLayoutData((current) => {
-      const next = current.map((item) => {
-        if (item.resourceId !== resourceId) {
-          return item;
-        }
-
-        const base = { ...item, ...changes } as ResourceLayout;
-        return viewMode === "2D" ? normalize2DTo3D(base) : normalize3DTo2D(base);
-      });
-
-      queueSave(next);
-      return next;
+  const resetEdit = () => {
+    setEditingResourceId(null);
+    setEditDraft({
+      name: "",
+      type: RESOURCE_TYPES[0],
+      quantity: 1,
     });
   };
 
-  const handleAddResource = async (resourceType: string) => {
-    if (!selectedRoom) {
-      window.alert("Select a room before adding resources.");
-      return;
-    }
-
-    try {
-      const name = `${resourceType[0].toUpperCase()}${resourceType.slice(1)} ${resources.length + 1}`;
-      const created = await resourceManagementService.createResource({
-        name,
-        type: resourceType,
-        quantity: 1,
-        roomId: selectedRoom,
-      });
-      setResources((current) => [...current, created]);
-
-      const refreshedLayouts = await resourceManagementService.getLayout(selectedRoom);
-      setLayoutData(refreshedLayouts);
-    } catch (error) {
-      window.alert(getApiError(error));
-    }
+  const startEdit = (resource: RoomResource) => {
+    setEditingResourceId(resource.id);
+    setEditDraft({
+      name: resource.name,
+      type: normalizeType(resource.type),
+      quantity: resource.quantity,
+    });
   };
 
-  const handleCreateResourceFromForm = async () => {
+  const handleCreate = async () => {
     if (!selectedRoom) {
-      window.alert("Select a room before adding resources.");
+      setErrorMessage("Select a room before creating a resource.");
       return;
     }
-
     if (!newResource.name.trim()) {
-      window.alert("Resource name is required.");
+      setErrorMessage("Resource name is required.");
       return;
     }
-
     if (newResource.quantity < 1) {
-      window.alert("Quantity must be at least 1.");
+      setErrorMessage("Quantity must be at least 1.");
       return;
     }
 
     try {
+      setCreatingResource(true);
+      setErrorMessage(null);
       const created = await resourceManagementService.createResource({
         name: newResource.name.trim(),
         type: newResource.type,
@@ -293,43 +292,30 @@ export const ResourceManagementPage = () => {
         type: newResource.type,
         quantity: 1,
       });
-      const refreshedLayouts = await resourceManagementService.getLayout(selectedRoom);
-      setLayoutData(refreshedLayouts);
     } catch (error) {
-      window.alert(getApiError(error));
+      setErrorMessage(getApiError(error));
+    } finally {
+      setCreatingResource(false);
     }
   };
 
-  const startEditResource = (resource: RoomResource) => {
-    setEditingResourceId(resource.id);
-    setEditDraft({
-      name: resource.name,
-      type: resource.type,
-      quantity: resource.quantity,
-    });
-  };
-
-  const cancelEditResource = () => {
-    setEditingResourceId(null);
-  };
-
-  const saveEditResource = async (resourceId: string) => {
+  const handleUpdate = async (resourceId: string) => {
     const currentResource = resources.find((entry) => entry.id === resourceId);
     if (!currentResource) {
       return;
     }
-
     if (!editDraft.name.trim()) {
-      window.alert("Resource name is required.");
+      setErrorMessage("Resource name is required.");
       return;
     }
-
     if (editDraft.quantity < 1) {
-      window.alert("Quantity must be at least 1.");
+      setErrorMessage("Quantity must be at least 1.");
       return;
     }
 
     try {
+      setUpdatingResourceId(resourceId);
+      setErrorMessage(null);
       const updated = await resourceManagementService.updateResource(resourceId, {
         name: editDraft.name.trim(),
         type: editDraft.type,
@@ -340,51 +326,90 @@ export const ResourceManagementPage = () => {
       setResources((current) =>
         current.map((entry) => (entry.id === resourceId ? updated : entry))
       );
-      setEditingResourceId(null);
+      resetEdit();
     } catch (error) {
-      window.alert(getApiError(error));
+      setErrorMessage(getApiError(error));
+    } finally {
+      setUpdatingResourceId(null);
     }
   };
 
-  const handleDeleteResource = async (resourceId: string) => {
+  const handleDelete = async (resourceId: string) => {
     if (!window.confirm("Delete this resource?")) {
       return;
     }
 
     try {
+      setDeletingResourceId(resourceId);
+      setErrorMessage(null);
       await resourceManagementService.deleteResource(resourceId);
       setResources((current) => current.filter((entry) => entry.id !== resourceId));
-      setLayoutData((current) => current.filter((entry) => entry.resourceId !== resourceId));
+      if (editingResourceId === resourceId) {
+        resetEdit();
+      }
     } catch (error) {
-      window.alert(getApiError(error));
+      setErrorMessage(getApiError(error));
+    } finally {
+      setDeletingResourceId(null);
     }
   };
 
-  const handleModeChange = (mode: ResourceViewMode) => {
-    setViewMode(mode);
-    setLayoutData((current) => current.map((layout) => (mode === "3D" ? normalize2DTo3D(layout) : normalize3DTo2D(layout))));
-  };
+  if (authLoading) {
+    return (
+      <div className="flex h-[320px] items-center justify-center rounded-2xl border border-border bg-card">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
 
-  const getLayoutForResource = (resourceId: string) =>
-    layoutData.find((entry) => entry.resourceId === resourceId);
+  if (!canManage) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-6">
+        <h2 className="text-xl font-semibold text-foreground">Resource Management</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          You do not have permission to manage resources in this panel.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-foreground">Resource Management</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Manage room resources and edit spatial layouts in synchronized 2D and 3D modes.
+          Select building, floor, and room to edit room resources only.
         </p>
+        {errorMessage && (
+          <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {errorMessage}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[280px_1fr]">
         <aside className="space-y-4 rounded-2xl border border-border bg-card p-4">
-          <BuildingSelector buildings={buildings} selectedBuilding={selectedBuilding} onChange={setSelectedBuilding} disabled={loading} />
-          <FloorSelector floors={floors} selectedFloor={selectedFloor} onChange={setSelectedFloor} disabled={!selectedBuilding || loading} />
-          <RoomSelector rooms={rooms} selectedRoom={selectedRoom} onChange={setSelectedRoom} disabled={!selectedFloor || loading} />
+          <BuildingSelector
+            buildings={buildings}
+            selectedBuilding={selectedBuilding}
+            onChange={setSelectedBuilding}
+            disabled={loadingHierarchy}
+          />
+          <FloorSelector
+            floors={floors}
+            selectedFloor={selectedFloor}
+            onChange={setSelectedFloor}
+            disabled={!selectedBuilding || loadingHierarchy}
+          />
+          <RoomSelector
+            rooms={rooms}
+            selectedRoom={selectedRoom}
+            onChange={setSelectedRoom}
+            disabled={!selectedFloor || loadingHierarchy}
+          />
 
           <div className="rounded-xl border border-border bg-background p-3 text-xs text-muted-foreground">
-            Selected room resources: {resources.length}
+            {loadingHierarchy ? "Loading hierarchy..." : `Selected room resources: ${resources.length}`}
           </div>
         </aside>
 
@@ -392,7 +417,16 @@ export const ResourceManagementPage = () => {
           <div className="rounded-2xl border border-border bg-card p-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-foreground">Resource Summary</h2>
-              <span className="text-sm text-muted-foreground">Fast room-level load</span>
+              <span className="text-sm text-muted-foreground">Room: {selectedRoom || "Not selected"}</span>
+            </div>
+
+            <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
+              {inventoryByType.map((entry) => (
+                <div key={entry.key} className="rounded-lg border border-border bg-background px-3 py-2">
+                  <p className="text-xs text-muted-foreground">{entry.label}</p>
+                  <p className="mt-1 text-lg font-semibold text-foreground">{entry.quantity}</p>
+                </div>
+              ))}
             </div>
 
             <div className="grid grid-cols-1 gap-2 border-b border-border pb-3 md:grid-cols-[1.8fr_1fr_0.8fr_auto]">
@@ -401,18 +435,16 @@ export const ResourceManagementPage = () => {
                 onChange={(event) => setNewResource((current) => ({ ...current, name: event.target.value }))}
                 placeholder="Resource name"
                 className="rounded-lg border border-border px-3 py-2 text-sm"
-                disabled={!selectedRoom}
+                disabled={!selectedRoom || creatingResource}
               />
               <select
                 value={newResource.type}
-                onChange={(event) => setNewResource((current) => ({ ...current, type: event.target.value }))}
-                className="rounded-lg border border-border px-3 py-2 text-sm capitalize"
-                disabled={!selectedRoom}
+                onChange={(event) => setNewResource((current) => ({ ...current, type: normalizeType(event.target.value) }))}
+                className="rounded-lg border border-border px-3 py-2 text-sm"
+                disabled={!selectedRoom || creatingResource}
               >
                 {RESOURCE_TYPES.map((entry) => (
-                  <option key={entry} value={entry} className="capitalize">
-                    {entry}
-                  </option>
+                  <option key={entry} value={entry}>{toLabel(entry)}</option>
                 ))}
               </select>
               <input
@@ -426,33 +458,33 @@ export const ResourceManagementPage = () => {
                   }))
                 }
                 className="rounded-lg border border-border px-3 py-2 text-sm"
-                disabled={!selectedRoom}
+                disabled={!selectedRoom || creatingResource}
               />
               <button
-                onClick={handleCreateResourceFromForm}
-                disabled={!selectedRoom}
+                onClick={handleCreate}
+                disabled={!selectedRoom || creatingResource}
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
               >
-                <Plus size={14} />
-                Add
+                {creatingResource ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                Save
               </button>
             </div>
 
             <div className="mt-3 overflow-x-auto">
-              <table className="w-full min-w-[760px] text-sm">
+              <table className="w-full min-w-[680px] text-sm">
                 <thead>
                   <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="px-2 py-2">Name</th>
                     <th className="px-2 py-2">Type</th>
                     <th className="px-2 py-2">Quantity</th>
-                    <th className="px-2 py-2">Layout</th>
                     <th className="px-2 py-2">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {resources.map((resource) => {
-                    const layout = getLayoutForResource(resource.id);
                     const isEditing = editingResourceId === resource.id;
+                    const isUpdating = updatingResourceId === resource.id;
+                    const isDeleting = deletingResourceId === resource.id;
 
                     return (
                       <tr key={resource.id} className="border-b border-border/70 align-middle">
@@ -467,21 +499,21 @@ export const ResourceManagementPage = () => {
                             <span className="font-medium text-foreground">{resource.name}</span>
                           )}
                         </td>
-                        <td className="px-2 py-2 capitalize">
+                        <td className="px-2 py-2">
                           {isEditing ? (
                             <select
                               value={editDraft.type}
-                              onChange={(event) => setEditDraft((current) => ({ ...current, type: event.target.value }))}
+                              onChange={(event) =>
+                                setEditDraft((current) => ({ ...current, type: normalizeType(event.target.value) }))
+                              }
                               className="w-full rounded-md border border-border px-2 py-1"
                             >
                               {RESOURCE_TYPES.map((entry) => (
-                                <option key={entry} value={entry} className="capitalize">
-                                  {entry}
-                                </option>
+                                <option key={entry} value={entry}>{toLabel(entry)}</option>
                               ))}
                             </select>
                           ) : (
-                            resource.type
+                            <span>{toLabel(normalizeType(resource.type))}</span>
                           )}
                         </td>
                         <td className="px-2 py-2">
@@ -499,32 +531,47 @@ export const ResourceManagementPage = () => {
                               className="w-24 rounded-md border border-border px-2 py-1"
                             />
                           ) : (
-                            resource.quantity
+                            <span>{resource.quantity}</span>
                           )}
-                        </td>
-                        <td className="px-2 py-2 text-xs text-muted-foreground">
-                          {layout
-                            ? `x:${layout.x.toFixed(0)} y:${layout.y.toFixed(0)} z:${layout.z.toFixed(0)} r:${layout.rotation.toFixed(0)} s:${layout.scale.toFixed(2)}`
-                            : "No layout"}
                         </td>
                         <td className="px-2 py-2">
                           <div className="flex items-center gap-2">
                             {isEditing ? (
                               <>
-                                <button onClick={() => saveEditResource(resource.id)} className="text-emerald-600 hover:text-emerald-700">
-                                  <Save size={15} />
+                                <button
+                                  onClick={() => handleUpdate(resource.id)}
+                                  disabled={isUpdating}
+                                  className="text-emerald-600 hover:text-emerald-700 disabled:opacity-60"
+                                  aria-label="Update resource"
+                                >
+                                  {isUpdating ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
                                 </button>
-                                <button onClick={cancelEditResource} className="text-muted-foreground hover:text-foreground">
+                                <button
+                                  onClick={resetEdit}
+                                  disabled={isUpdating}
+                                  className="text-muted-foreground hover:text-foreground disabled:opacity-60"
+                                  aria-label="Cancel edit"
+                                >
                                   <X size={15} />
                                 </button>
                               </>
                             ) : (
-                              <button onClick={() => startEditResource(resource)} className="text-primary hover:text-primary/80">
+                              <button
+                                onClick={() => startEdit(resource)}
+                                disabled={Boolean(updatingResourceId || deletingResourceId)}
+                                className="text-primary hover:text-primary/80 disabled:opacity-60"
+                                aria-label="Edit resource"
+                              >
                                 <Pencil size={15} />
                               </button>
                             )}
-                            <button onClick={() => handleDeleteResource(resource.id)} className="text-muted-foreground hover:text-destructive">
-                              <Trash2 size={15} />
+                            <button
+                              onClick={() => handleDelete(resource.id)}
+                              disabled={isUpdating || isDeleting}
+                              className="text-muted-foreground hover:text-destructive disabled:opacity-60"
+                              aria-label="Delete resource"
+                            >
+                              {isDeleting ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
                             </button>
                           </div>
                         </td>
@@ -533,42 +580,19 @@ export const ResourceManagementPage = () => {
                   })}
                 </tbody>
               </table>
-              {resources.length === 0 && <p className="py-6 text-center text-sm text-muted-foreground">No resources found for the selected room.</p>}
-            </div>
-          </div>
 
-          <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
-            <ViewToggle value={viewMode} onChange={handleModeChange} />
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              {saving ? <Loader2 size={16} className="animate-spin" /> : <Box size={16} />}
-              {saving ? "Saving layout..." : "Layout auto-save enabled"}
-            </div>
-          </div>
-
-          <ResourceToolbar onAdd={handleAddResource} disabled={!selectedRoom || loading} />
-
-          {loading ? (
-            <div className="flex h-[560px] items-center justify-center rounded-2xl border border-border bg-card">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            </div>
-          ) : viewMode === "2D" ? (
-            <Canvas2DEditor
-              items={editorItems}
-              onChangeItem={(resourceId, change) => updateLayoutItem(resourceId, change)}
-            />
-          ) : (
-            <Suspense
-              fallback={
-                <div className="flex h-[560px] items-center justify-center rounded-2xl border border-border bg-card">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              {loadingResources && (
+                <div className="py-6 text-center text-sm text-muted-foreground">
+                  <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
+                  Loading resources...
                 </div>
-              }
-            >
-              <Canvas3DEditor
-                items={editorItems}
-              />
-            </Suspense>
-          )}
+              )}
+
+              {!loadingResources && resources.length === 0 && (
+                <p className="py-6 text-center text-sm text-muted-foreground">No resources found for the selected room.</p>
+              )}
+            </div>
+          </div>
         </section>
       </div>
     </div>
