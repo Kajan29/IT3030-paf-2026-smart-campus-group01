@@ -3,6 +3,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Navbar } from "@/components/dashboard/Navbar";
 import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
 import { UserManagementPage } from "@/components/dashboard/UserManagementPage";
+import { TicketManagementPage } from "@/components/dashboard/TicketManagementPage";
 import { BuildingManagementPage } from "@/components/dashboard/BuildingManagementPage";
 import { FloorManagementPage } from "@/components/dashboard/FloorManagementPage";
 import { RoomManagementPage } from "@/components/dashboard/RoomManagementPage";
@@ -17,6 +18,7 @@ import { cn } from "@/lib/utils";
 const pageTitles: Record<string, string> = {
   dashboard: "Dashboard",
   users: "User Management",
+  tickets: "Ticket Management",
   buildings: "Building Management",
   floors: "Floor Management",
   rooms: "Room Management",
@@ -76,6 +78,8 @@ const AdminDashboard = () => {
         return <DashboardOverview />;
       case "users":
         return <UserManagementPage />;
+      case "tickets":
+        return <TicketManagementPage />;
       case "buildings":
         return (
           <BuildingManagementPage

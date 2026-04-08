@@ -32,6 +32,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "../context/AuthContext";
 import { userService } from "@/services/userService";
+import ticketService, { type TicketResponse } from "@/services/ticketService";
 import { toast } from "react-toastify";
 import { cn } from "@/lib/utils";
 
@@ -42,14 +43,6 @@ type BookingItem = {
   date: string;
   status: "Confirmed" | "Pending" | "Cancelled";
   details: string;
-};
-
-type TicketItem = {
-  id: string;
-  subject: string;
-  status: "Open" | "Resolved" | "Pending";
-  updated: string;
-  channel: string;
 };
 
 const ProfilePage = () => {
@@ -69,6 +62,11 @@ const ProfilePage = () => {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>(user?.profilePicture || "");
   const [avatarName, setAvatarName] = useState<string>(user?.profilePicture ? "Current image" : "No file chosen");
+  const [myTickets, setMyTickets] = useState<TicketResponse[]>([]);
+  const [assignedTickets, setAssignedTickets] = useState<TicketResponse[]>([]);
+  const [ticketLoading, setTicketLoading] = useState(false);
+  const [resolvingTicketId, setResolvingTicketId] = useState<number | null>(null);
+  const [ticketTab, setTicketTab] = useState<"mine" | "assigned">("mine");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -93,6 +91,7 @@ const ProfilePage = () => {
 
   const isStaff = user?.role === "ACADEMIC_STAFF" || user?.role === "NON_ACADEMIC_STAFF";
   const isStudent = user?.role === "STUDENT";
+  const isNonAcademicStaff = user?.role === "NON_ACADEMIC_STAFF";
 
   const bookings: BookingItem[] = isStaff
     ? [
@@ -130,29 +129,7 @@ const ProfilePage = () => {
         },
       ];
 
-  const tickets: TicketItem[] = [
-    {
-      id: "T-1042",
-      subject: "Change booking time",
-      status: "Open",
-      updated: "Today, 09:30",
-      channel: "Support",
-    },
-    {
-      id: "T-0988",
-      subject: "Access to lab after 7pm",
-      status: "Resolved",
-      updated: "Mar 28, 2026",
-      channel: "Facilities",
-    },
-    {
-      id: "T-0954",
-      subject: "Projector not working",
-      status: "Pending",
-      updated: "Mar 26, 2026",
-      channel: "AV",
-    },
-  ];
+  const openTicketCount = myTickets.filter((ticket) => ticket.status !== "RESOLVED").length;
 
   const summary = [
     {
@@ -162,8 +139,8 @@ const ProfilePage = () => {
     },
     {
       label: "Open tickets",
-      value: "1",
-      hint: "Avg response 2h",
+      value: String(openTicketCount),
+      hint: openTicketCount > 0 ? "Track live updates in Tickets" : "No pending tickets",
     },
     {
       label: "Completed",
@@ -249,6 +226,46 @@ const ProfilePage = () => {
     }
   };
 
+  const loadTickets = async () => {
+    if (!user) return;
+
+    setTicketLoading(true);
+    try {
+      const myResponse = await ticketService.getMyTickets();
+      setMyTickets(myResponse.data.data || []);
+
+      if (user.role === "NON_ACADEMIC_STAFF") {
+        const assignedResponse = await ticketService.getAssignedTickets();
+        setAssignedTickets(assignedResponse.data.data || []);
+      } else {
+        setAssignedTickets([]);
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Could not load tickets");
+    } finally {
+      setTicketLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadTickets();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.email, user?.role]);
+
+  const handleResolveAssignedTicket = async (ticketId: number) => {
+    const note = window.prompt("Add an optional resolution note:") || undefined;
+    setResolvingTicketId(ticketId);
+    try {
+      await ticketService.resolveAssignedTicket(ticketId, note);
+      toast.success("Ticket resolved successfully");
+      await loadTickets();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Could not resolve ticket");
+    } finally {
+      setResolvingTicketId(null);
+    }
+  };
+
   const sectionList = [
     { id: "overview" as SectionId, label: "Overview", icon: LayoutGrid },
     { id: "bookings" as SectionId, label: isStudent ? "My Bookings" : "Bookings", icon: CalendarDays },
@@ -274,13 +291,22 @@ const ProfilePage = () => {
     return <Badge className={`border ${styles[status]}`}>{status}</Badge>;
   };
 
-  const renderTicketBadge = (status: TicketItem["status"]) => {
-    const styles: Record<TicketItem["status"], string> = {
-      Open: "bg-primary/10 text-primary border-primary/30",
-      Resolved: "bg-success/10 text-success border-success/30",
-      Pending: "bg-warning/15 text-warning-foreground border-warning/30",
+  const renderTicketBadge = (status: TicketResponse["status"]) => {
+    const styles: Record<TicketResponse["status"], string> = {
+      OPEN: "bg-primary/10 text-primary border-primary/30",
+      RESOLVED: "bg-success/10 text-success border-success/30",
+      IN_PROGRESS: "bg-warning/15 text-warning-foreground border-warning/30",
     };
-    return <Badge className={`border ${styles[status]}`}>{status}</Badge>;
+    const label = status.replace("_", " ").toLowerCase().replace(/\b\w/g, (s) => s.toUpperCase());
+    return <Badge className={`border ${styles[status]}`}>{label}</Badge>;
+  };
+
+  const formatDateTime = (value: string) => {
+    try {
+      return new Date(value).toLocaleString();
+    } catch {
+      return value;
+    }
   };
 
   const statIcons = [CalendarDays, MessageSquare, TrendingUp, ShieldCheck];
@@ -469,6 +495,7 @@ const ProfilePage = () => {
     }
 
     if (activeSection === "tickets") {
+      const visibleTickets = ticketTab === "mine" ? myTickets : assignedTickets;
       return (
         <Card className="border-border/50 shadow-card">
           <CardHeader>
@@ -479,48 +506,94 @@ const ProfilePage = () => {
                 </div>
                 <div>
                   <CardTitle className="font-display text-xl">Support Tickets</CardTitle>
-                  <CardDescription>Track your support and access requests</CardDescription>
+                  <CardDescription>
+                    {isNonAcademicStaff
+                      ? "Manage your own requests and tickets assigned to you"
+                      : "Track your support and access requests"}
+                  </CardDescription>
                 </div>
               </div>
-              <Button size="sm" className="bg-primary hover:bg-primary/90">
+              <Button size="sm" className="bg-primary hover:bg-primary/90" onClick={() => navigate("/contact")}>
                 <MessageSquare size={16} className="mr-2" />
                 Raise Ticket
               </Button>
             </div>
+            {isNonAcademicStaff && (
+              <div className="flex items-center gap-2 mt-2">
+                <Button
+                  size="sm"
+                  variant={ticketTab === "mine" ? "default" : "outline"}
+                  className={ticketTab === "mine" ? "bg-primary hover:bg-primary/90" : "border-border"}
+                  onClick={() => setTicketTab("mine")}
+                >
+                  My Requests
+                </Button>
+                <Button
+                  size="sm"
+                  variant={ticketTab === "assigned" ? "default" : "outline"}
+                  className={ticketTab === "assigned" ? "bg-primary hover:bg-primary/90" : "border-border"}
+                  onClick={() => setTicketTab("assigned")}
+                >
+                  Assigned To Me
+                </Button>
+              </div>
+            )}
           </CardHeader>
           <CardContent className="space-y-3">
-            {tickets.map((ticket) => (
-              <div
-                key={ticket.id}
-                className="group p-4 rounded-xl bg-muted/30 border border-border/50 hover:bg-muted/50 hover:border-border transition-all"
-              >
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <div className="flex items-start gap-4">
-                    <div className="hidden sm:flex h-12 w-12 rounded-xl bg-muted items-center justify-center flex-shrink-0 group-hover:bg-muted/80 transition-colors">
-                      <MessageSquare size={18} className="text-muted-foreground" />
-                    </div>
-                    <div className="space-y-1">
-                      <p className="font-semibold text-foreground">{ticket.subject}</p>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span className="font-mono bg-muted px-2 py-0.5 rounded">{ticket.id}</span>
-                        <span>{ticket.channel}</span>
+            {ticketLoading ? (
+              <div className="p-6 text-center text-sm text-muted-foreground">Loading tickets...</div>
+            ) : visibleTickets.length === 0 ? (
+              <div className="p-6 text-center text-sm text-muted-foreground">
+                {ticketTab === "assigned"
+                  ? "No tickets assigned to you yet."
+                  : "You have not created any tickets yet."}
+              </div>
+            ) : (
+              visibleTickets.map((ticket) => (
+                <div
+                  key={ticket.id}
+                  className="group p-4 rounded-xl bg-muted/30 border border-border/50 hover:bg-muted/50 hover:border-border transition-all"
+                >
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                      <div className="hidden sm:flex h-12 w-12 rounded-xl bg-muted items-center justify-center flex-shrink-0 group-hover:bg-muted/80 transition-colors">
+                        <MessageSquare size={18} className="text-muted-foreground" />
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Clock size={12} />
-                        <span>Updated {ticket.updated}</span>
+                      <div className="space-y-1">
+                        <p className="font-semibold text-foreground">{ticket.subject}</p>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                          <span className="font-mono bg-muted px-2 py-0.5 rounded">{ticket.ticketNumber}</span>
+                          <span>{ticket.category.replace(/_/g, " ")}</span>
+                          <span>{ticket.audience === "STUDENT" ? "Student Support" : "Staff Support"}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Clock size={12} />
+                          <span>Updated {formatDateTime(ticket.updatedAt)}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {renderTicketBadge(ticket.status)}
-                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-                      View
-                      <ChevronRight size={14} className="ml-1" />
-                    </Button>
+                    <div className="flex items-center gap-3">
+                      {renderTicketBadge(ticket.status)}
+                      {isNonAcademicStaff && ticketTab === "assigned" && ticket.status !== "RESOLVED" ? (
+                        <Button
+                          size="sm"
+                          className="bg-success hover:bg-success/90 text-success-foreground"
+                          disabled={resolvingTicketId === ticket.id}
+                          onClick={() => handleResolveAssignedTicket(ticket.id)}
+                        >
+                          {resolvingTicketId === ticket.id ? "Resolving..." : "Resolve"}
+                        </Button>
+                      ) : (
+                        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                          {ticket.assignedStaffName ? ticket.assignedStaffName : "View"}
+                          <ChevronRight size={14} className="ml-1" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </CardContent>
         </Card>
       );
@@ -1010,7 +1083,7 @@ const ProfilePage = () => {
             <Button
               size="sm"
               className="bg-primary hover:bg-primary/90"
-              onClick={() => setActiveSection("tickets")}
+              onClick={() => navigate("/contact")}
             >
               <Ticket size={16} className="mr-2 hidden sm:inline" />
               Raise Ticket
