@@ -28,6 +28,7 @@ public class BookingService {
     private final BookingValidationRulesService rulesService;
     private final BookingNotificationRepository notificationRepository;
     private final RoomRepository roomRepository;
+    private final NotificationService notificationService;
 
     // ============= BOOKING CREATION =============
 
@@ -101,6 +102,14 @@ public class BookingService {
             createNotification(savedBooking, BookingNotification.NotificationType.BOOKING_CONFIRMED, booker);
         } else if (booking.getStatus() == RoomBooking.BookingStatus.PENDING) {
             createNotification(savedBooking, BookingNotification.NotificationType.BOOKING_PENDING, booker);
+            notificationService.notifyAdmins(
+                    BookingNotification.NotificationType.BOOKING_PENDING,
+                    "Booking Approval Required",
+                    "A new booking request from " + booker.getEmail() + " is waiting for admin approval.",
+                    savedBooking.getId(),
+                    null,
+                    "/admin/dashboard?view=bookings"
+            );
         }
 
         return new BookingResultDTO(true, savedBooking, null);

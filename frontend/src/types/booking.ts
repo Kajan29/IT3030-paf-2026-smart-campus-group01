@@ -117,13 +117,22 @@ export interface Timetable {
 }
 
 export interface BookingNotification {
-  id: string;
+  id: number;
   type: "BOOKING_CONFIRMED" | "BOOKING_PENDING" | "BOOKING_REJECTED" | 
+        "TICKET_CREATED" | "TICKET_ASSIGNED" | "TICKET_REPLY" | "TICKET_STATUS_UPDATED" |
+        "STUDENT_REGISTERED" |
         "SWAP_REQUEST_RECEIVED" | "SWAP_REQUEST_APPROVED" | "SWAP_REQUEST_REJECTED" |
         "BOOKING_REMINDER" | "BOOKING_CANCELLED" | "ADMIN_ALERT";
+  relatedBookingId?: number;
+  relatedTicketId?: number;
+  targetPath?: string;
   title: string;
   message: string;
   isRead: boolean;
   eventDate?: string;
+  readAt?: string;
+  status?: string;
+  emailSent?: boolean;
+  signalrSent?: boolean;
   createdAt: string;
 }

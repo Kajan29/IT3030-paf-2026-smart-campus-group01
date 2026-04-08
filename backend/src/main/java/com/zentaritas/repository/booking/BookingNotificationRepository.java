@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface BookingNotificationRepository extends JpaRepository<BookingNotification, Long> {
 
@@ -20,6 +21,14 @@ public interface BookingNotificationRepository extends JpaRepository<BookingNoti
 
     // Find notifications by type
     List<BookingNotification> findByType(BookingNotification.NotificationType type);
+
+    @Query("SELECT n FROM BookingNotification n WHERE n.user.id = :userId AND n.type = :type ORDER BY n.createdAt DESC")
+    List<BookingNotification> findByUserAndType(
+            @Param("userId") Long userId,
+            @Param("type") BookingNotification.NotificationType type
+    );
+
+    Optional<BookingNotification> findByIdAndUserId(Long id, Long userId);
 
     // Find notifications by status
     List<BookingNotification> findByStatus(BookingNotification.NotificationStatus status);

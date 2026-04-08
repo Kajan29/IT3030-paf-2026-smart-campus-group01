@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Sidebar } from "@/components/admin/dashboard/Sidebar";
 import { Navbar } from "@/components/admin/dashboard/Navbar";
 import { DashboardOverview } from "@/components/admin/dashboard/DashboardOverview";
@@ -37,7 +38,13 @@ const pageTitles: Record<string, string> = {
 };
 
 const AdminDashboard = () => {
-  const [activeItem, setActiveItem] = useState("dashboard");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialView = searchParams.get("view");
+  const [activeItem, setActiveItem] = useState(() =>
+    initialView && Object.prototype.hasOwnProperty.call(pageTitles, initialView)
+      ? initialView
+      : "dashboard"
+  );
   const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
   const [selectedFloorId, setSelectedFloorId] = useState<string | null>(null);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
@@ -48,6 +55,22 @@ const AdminDashboard = () => {
   useEffect(() => {
     void facilityService.preloadFacilitySnapshot();
   }, []);
+
+  useEffect(() => {
+    const requestedView = searchParams.get("view");
+    if (requestedView && Object.prototype.hasOwnProperty.call(pageTitles, requestedView)) {
+      setActiveItem(requestedView);
+    }
+  }, [searchParams]);
+
+  const handleSetActiveItem = (item: string) => {
+    setActiveItem(item);
+    setSearchParams((previous) => {
+      const nextParams = new URLSearchParams(previous);
+      nextParams.set("view", item);
+      return nextParams;
+    });
+  };
 
   const toggleDark = () => {
     setDarkMode((d) => {
@@ -161,7 +184,7 @@ const AdminDashboard = () => {
       <div className="hidden md:flex">
         <Sidebar
           activeItem={navActiveItem}
-          onItemClick={setActiveItem}
+          onItemClick={handleSetActiveItem}
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed((c) => !c)}
         />
@@ -173,7 +196,7 @@ const AdminDashboard = () => {
       )}>
         <Sidebar
           activeItem={navActiveItem}
-          onItemClick={(id) => { setActiveItem(id); setMobileSidebarOpen(false); }}
+          onItemClick={(id) => { handleSetActiveItem(id); setMobileSidebarOpen(false); }}
           collapsed={false}
           onToggle={() => setMobileSidebarOpen(false)}
         />

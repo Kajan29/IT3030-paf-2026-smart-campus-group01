@@ -10,6 +10,7 @@ import com.zentaritas.dto.ticket.TicketResponse;
 import com.zentaritas.exception.ResourceNotFoundException;
 import com.zentaritas.model.auth.Role;
 import com.zentaritas.model.auth.User;
+import com.zentaritas.model.booking.BookingNotification;
 import com.zentaritas.model.ticket.Ticket;
 import com.zentaritas.model.ticket.TicketAttachment;
 import com.zentaritas.model.ticket.TicketCategory;
@@ -20,6 +21,7 @@ import com.zentaritas.repository.auth.UserRepository;
 import com.zentaritas.repository.ticket.TicketAttachmentRepository;
 import com.zentaritas.repository.ticket.TicketMessageRepository;
 import com.zentaritas.repository.ticket.TicketRepository;
+import com.zentaritas.service.booking.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -32,11 +34,13 @@ import java.time.LocalDateTime;
 import java.time.Year;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -60,6 +64,7 @@ public class TicketService {
     private final TicketAttachmentRepository ticketAttachmentRepository;
     private final UserRepository userRepository;
     private final Cloudinary cloudinary;
+    private final NotificationService notificationService;
 
     @Transactional
     public TicketResponse createTicket(CreateTicketRequest request, String authenticatedEmail) {
@@ -126,6 +131,15 @@ public class TicketService {
         if (!usableAttachments.isEmpty()) {
             uploadTicketAttachments(savedTicket, usableAttachments);
         }
+
+        notificationService.notifyAdmins(
+                BookingNotification.NotificationType.TICKET_CREATED,
+                "New Support Ticket",
+                "A new ticket " + savedTicket.getTicketNumber() + " was submitted: " + savedTicket.getSubject(),
+                null,
+                savedTicket.getId(),
+                "/admin/dashboard?view=tickets"
+        );
 
         return toResponse(savedTicket);
     }
@@ -232,6 +246,32 @@ public class TicketService {
                 actingAdmin != null ? actingAdmin.getRole() : Role.ADMIN,
                 "Ticket transferred to " + assignedStaffName + ". Please continue updates in this conversation thread."
         );
+
+            notificationService.createNotification(
+                staff,
+                BookingNotification.NotificationType.TICKET_ASSIGNED,
+                "Ticket Assigned",
+                "Ticket " + savedTicket.getTicketNumber() + " has been assigned to you.",
+                null,
+                savedTicket.getId(),
+                "/profile?section=assignedTickets",
+                null
+            );
+
+            User requester = resolveRequesterUser(savedTicket);
+            if (requester != null) {
+                notificationService.createNotification(
+                    requester,
+                    BookingNotification.NotificationType.TICKET_STATUS_UPDATED,
+                    "Ticket Assigned to Staff",
+                    "Your ticket " + savedTicket.getTicketNumber() + " is now assigned to " + assignedStaffName + ".",
+                    null,
+                    savedTicket.getId(),
+                    resolveTicketTargetPath(requester),
+                    null
+                );
+            }
+
         return toResponse(savedTicket);
     }
 
@@ -269,6 +309,20 @@ public class TicketService {
                     staff.getRole(),
                     "Ticket marked as IN_PROGRESS."
             );
+
+                    User requester = resolveRequesterUser(ticket);
+                    if (requester != null) {
+                    notificationService.createNotification(
+                        requester,
+                        BookingNotification.NotificationType.TICKET_STATUS_UPDATED,
+                        "Ticket In Progress",
+                        "Your ticket " + ticket.getTicketNumber() + " is now in progress.",
+                        null,
+                        ticket.getId(),
+                        resolveTicketTargetPath(requester),
+                        null
+                    );
+                    }
         }
 
         return toResponse(ticket);
@@ -312,6 +366,21 @@ public class TicketService {
                     savedTicket.getResolutionNote()
             );
         }
+
+        User requester = resolveRequesterUser(savedTicket);
+        if (requester != null) {
+            notificationService.createNotification(
+                    requester,
+                    BookingNotification.NotificationType.TICKET_STATUS_UPDATED,
+                    "Ticket Resolved",
+                    "Your ticket " + savedTicket.getTicketNumber() + " has been resolved by admin.",
+                    null,
+                    savedTicket.getId(),
+                    resolveTicketTargetPath(requester),
+                    null
+            );
+        }
+
         return toResponse(savedTicket);
     }
 
@@ -356,6 +425,21 @@ public class TicketService {
                 staff.getRole(),
                 savedTicket.getResolutionNote()
         );
+
+            User requester = resolveRequesterUser(savedTicket);
+            if (requester != null) {
+                notificationService.createNotification(
+                    requester,
+                    BookingNotification.NotificationType.TICKET_STATUS_UPDATED,
+                    "Ticket Resolved",
+                    "Your ticket " + savedTicket.getTicketNumber() + " has been resolved by support staff.",
+                    null,
+                    savedTicket.getId(),
+                    resolveTicketTargetPath(requester),
+                    null
+                );
+            }
+
         return toResponse(savedTicket);
     }
 
@@ -385,6 +469,20 @@ public class TicketService {
                 actor.getRole(),
                 "Ticket marked as CLOSED."
         );
+
+            User requester = resolveRequesterUser(savedTicket);
+            if (requester != null && !requester.getId().equals(actor.getId())) {
+                notificationService.createNotification(
+                    requester,
+                    BookingNotification.NotificationType.TICKET_STATUS_UPDATED,
+                    "Ticket Closed",
+                    "Your ticket " + savedTicket.getTicketNumber() + " has been closed.",
+                    null,
+                    savedTicket.getId(),
+                    resolveTicketTargetPath(requester),
+                    null
+                );
+            }
 
         return toResponse(savedTicket);
     }
@@ -423,6 +521,20 @@ public class TicketService {
                 adminUser != null ? adminUser.getRole() : Role.ADMIN,
                 "Ticket rejected: " + trimmedReason
         );
+
+            User requester = resolveRequesterUser(savedTicket);
+            if (requester != null) {
+                notificationService.createNotification(
+                    requester,
+                    BookingNotification.NotificationType.TICKET_STATUS_UPDATED,
+                    "Ticket Rejected",
+                    "Your ticket " + savedTicket.getTicketNumber() + " was rejected: " + trimmedReason,
+                    null,
+                    savedTicket.getId(),
+                    resolveTicketTargetPath(requester),
+                    null
+                );
+            }
 
         return toResponse(savedTicket);
     }
@@ -464,6 +576,8 @@ public class TicketService {
                 actor.getRole(),
                 trimmedMessage
         );
+
+            notifyTicketReplyParticipants(ticket, actor, trimmedMessage);
 
         return toMessageResponse(saved);
     }
@@ -786,6 +900,72 @@ public class TicketService {
                 .build();
 
         return ticketMessageRepository.save(entry);
+    }
+
+    private void notifyTicketReplyParticipants(Ticket ticket, User actor, String message) {
+        Set<Long> notifiedUserIds = new HashSet<>();
+        String actorName = resolveDisplayName(actor, "Support Team");
+        String snippet = message.length() > 120 ? message.substring(0, 117) + "..." : message;
+        String notificationMessage = actorName + " replied to " + ticket.getTicketNumber() + ": " + snippet;
+
+        User requester = resolveRequesterUser(ticket);
+        maybeNotifyReplyRecipient(ticket, requester, actor, notifiedUserIds, notificationMessage);
+        maybeNotifyReplyRecipient(ticket, ticket.getAssignedTo(), actor, notifiedUserIds, notificationMessage);
+    }
+
+    private void maybeNotifyReplyRecipient(
+            Ticket ticket,
+            User recipient,
+            User actor,
+            Set<Long> notifiedUserIds,
+            String message
+    ) {
+        if (recipient == null || recipient.getId() == null || !Boolean.TRUE.equals(recipient.getIsActive())) {
+            return;
+        }
+
+        if (actor != null && recipient.getId().equals(actor.getId())) {
+            return;
+        }
+
+        if (!notifiedUserIds.add(recipient.getId())) {
+            return;
+        }
+
+        notificationService.createNotification(
+                recipient,
+                BookingNotification.NotificationType.TICKET_REPLY,
+                "New Ticket Reply",
+                message,
+                null,
+                ticket.getId(),
+                resolveTicketTargetPath(recipient),
+                null
+        );
+    }
+
+    private User resolveRequesterUser(Ticket ticket) {
+        if (ticket.getRequesterUser() != null) {
+            return ticket.getRequesterUser();
+        }
+
+        if (StringUtils.hasText(ticket.getRequesterEmail())) {
+            return userRepository.findByEmailIgnoreCase(ticket.getRequesterEmail()).orElse(null);
+        }
+
+        return null;
+    }
+
+    private String resolveTicketTargetPath(User recipient) {
+        if (recipient == null) {
+            return "/my-tickets";
+        }
+
+        return switch (recipient.getRole()) {
+            case ADMIN -> "/admin/dashboard?view=tickets";
+            case NON_ACADEMIC_STAFF -> "/profile?section=assignedTickets";
+            default -> "/my-tickets";
+        };
     }
 
     private void clearResolutionAndClosure(Ticket ticket) {
