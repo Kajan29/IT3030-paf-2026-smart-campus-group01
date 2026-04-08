@@ -27,7 +27,9 @@ export interface TicketResponse {
   assignedStaffId?: number
   assignedStaffName?: string
   assignedStaffEmail?: string
+  assignedAt?: string
   resolutionNote?: string
+  resolvedByName?: string
   createdAt: string
   updatedAt: string
   resolvedAt?: string

@@ -69,11 +69,17 @@ public class Ticket {
     @JoinColumn(name = "assigned_to_user_id")
     private User assignedTo;
 
+    @Column(name = "assigned_at")
+    private LocalDateTime assignedAt;
+
     @Column(name = "resolution_note", columnDefinition = "TEXT")
     private String resolutionNote;
 
     @Column(name = "resolved_at")
     private LocalDateTime resolvedAt;
+
+    @Column(name = "resolved_by_name")
+    private String resolvedByName;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

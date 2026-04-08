@@ -1,16 +1,30 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Send, MapPin, Phone, Mail, TicketCheck } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Loader2,
+  Mail,
+  MapPin,
+  MessageSquare,
+  Phone,
+  Send,
+  Sparkles,
+  TicketCheck,
+  Wand2,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
 import heroCampus from "@/assets/hero-campus.jpg";
 import { useAuth } from "@/context/AuthContext";
+import aiTicketService, { type TicketDraftResult } from "@/services/aiTicketService";
 import ticketService, { type TicketAudience, type TicketCategory } from "@/services/ticketService";
 
 const ticketCategories: Array<{ label: string; value: TicketCategory }> = [
@@ -26,6 +40,21 @@ const ticketAudiences: Array<{ label: string; value: TicketAudience }> = [
   { label: "Staff Support", value: "STAFF" },
 ];
 
+type AiChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+};
+
+const getInitialAiMessages = (): AiChatMessage[] => [
+  {
+    id: "ai-welcome",
+    role: "assistant",
+    content:
+      "Tell me your issue in any language (or mixed English). I will prepare a clean ticket subject and message for you.",
+  },
+];
+
 const ContactPage = () => {
   const { user, isAuthenticated } = useAuth();
   const [form, setForm] = useState({
@@ -37,6 +66,14 @@ const ContactPage = () => {
     message: "",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState<{ ticketNumber?: string; message: string } | null>(null);
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
+  const [aiInput, setAiInput] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiDraft, setAiDraft] = useState<TicketDraftResult | null>(null);
+  const [aiMessages, setAiMessages] = useState<AiChatMessage[]>(getInitialAiMessages);
+
+  const aiConfigured = Boolean(import.meta.env.VITE_OPENAI_API_KEY);
 
   const inferredAudience = useMemo<TicketAudience>(() => {
     if (!isAuthenticated || !user) {
@@ -56,7 +93,7 @@ const ContactPage = () => {
   const trackingLink = isAuthenticated
     ? user?.role === "ADMIN"
       ? "/admin"
-      : "/my-tickets"
+      : "/profile?section=tickets"
     : "/auth/login";
 
   const trackingLabel = isAuthenticated
@@ -65,16 +102,99 @@ const ContactPage = () => {
       : "Track My Tickets"
     : "Login to Track Tickets";
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const resetAiDialogState = () => {
+    setAiInput("");
+    setAiLoading(false);
+    setAiDraft(null);
+    setAiMessages(getInitialAiMessages());
+  };
+
+  const applyDraftToForm = (draft: TicketDraftResult) => {
+    setForm((prev) => ({
+      ...prev,
+      subject: draft.subject,
+      message: draft.message,
+      category: draft.category || prev.category,
+      audience: !isAuthenticated && draft.audience ? draft.audience : prev.audience,
+    }));
+  };
+
+  const handleAiSend = async () => {
+    const message = aiInput.trim();
+    if (!message || aiLoading) {
+      return;
+    }
+
+    const userMessage: AiChatMessage = {
+      id: `ai-user-${Date.now()}`,
+      role: "user",
+      content: message,
+    };
+
+    const nextMessages = [...aiMessages, userMessage];
+    setAiMessages(nextMessages);
+    setAiInput("");
+    setAiLoading(true);
+
+    try {
+      const draft = await aiTicketService.draftTicket({
+        userInput: message,
+        conversation: nextMessages.map((item) => ({
+          role: item.role,
+          content: item.content,
+        })),
+        currentForm: {
+          category: form.category,
+          audience: inferredAudience,
+          subject: form.subject,
+          message: form.message,
+        },
+      });
+
+      setAiDraft(draft);
+      applyDraftToForm(draft);
+
+      setAiMessages((prev) => [
+        ...prev,
+        {
+          id: `ai-assistant-${Date.now()}`,
+          role: "assistant",
+          content: draft.assistantReply,
+        },
+      ]);
+
+      if (draft.source === "fallback") {
+        toast.message("Draft prepared from your text. Please review before submit.");
+      } else {
+        toast.success("AI draft added to your ticket form.");
+      }
+    } catch {
+      setAiMessages((prev) => [
+        ...prev,
+        {
+          id: `ai-error-${Date.now()}`,
+          role: "assistant",
+          content:
+            "I had a temporary issue creating the draft. Please send your issue again, and include location and time for best results.",
+        },
+      ]);
+      toast.error("Failed to generate the draft right now. Please try once more.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setSubmitSuccess(null);
 
     const fallbackName = `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
     const requesterName = isAuthenticated ? fallbackName || user?.email || "Signed-in User" : form.name;
     const requesterEmail = isAuthenticated ? user?.email || form.email : form.email;
 
     try {
-      await ticketService.createPublicTicket({
+      const response = await ticketService.createPublicTicket({
         category: form.category,
         audience: inferredAudience,
         subject: form.subject,
@@ -84,6 +204,10 @@ const ContactPage = () => {
       });
 
       toast.success("Ticket submitted successfully. Our support team will respond soon.");
+      setSubmitSuccess({
+        ticketNumber: response.data?.data?.ticketNumber,
+        message: response.data?.message || "Ticket submitted successfully.",
+      });
       setForm((prev) => ({
         ...prev,
         name: "",
@@ -155,12 +279,39 @@ const ContactPage = () => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <div className="flex items-center gap-2 mb-6">
-              <TicketCheck className="h-6 w-6 text-accent" />
-              <h2 className="font-display text-2xl font-semibold text-foreground">
-                Raise a Ticket
-              </h2>
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <TicketCheck className="h-6 w-6 text-accent" />
+                <h2 className="font-display text-2xl font-semibold text-foreground">Raise a Ticket</h2>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="border-accent/50 text-accent hover:bg-accent/10"
+                onClick={() => {
+                  resetAiDialogState();
+                  setAiDialogOpen(true);
+                }}
+              >
+                <Sparkles className="h-4 w-4" />
+                AI Help
+              </Button>
             </div>
+
+            {submitSuccess && (
+              <div className="mb-5 rounded-xl border border-success/30 bg-success/10 p-4">
+                <p className="flex items-center gap-2 text-sm font-semibold text-success">
+                  <CheckCircle2 className="h-4 w-4" />
+                  {submitSuccess.message}
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {submitSuccess.ticketNumber
+                    ? `Ticket ID: ${submitSuccess.ticketNumber}`
+                    : "Your ticket is now in the support queue."}
+                </p>
+              </div>
+            )}
+
             <form id="support-form" onSubmit={handleSubmit} className="space-y-4">
               {isAuthenticated && user ? (
                 <div className="rounded-xl border border-border bg-muted/30 p-4">
@@ -248,7 +399,7 @@ const ContactPage = () => {
                 <p>
                   Track status updates and resolution notes in{" "}
                   <Link to={trackingLink} className="font-semibold text-primary hover:underline">
-                    {user?.role === "ADMIN" ? "Admin Dashboard" : "My Tickets"}
+                    {user?.role === "ADMIN" ? "Admin Dashboard" : "Profile Tickets"}
                   </Link>
                   .
                 </p>
@@ -262,6 +413,98 @@ const ContactPage = () => {
                 </p>
               )}
             </div>
+
+            <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
+              <DialogContent className="max-w-2xl p-0">
+                <DialogHeader className="border-b px-6 pb-4 pt-6">
+                  <DialogTitle className="flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5 text-accent" />
+                    AI Ticket Assistant
+                  </DialogTitle>
+                  <DialogDescription>
+                    Describe your problem in your own language or mixed English. I will draft a clear ticket subject and message.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4 px-6 pb-6 pt-4">
+                  {!aiConfigured && (
+                    <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-foreground">
+                      OpenAI key is not configured. A basic local draft will still be generated from your text.
+                    </div>
+                  )}
+
+                  <div className="h-72 overflow-y-auto rounded-lg border border-border bg-muted/20 p-3">
+                    <div className="space-y-3">
+                      {aiMessages.map((item) => (
+                        <div key={item.id} className={`flex ${item.role === "user" ? "justify-end" : "justify-start"}`}>
+                          <div
+                            className={`max-w-[85%] rounded-xl px-3 py-2 text-sm leading-6 ${
+                              item.role === "user"
+                                ? "bg-accent text-accent-foreground"
+                                : "bg-background border border-border text-foreground"
+                            }`}
+                          >
+                            {item.content}
+                          </div>
+                        </div>
+                      ))}
+
+                      {aiLoading && (
+                        <div className="flex justify-start">
+                          <div className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Thinking...
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Textarea
+                      rows={3}
+                      placeholder="Example: lab computer no internet since morning. exam practice affected."
+                      value={aiInput}
+                      onChange={(event) => setAiInput(event.target.value)}
+                    />
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs text-muted-foreground">
+                        Tip: include location, date/time, and impact for better ticket quality.
+                      </p>
+                      <Button
+                        type="button"
+                        onClick={() => void handleAiSend()}
+                        disabled={aiLoading || !aiInput.trim()}
+                        className="bg-accent text-accent-foreground hover:bg-accent/90"
+                      >
+                        {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                        Generate Draft
+                      </Button>
+                    </div>
+                  </div>
+
+                  {aiDraft && (
+                    <div className="rounded-lg border border-border bg-background p-4">
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-foreground">Generated Ticket Draft</p>
+                        <Button type="button" variant="secondary" size="sm" onClick={() => applyDraftToForm(aiDraft)}>
+                          Apply to Form
+                        </Button>
+                      </div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Subject</p>
+                      <p className="mb-3 text-sm text-foreground">{aiDraft.subject}</p>
+
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Message</p>
+                      <p className="whitespace-pre-line text-sm leading-6 text-foreground">{aiDraft.message}</p>
+
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        Detected language: {aiDraft.detectedLanguage || "Unknown"}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
           </motion.div>
 
           {/* Contact Info */}

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
+  ArrowRightLeft,
   CheckCheck,
   ClipboardList,
   Filter,
@@ -8,7 +9,6 @@ import {
   RefreshCcw,
   Search,
   ShieldCheck,
-  UserPlus,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import ticketService, {
@@ -143,6 +143,38 @@ export const TicketManagementPage = () => {
     [filteredTickets, selectedId]
   );
 
+  const flowStages = useMemo(() => {
+    if (!selectedTicket) {
+      return [];
+    }
+
+    return [
+      {
+        key: "submitted",
+        title: "Submitted",
+        happenedAt: selectedTicket.createdAt,
+        detail: `${selectedTicket.requesterName} (${selectedTicket.requesterEmail})`,
+        complete: true,
+      },
+      {
+        key: "assigned",
+        title: "Transferred To Staff",
+        happenedAt: selectedTicket.assignedAt,
+        detail: selectedTicket.assignedStaffName
+          ? `${selectedTicket.assignedStaffName}${selectedTicket.assignedStaffEmail ? ` (${selectedTicket.assignedStaffEmail})` : ""}`
+          : "Pending assignment",
+        complete: Boolean(selectedTicket.assignedStaffId),
+      },
+      {
+        key: "resolved",
+        title: "Resolved",
+        happenedAt: selectedTicket.resolvedAt,
+        detail: selectedTicket.resolvedByName || "Pending resolution",
+        complete: selectedTicket.status === "RESOLVED",
+      },
+    ];
+  }, [selectedTicket]);
+
   useEffect(() => {
     void loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -188,10 +220,15 @@ export const TicketManagementPage = () => {
       return;
     }
 
+    if (selectedTicket?.assignedStaffId === staffId) {
+      toast.info("This ticket is already assigned to the selected staff member");
+      return;
+    }
+
     setWorkingTicketId(ticketId);
     try {
       await ticketService.assignTicket(ticketId, staffId);
-      toast.success("Ticket assigned successfully");
+      toast.success("Ticket transferred successfully");
       await loadData(false);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to assign ticket");
@@ -338,6 +375,11 @@ export const TicketManagementPage = () => {
                     <p className="mt-1 text-xs text-muted-foreground line-clamp-1">
                       {ticket.requesterName} - {ticket.requesterEmail}
                     </p>
+                    <p className="mt-1 text-[11px] text-muted-foreground line-clamp-1">
+                      {ticket.assignedStaffName
+                        ? `Assigned to ${ticket.assignedStaffName}`
+                        : "Awaiting staff assignment"}
+                    </p>
                   </button>
                 ))
               )}
@@ -377,6 +419,27 @@ export const TicketManagementPage = () => {
                     <p className="text-sm text-foreground">
                       Assigned: {selectedTicket.assignedStaffName || "Not assigned yet"}
                     </p>
+                    <p className="text-xs text-muted-foreground">
+                      Last transfer: {formatDateTime(selectedTicket.assignedAt)}
+                    </p>
+                  </div>
+
+                  <div className="space-y-3 rounded-xl border border-border p-4 lg:col-span-2">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Flow Timeline</p>
+                    <div className="space-y-3">
+                      {flowStages.map((stage) => (
+                        <div key={stage.key} className="flex items-start gap-3">
+                          <span
+                            className={`mt-1 h-2.5 w-2.5 rounded-full ${stage.complete ? "bg-primary" : "bg-muted-foreground/40"}`}
+                          />
+                          <div>
+                            <p className="text-sm font-medium text-foreground">{stage.title}</p>
+                            <p className="text-xs text-muted-foreground">{stage.detail}</p>
+                            <p className="text-xs text-muted-foreground">{formatDateTime(stage.happenedAt)}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="space-y-2 rounded-xl border border-border p-4 lg:col-span-2">
@@ -394,6 +457,9 @@ export const TicketManagementPage = () => {
 
                 <div className="border-t border-border p-5 space-y-4">
                   <h4 className="text-sm font-semibold text-foreground">Admin Action</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Transfer this ticket to the relevant non-academic staff member and track progress here.
+                  </p>
 
                   <div>
                     <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
@@ -430,12 +496,12 @@ export const TicketManagementPage = () => {
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
-                      disabled={workingTicketId === selectedTicket.id || selectedTicket.status === "RESOLVED"}
+                      disabled={workingTicketId === selectedTicket.id || selectedTicket.status === "RESOLVED" || staff.length === 0}
                       onClick={() => void handleAssign(selectedTicket.id)}
                       className="inline-flex items-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary hover:bg-primary/20 disabled:opacity-60"
                     >
-                      <UserPlus size={14} />
-                      Assign / Update Staff
+                      <ArrowRightLeft size={14} />
+                      Transfer To Staff
                     </button>
                     <button
                       type="button"

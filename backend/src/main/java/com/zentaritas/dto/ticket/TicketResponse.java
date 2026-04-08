@@ -31,7 +31,9 @@ public class TicketResponse {
     private Long assignedStaffId;
     private String assignedStaffName;
     private String assignedStaffEmail;
+    private LocalDateTime assignedAt;
     private String resolutionNote;
+    private String resolvedByName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime resolvedAt;

@@ -28,8 +28,9 @@ api.interceptors.request.use(
     }
     
     const token = authService.getAccessToken()
-    const shouldAttachToken = !isAuthEndpoint && token && config.headers && (!isPublicEndpoint || !authService.isSessionExpired())
+    const shouldAttachToken = !isAuthEndpoint && token && (!isPublicEndpoint || !authService.isSessionExpired())
     if (shouldAttachToken) {
+      config.headers = config.headers || {}
       ;(config.headers as Record<string, string>).Authorization = `Bearer ${token}`
     }
     return config
@@ -46,8 +47,9 @@ api.interceptors.response.use(
     const isAuthEndpoint = originalRequest?.url?.includes('/auth/')
     const isPublicEndpoint = originalRequest?.url?.includes('/public/')
     const shouldHandleAuthFailure = !isAuthEndpoint && !isPublicEndpoint
+    const status = error.response?.status
 
-    if (error.response?.status === 401 && !originalRequest?._retry && shouldHandleAuthFailure) {
+    if ((status === 401 || status === 403) && !originalRequest?._retry && shouldHandleAuthFailure) {
       originalRequest._retry = true
       try {
         const refreshResponse = await axios.post(
@@ -75,7 +77,7 @@ api.interceptors.response.use(
       }
     }
 
-    if (error.response?.status === 401 && shouldHandleAuthFailure) {
+    if (status === 401 && shouldHandleAuthFailure) {
       authService.logout()
       if (!window.location.pathname.startsWith('/auth/')) {
         window.location.href = '/auth/login'

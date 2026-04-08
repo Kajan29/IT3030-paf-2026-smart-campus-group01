@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -53,10 +54,11 @@ public class AdminTicketController {
     @PatchMapping("/{ticketId}/resolve")
     public ResponseEntity<ApiResponse<TicketResponse>> resolveTicket(
             @PathVariable Long ticketId,
-            @Valid @RequestBody TicketResolveRequest request) {
+            @Valid @RequestBody TicketResolveRequest request,
+            Authentication authentication) {
         return ResponseEntity.ok(ApiResponse.success(
-                ticketService.resolveTicketByAdmin(ticketId, request.getResolutionNote()),
-                "Ticket resolved successfully"
+                ticketService.resolveTicketByAdmin(ticketId, request.getResolutionNote(), authentication.getName()),
+            "Ticket resolved successfully"
         ));
     }
 }

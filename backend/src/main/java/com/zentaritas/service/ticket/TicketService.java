@@ -141,6 +141,10 @@ public class TicketService {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
 
+        if (ticket.getStatus() == TicketStatus.RESOLVED) {
+            throw new IllegalArgumentException("Resolved tickets cannot be reassigned");
+        }
+
         User staff = userRepository.findById(staffId)
                 .orElseThrow(() -> new ResourceNotFoundException("Staff user not found"));
 
@@ -152,24 +156,34 @@ public class TicketService {
         }
 
         ticket.setAssignedTo(staff);
+        ticket.setAssignedAt(LocalDateTime.now());
         if (ticket.getStatus() == TicketStatus.OPEN) {
             ticket.setStatus(TicketStatus.IN_PROGRESS);
         }
         ticket.setResolvedAt(null);
+        ticket.setResolvedByName(null);
+        ticket.setResolutionNote(null);
 
-        return toResponse(ticketRepository.save(ticket));
+        Ticket savedTicket = ticketRepository.save(ticket);
+        return toResponse(savedTicket);
     }
 
     @Transactional
-    public TicketResponse resolveTicketByAdmin(Long ticketId, String resolutionNote) {
+    public TicketResponse resolveTicketByAdmin(Long ticketId, String resolutionNote, String adminEmail) {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
 
-        ticket.setStatus(TicketStatus.RESOLVED);
-        ticket.setResolutionNote(resolutionNote);
-        ticket.setResolvedAt(LocalDateTime.now());
+        User adminUser = userRepository.findByEmailIgnoreCase(adminEmail)
+                .orElse(null);
+        String adminName = resolveDisplayName(adminUser, "Admin Team");
 
-        return toResponse(ticketRepository.save(ticket));
+        ticket.setStatus(TicketStatus.RESOLVED);
+        ticket.setResolutionNote(trimToNull(resolutionNote));
+        ticket.setResolvedAt(LocalDateTime.now());
+        ticket.setResolvedByName(adminName);
+
+        Ticket savedTicket = ticketRepository.save(ticket);
+        return toResponse(savedTicket);
     }
 
     @Transactional
@@ -188,11 +202,15 @@ public class TicketService {
             throw new IllegalArgumentException("You can only resolve tickets assigned to you");
         }
 
-        ticket.setStatus(TicketStatus.RESOLVED);
-        ticket.setResolutionNote(resolutionNote);
-        ticket.setResolvedAt(LocalDateTime.now());
+        String staffName = resolveDisplayName(staff, staff.getEmail());
 
-        return toResponse(ticketRepository.save(ticket));
+        ticket.setStatus(TicketStatus.RESOLVED);
+        ticket.setResolutionNote(trimToNull(resolutionNote));
+        ticket.setResolvedAt(LocalDateTime.now());
+        ticket.setResolvedByName(staffName);
+
+        Ticket savedTicket = ticketRepository.save(ticket);
+        return toResponse(savedTicket);
     }
 
     private String generateTicketNumber() {
@@ -239,10 +257,38 @@ public class TicketService {
                 .assignedStaffId(assignedId)
                 .assignedStaffName(assignedName)
                 .assignedStaffEmail(assignedEmail)
+                .assignedAt(ticket.getAssignedAt())
                 .resolutionNote(ticket.getResolutionNote())
+                .resolvedByName(ticket.getResolvedByName())
                 .createdAt(ticket.getCreatedAt())
                 .updatedAt(ticket.getUpdatedAt())
                 .resolvedAt(ticket.getResolvedAt())
                 .build();
+    }
+
+    private String resolveDisplayName(User user, String fallback) {
+        if (user == null) {
+            return fallback;
+        }
+
+        String fullName = ((user.getFirstName() != null ? user.getFirstName() : "") + " "
+                + (user.getLastName() != null ? user.getLastName() : "")).trim();
+        if (StringUtils.hasText(fullName)) {
+            return fullName;
+        }
+        if (StringUtils.hasText(user.getUsername())) {
+            return user.getUsername();
+        }
+        if (StringUtils.hasText(user.getEmail())) {
+            return user.getEmail();
+        }
+        return fallback;
+    }
+
+    private String trimToNull(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        return value.trim();
     }
 }

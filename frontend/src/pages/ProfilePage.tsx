@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   BookOpen,
   CalendarCheck,
   CalendarDays,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Edit,
+  Eye,
   Home,
   LayoutGrid,
   LogOut,
@@ -17,6 +19,7 @@ import {
   Phone,
   Settings,
   ShieldCheck,
+  Search,
   Ticket,
   User,
   Bell,
@@ -48,6 +51,7 @@ type BookingItem = {
 const ProfilePage = () => {
   const { user, logout, updateUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeSection, setActiveSection] = useState<SectionId>("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -67,7 +71,24 @@ const ProfilePage = () => {
   const [ticketLoading, setTicketLoading] = useState(false);
   const [resolvingTicketId, setResolvingTicketId] = useState<number | null>(null);
   const [ticketTab, setTicketTab] = useState<"mine" | "assigned">("mine");
+  const [ticketSearch, setTicketSearch] = useState("");
+  const [ticketStatusFilter, setTicketStatusFilter] = useState<TicketResponse["status"] | "ALL">("ALL");
+  const [focusedTicketId, setFocusedTicketId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const section = params.get("section");
+    const tab = params.get("tab");
+
+    if (section && ["overview", "bookings", "tickets", "profile", "settings"].includes(section)) {
+      setActiveSection(section as SectionId);
+    }
+
+    if (tab === "mine" || tab === "assigned") {
+      setTicketTab(tab);
+    }
+  }, [location.search]);
 
   useEffect(() => {
     if (!user) return;
@@ -251,6 +272,19 @@ const ProfilePage = () => {
     loadTickets();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.email, user?.role]);
+
+  useEffect(() => {
+    const visible = ticketTab === "mine" ? myTickets : assignedTickets;
+
+    if (visible.length === 0) {
+      setFocusedTicketId(null);
+      return;
+    }
+
+    if (!focusedTicketId || !visible.some((ticket) => ticket.id === focusedTicketId)) {
+      setFocusedTicketId(visible[0].id);
+    }
+  }, [assignedTickets, focusedTicketId, myTickets, ticketTab]);
 
   const handleResolveAssignedTicket = async (ticketId: number) => {
     const note = window.prompt("Add an optional resolution note:") || undefined;
@@ -496,6 +530,80 @@ const ProfilePage = () => {
 
     if (activeSection === "tickets") {
       const visibleTickets = ticketTab === "mine" ? myTickets : assignedTickets;
+      const filteredTickets = visibleTickets.filter((ticket) => {
+        const query = ticketSearch.trim().toLowerCase();
+        const statusMatch = ticketStatusFilter === "ALL" || ticket.status === ticketStatusFilter;
+
+        if (!query) {
+          return statusMatch;
+        }
+
+        const searchable = [
+          ticket.ticketNumber,
+          ticket.subject,
+          ticket.description,
+          ticket.requesterName,
+          ticket.requesterEmail,
+          ticket.assignedStaffName,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        return statusMatch && searchable.includes(query);
+      });
+
+      const selectedTicket = filteredTickets.find((ticket) => ticket.id === focusedTicketId) || filteredTickets[0] || null;
+
+      const buildTicketFlow = (ticket: TicketResponse) => {
+        const steps: Array<{ id: string; title: string; time: string; description: string }> = [
+          {
+            id: "created",
+            title: "Ticket Submitted",
+            time: formatDateTime(ticket.createdAt),
+            description: `Ticket ID ${ticket.ticketNumber} was created and sent to support queue.`,
+          },
+        ];
+
+        if (ticket.assignedStaffName) {
+          steps.push({
+            id: "assigned",
+            title: "Assigned to Staff",
+            time: formatDateTime(ticket.updatedAt),
+            description: `Assigned to ${ticket.assignedStaffName}${ticket.assignedStaffEmail ? ` (${ticket.assignedStaffEmail})` : ""}.`,
+          });
+        }
+
+        if (ticket.status === "IN_PROGRESS" || ticket.status === "RESOLVED") {
+          steps.push({
+            id: "progress",
+            title: "In Progress",
+            time: formatDateTime(ticket.updatedAt),
+            description: "Support team is reviewing and working on your request.",
+          });
+        }
+
+        if (ticket.resolutionNote) {
+          steps.push({
+            id: "reply",
+            title: "Support Reply",
+            time: formatDateTime(ticket.resolvedAt || ticket.updatedAt),
+            description: ticket.resolutionNote,
+          });
+        }
+
+        if (ticket.status === "RESOLVED") {
+          steps.push({
+            id: "resolved",
+            title: "Resolved",
+            time: formatDateTime(ticket.resolvedAt || ticket.updatedAt),
+            description: "Ticket has been marked as resolved.",
+          });
+        }
+
+        return steps;
+      };
+
       return (
         <Card className="border-border/50 shadow-card">
           <CardHeader>
@@ -538,61 +646,163 @@ const ProfilePage = () => {
                 </Button>
               </div>
             )}
+
+            <div className="grid gap-2 md:grid-cols-[1fr,220px] mt-2">
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  value={ticketSearch}
+                  onChange={(event) => setTicketSearch(event.target.value)}
+                  placeholder="Search by ticket ID, subject, or requester"
+                  className="h-10 w-full rounded-lg border border-border bg-muted/20 pl-9 pr-3 text-sm text-foreground"
+                />
+              </div>
+              <select
+                value={ticketStatusFilter}
+                onChange={(event) => setTicketStatusFilter(event.target.value as TicketResponse["status"] | "ALL")}
+                className="h-10 rounded-lg border border-border bg-muted/20 px-3 text-sm text-foreground"
+              >
+                <option value="ALL">All Statuses</option>
+                <option value="OPEN">Open</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="RESOLVED">Resolved</option>
+              </select>
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
             {ticketLoading ? (
               <div className="p-6 text-center text-sm text-muted-foreground">Loading tickets...</div>
-            ) : visibleTickets.length === 0 ? (
+            ) : filteredTickets.length === 0 ? (
               <div className="p-6 text-center text-sm text-muted-foreground">
                 {ticketTab === "assigned"
                   ? "No tickets assigned to you yet."
-                  : "You have not created any tickets yet."}
+                  : "No tickets found for this filter."}
               </div>
             ) : (
-              visibleTickets.map((ticket) => (
-                <div
-                  key={ticket.id}
-                  className="group p-4 rounded-xl bg-muted/30 border border-border/50 hover:bg-muted/50 hover:border-border transition-all"
-                >
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div className="flex items-start gap-4">
-                      <div className="hidden sm:flex h-12 w-12 rounded-xl bg-muted items-center justify-center flex-shrink-0 group-hover:bg-muted/80 transition-colors">
-                        <MessageSquare size={18} className="text-muted-foreground" />
-                      </div>
-                      <div className="space-y-1">
-                        <p className="font-semibold text-foreground">{ticket.subject}</p>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                          <span className="font-mono bg-muted px-2 py-0.5 rounded">{ticket.ticketNumber}</span>
-                          <span>{ticket.category.replace(/_/g, " ")}</span>
-                          <span>{ticket.audience === "STUDENT" ? "Student Support" : "Staff Support"}</span>
+              <div className="grid gap-4 xl:grid-cols-[1fr,1.35fr]">
+                <div className="space-y-3 max-h-[560px] overflow-y-auto pr-1">
+                  {filteredTickets.map((ticket) => {
+                    const selected = selectedTicket?.id === ticket.id;
+
+                    return (
+                      <div
+                        key={ticket.id}
+                        className={cn(
+                          "group p-4 rounded-xl border transition-all",
+                          selected
+                            ? "bg-primary/5 border-primary/30"
+                            : "bg-muted/30 border-border/50 hover:bg-muted/50 hover:border-border"
+                        )}
+                      >
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="font-semibold text-foreground">{ticket.subject}</p>
+                            {renderTicketBadge(ticket.status)}
+                          </div>
+
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                            <span className="font-mono bg-muted px-2 py-0.5 rounded">ID: {ticket.ticketNumber}</span>
+                            <span>{ticket.category.replace(/_/g, " ")}</span>
+                            <span>{ticket.audience === "STUDENT" ? "Student Support" : "Staff Support"}</span>
+                          </div>
+
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Clock size={12} />
+                            <span>Updated {formatDateTime(ticket.updatedAt)}</span>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-2 pt-1">
+                            <Button
+                              variant={selected ? "default" : "outline"}
+                              size="sm"
+                              className={selected ? "bg-primary hover:bg-primary/90" : "border-border"}
+                              onClick={() => setFocusedTicketId(ticket.id)}
+                            >
+                              <Eye size={14} className="mr-2" />
+                              View Flow
+                            </Button>
+
+                            {isNonAcademicStaff && ticketTab === "assigned" && ticket.status !== "RESOLVED" && (
+                              <Button
+                                size="sm"
+                                className="bg-success hover:bg-success/90 text-success-foreground"
+                                disabled={resolvingTicketId === ticket.id}
+                                onClick={() => handleResolveAssignedTicket(ticket.id)}
+                              >
+                                {resolvingTicketId === ticket.id ? "Resolving..." : "Resolve"}
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Clock size={12} />
-                          <span>Updated {formatDateTime(ticket.updatedAt)}</span>
-                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {renderTicketBadge(ticket.status)}
-                      {isNonAcademicStaff && ticketTab === "assigned" && ticket.status !== "RESOLVED" ? (
-                        <Button
-                          size="sm"
-                          className="bg-success hover:bg-success/90 text-success-foreground"
-                          disabled={resolvingTicketId === ticket.id}
-                          onClick={() => handleResolveAssignedTicket(ticket.id)}
-                        >
-                          {resolvingTicketId === ticket.id ? "Resolving..." : "Resolve"}
-                        </Button>
-                      ) : (
-                        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-                          {ticket.assignedStaffName ? ticket.assignedStaffName : "View"}
-                          <ChevronRight size={14} className="ml-1" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
+                    );
+                  })}
                 </div>
-              ))
+
+                <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+                  {!selectedTicket ? (
+                    <div className="h-full min-h-[320px] flex items-center justify-center text-sm text-muted-foreground text-center">
+                      Select a ticket and click View Flow to see full ticket timeline.
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Ticket ID</p>
+                          <p className="font-mono text-sm font-semibold text-primary">{selectedTicket.ticketNumber}</p>
+                          <h4 className="mt-2 text-lg font-semibold text-foreground">{selectedTicket.subject}</h4>
+                        </div>
+                        {renderTicketBadge(selectedTicket.status)}
+                      </div>
+
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div className="rounded-lg border border-border/60 bg-background p-3">
+                          <p className="text-xs text-muted-foreground">Requester</p>
+                          <p className="text-sm font-medium text-foreground mt-1">{selectedTicket.requesterName}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{selectedTicket.requesterEmail}</p>
+                        </div>
+                        <div className="rounded-lg border border-border/60 bg-background p-3">
+                          <p className="text-xs text-muted-foreground">Assigned Staff</p>
+                          <p className="text-sm font-medium text-foreground mt-1">{selectedTicket.assignedStaffName || "Pending assignment"}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{selectedTicket.assignedStaffEmail || "-"}</p>
+                        </div>
+                      </div>
+
+                      <div className="rounded-lg border border-border/60 bg-background p-3">
+                        <p className="text-xs text-muted-foreground">Issue Description</p>
+                        <p className="text-sm text-foreground mt-2 whitespace-pre-line">{selectedTicket.description}</p>
+                      </div>
+
+                      <div className="rounded-lg border border-success/30 bg-success/5 p-3">
+                        <p className="text-xs text-muted-foreground">Support Reply / Resolution</p>
+                        <p className="text-sm text-foreground mt-2 whitespace-pre-line">
+                          {selectedTicket.resolutionNote || "No support reply yet. Your ticket is currently being processed."}
+                        </p>
+                      </div>
+
+                      <div className="rounded-lg border border-border/60 bg-background p-3">
+                        <p className="text-xs text-muted-foreground mb-3">Ticket Flow</p>
+                        <div className="space-y-3">
+                          {buildTicketFlow(selectedTicket).map((step, index, arr) => (
+                            <div key={step.id} className="relative pl-6">
+                              <span className="absolute left-0 top-1 h-3 w-3 rounded-full bg-primary/80" />
+                              {index < arr.length - 1 && (
+                                <span className="absolute left-[5px] top-4 h-6 w-[2px] bg-border" />
+                              )}
+                              <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                                <CheckCircle2 size={14} className="text-success" />
+                                {step.title}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-0.5">{step.time}</p>
+                              <p className="text-xs text-muted-foreground mt-1 whitespace-pre-line">{step.description}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>

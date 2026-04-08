@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, GraduationCap, Ticket, User, LogOut, LayoutDashboard, Settings, ChevronDown } from "lucide-react";
+import { Menu, X, GraduationCap, User, LogOut, LayoutDashboard, Settings, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -48,10 +48,6 @@ const Navbar = () => {
   };
 
   const avatarSrc = user?.profilePicture || "";
-  const visibleNavLinks =
-    isAuthenticated && user?.role !== "ADMIN"
-      ? [...navLinks, { label: "My Tickets", path: "/my-tickets" }]
-      : navLinks;
 
   return (
     <nav
@@ -71,7 +67,7 @@ const Navbar = () => {
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-8">
-          {visibleNavLinks.map((link) => (
+          {navLinks.map((link) => (
             <Link
               key={link.path}
               to={link.path}
@@ -137,12 +133,6 @@ const Navbar = () => {
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </DropdownMenuItem>
-                  {user?.role !== "ADMIN" && (
-                    <DropdownMenuItem onClick={() => navigate("/my-tickets")}>
-                      <Ticket className="mr-2 h-4 w-4" />
-                      <span>My Tickets</span>
-                    </DropdownMenuItem>
-                  )}
                   <DropdownMenuItem onClick={() => navigate("/settings")}>
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
@@ -193,7 +183,7 @@ const Navbar = () => {
             className="md:hidden bg-primary/95 backdrop-blur-md overflow-hidden"
           >
             <div className="container mx-auto px-4 py-4 flex flex-col gap-4">
-              {visibleNavLinks.map((link) => (
+              {navLinks.map((link) => (
                 <Link
                   key={link.path}
                   to={link.path}
@@ -247,16 +237,6 @@ const Navbar = () => {
                       <User className="mr-2 h-4 w-4" />
                       Profile
                     </Button>
-                    {user?.role !== "ADMIN" && (
-                      <Button
-                        variant="outline"
-                        className="w-full border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 justify-start"
-                        onClick={() => navigate("/my-tickets")}
-                      >
-                        <Ticket className="mr-2 h-4 w-4" />
-                        My Tickets
-                      </Button>
-                    )}
                     <Button
                       variant="outline"
                       className="w-full border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 justify-start"
