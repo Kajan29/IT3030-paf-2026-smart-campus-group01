@@ -12,11 +12,11 @@ import RoomAvailabilityManagementPage from "@/components/admin/dashboard/RoomAva
 import { BookingsPage } from "@/components/admin/dashboard/BookingsPage";
 import { ReportsAnalyticsPage } from "@/components/admin/dashboard/ReportsAnalyticsPage";
 import { SettingsPage } from "@/components/admin/dashboard/SettingsPage";
+import { ResourceManagementPage } from "@/components/admin/dashboard/ResourceManagementPage";
 import { SwapRequestManagementPage } from "@/pages/admin/SwapRequestManagementPage";
 import { NotificationsPage } from "@/pages/admin/NotificationsPage";
 import { Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
-import facilityService from "@/services/facilityService";
 
 const pageTitles: Record<string, string> = {
   dashboard: "Dashboard",
@@ -24,6 +24,7 @@ const pageTitles: Record<string, string> = {
   buildings: "Building Management",
   floors: "Floor Management",
   rooms: "Room Management",
+  resources: "Resource Management",
   availability: "Room Availability",
   buildingDetails: "Building Details",
   roomDetails: "Room Details",
@@ -42,10 +43,6 @@ const AdminDashboard = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-
-  useEffect(() => {
-    void facilityService.preloadFacilitySnapshot();
-  }, []);
 
   const toggleDark = () => {
     setDarkMode((d) => {
@@ -116,6 +113,8 @@ const AdminDashboard = () => {
             onOpenRoomDetails={openRoomDetails}
           />
         );
+      case "resources":
+        return <ResourceManagementPage />;
       case "availability":
         return <RoomAvailabilityManagementPage selectedRoomId={selectedRoomId} onOpenRoomDetails={selectRoomFromAvailability} onClearRoomSelection={() => setSelectedRoomId(null)} />;
       case "buildingDetails":

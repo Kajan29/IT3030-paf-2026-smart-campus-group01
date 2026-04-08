@@ -1,4 +1,5 @@
 import api from "./api";
+import authService from "./authService";
 import type {
   Building,
   BuildingStatus,
@@ -375,14 +376,38 @@ const toBuildingPayload = (payload: BuildingUpsertPayload) => ({
 });
 
 const SNAPSHOT_CACHE_TTL_MS = 45_000;
+const SNAPSHOT_FORBIDDEN_RETRY_MS = 60_000;
+const SNAPSHOT_BLOCKED_STORAGE_KEY = "facilitySnapshotBlockedUntil";
+const EMPTY_SNAPSHOT: FacilitySnapshot = {
+  buildings: [],
+  floors: [],
+  rooms: [],
+};
 
 let snapshotCache: FacilitySnapshot | null = null;
 let snapshotExpiresAt = 0;
 let snapshotInFlight: Promise<FacilitySnapshot> | null = null;
+let snapshotBlockedUntil = (() => {
+  const stored = window.sessionStorage.getItem(SNAPSHOT_BLOCKED_STORAGE_KEY);
+  return stored ? Number(stored) || 0 : 0;
+})();
+
+const setSnapshotBlockedUntil = (value: number) => {
+  snapshotBlockedUntil = value;
+  window.sessionStorage.setItem(SNAPSHOT_BLOCKED_STORAGE_KEY, String(value));
+};
 
 const isSnapshotFresh = () => snapshotCache !== null && Date.now() < snapshotExpiresAt;
 
 const fetchFacilitySnapshot = async (): Promise<FacilitySnapshot> => {
+  if (Date.now() < snapshotBlockedUntil) {
+    return snapshotCache ?? EMPTY_SNAPSHOT;
+  }
+
+  if (!authService.isAuthenticated() || authService.isSessionExpired()) {
+    return EMPTY_SNAPSHOT;
+  }
+
   if (isSnapshotFresh()) {
     return snapshotCache as FacilitySnapshot;
   }
@@ -391,12 +416,13 @@ const fetchFacilitySnapshot = async (): Promise<FacilitySnapshot> => {
     return snapshotInFlight;
   }
 
-  snapshotInFlight = Promise.all([
-    api.get<ApiEnvelope<ApiBuilding[]>>("/management/facilities/buildings"),
-    api.get<ApiEnvelope<ApiFloor[]>>("/management/facilities/floors"),
-    api.get<ApiEnvelope<ApiRoom[]>>("/management/facilities/rooms"),
-  ])
-    .then(([buildingsResponse, floorsResponse, roomsResponse]) => {
+  snapshotInFlight = (async () => {
+    try {
+      // Call sequentially so a forbidden response does not fan out into multiple failed network calls.
+      const buildingsResponse = await api.get<ApiEnvelope<ApiBuilding[]>>("/management/facilities/buildings");
+      const floorsResponse = await api.get<ApiEnvelope<ApiFloor[]>>("/management/facilities/floors");
+      const roomsResponse = await api.get<ApiEnvelope<ApiRoom[]>>("/management/facilities/rooms");
+
       const data: FacilitySnapshot = {
         buildings: (buildingsResponse.data.data || []).map(mapBuilding),
         floors: (floorsResponse.data.data || []).map(mapFloor),
@@ -404,11 +430,26 @@ const fetchFacilitySnapshot = async (): Promise<FacilitySnapshot> => {
       };
       snapshotCache = data;
       snapshotExpiresAt = Date.now() + SNAPSHOT_CACHE_TTL_MS;
+      setSnapshotBlockedUntil(0);
       return data;
-    })
-    .finally(() => {
+    } catch (error: unknown) {
+      const status =
+        typeof error === "object" && error !== null
+          ? (error as { response?: { status?: number } }).response?.status
+          : undefined;
+
+      if (status === 401 || status === 403) {
+        setSnapshotBlockedUntil(Date.now() + SNAPSHOT_FORBIDDEN_RETRY_MS);
+        snapshotCache = EMPTY_SNAPSHOT;
+        snapshotExpiresAt = Date.now() + 5_000;
+        return EMPTY_SNAPSHOT;
+      }
+
+      throw error;
+    } finally {
       snapshotInFlight = null;
-    });
+    }
+  })();
 
   return snapshotInFlight;
 };
@@ -416,13 +457,25 @@ const fetchFacilitySnapshot = async (): Promise<FacilitySnapshot> => {
 const invalidateSnapshot = () => {
   snapshotCache = null;
   snapshotExpiresAt = 0;
+  setSnapshotBlockedUntil(0);
 };
 
 export const facilityService = {
   getFacilitySnapshot: fetchFacilitySnapshot,
 
   preloadFacilitySnapshot() {
-    return fetchFacilitySnapshot();
+    return fetchFacilitySnapshot().catch((error: unknown) => {
+      const status =
+        typeof error === "object" && error !== null
+          ? (error as { response?: { status?: number } }).response?.status
+          : undefined;
+
+      if (status === 401 || status === 403) {
+        return null;
+      }
+
+      throw error;
+    });
   },
 
   invalidateFacilitySnapshot: invalidateSnapshot,
