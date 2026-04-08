@@ -40,15 +40,22 @@ public class TicketService {
         Role requesterRole = null;
 
         if (StringUtils.hasText(authenticatedEmail)) {
-            requesterUser = userRepository.findByEmailIgnoreCase(authenticatedEmail)
-                    .orElseThrow(() -> new ResourceNotFoundException("Authenticated user not found"));
+            requesterUser = userRepository.findByEmailIgnoreCase(authenticatedEmail).orElse(null);
 
-            requesterName = (requesterUser.getFirstName() + " " + requesterUser.getLastName()).trim();
-            if (!StringUtils.hasText(requesterName)) {
-                requesterName = requesterUser.getUsername();
+            if (requesterUser != null) {
+                requesterName = (requesterUser.getFirstName() + " " + requesterUser.getLastName()).trim();
+                if (!StringUtils.hasText(requesterName)) {
+                    requesterName = requesterUser.getUsername();
+                }
+                requesterEmail = requesterUser.getEmail();
+                requesterRole = requesterUser.getRole();
+            } else {
+                if (!StringUtils.hasText(request.getName()) || !StringUtils.hasText(request.getEmail())) {
+                    throw new ResourceNotFoundException("Authenticated user not found. Please sign in again.");
+                }
+                requesterName = request.getName().trim();
+                requesterEmail = request.getEmail().trim();
             }
-            requesterEmail = requesterUser.getEmail();
-            requesterRole = requesterUser.getRole();
         } else {
             if (!StringUtils.hasText(request.getName()) || !StringUtils.hasText(request.getEmail())) {
                 throw new IllegalArgumentException("Name and email are required for guest ticket submissions");

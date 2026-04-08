@@ -11,6 +11,7 @@ import ResourcesPage from './pages/CoursesPage'
 import NotFoundPage from './pages/NotFoundPage'
 import ProfilePage from './pages/ProfilePage'
 import SettingsPage from './pages/SettingsPage'
+import MyTicketsPage from './pages/MyTicketsPage'
 
 // Auth Pages
 import LoginPage from './pages/auth/LoginPage'
@@ -88,6 +89,14 @@ function App(): JSX.Element {
               <SettingsPage />
             </ProtectedRoute>
           } 
+        />
+        <Route
+          path="/my-tickets"
+          element={
+            <ProtectedRoute>
+              <MyTicketsPage />
+            </ProtectedRoute>
+          }
         />
 
         {/* Admin Routes */}

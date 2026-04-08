@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Send, MapPin, Phone, Mail, TicketCheck } from "lucide-react";
+import { ArrowRight, Send, MapPin, Phone, Mail, TicketCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -52,21 +53,34 @@ const ContactPage = () => {
     return "Admin";
   }, [user]);
 
+  const trackingLink = isAuthenticated
+    ? user?.role === "ADMIN"
+      ? "/admin"
+      : "/my-tickets"
+    : "/auth/login";
+
+  const trackingLabel = isAuthenticated
+    ? user?.role === "ADMIN"
+      ? "Open Admin Ticket Queue"
+      : "Track My Tickets"
+    : "Login to Track Tickets";
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+
+    const fallbackName = `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
+    const requesterName = isAuthenticated ? fallbackName || user?.email || "Signed-in User" : form.name;
+    const requesterEmail = isAuthenticated ? user?.email || form.email : form.email;
+
     try {
       await ticketService.createPublicTicket({
         category: form.category,
         audience: inferredAudience,
         subject: form.subject,
         description: form.message,
-        ...(isAuthenticated
-          ? {}
-          : {
-              name: form.name,
-              email: form.email,
-            }),
+        name: requesterName,
+        email: requesterEmail,
       });
 
       toast.success("Ticket submitted successfully. Our support team will respond soon.");
@@ -110,6 +124,26 @@ const ContactPage = () => {
           >
             Reach out to us or raise a support ticket for any issues.
           </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.28 }}
+            className="mt-7 flex flex-wrap items-center justify-center gap-3"
+          >
+            <Button asChild className="bg-accent text-accent-foreground hover:bg-accent/90 font-semibold">
+              <a href="#support-form">Submit Ticket</a>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="border-primary-foreground/35 bg-transparent text-primary-foreground hover:bg-primary-foreground/10"
+            >
+              <Link to={trackingLink}>
+                {trackingLabel}
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Link>
+            </Button>
+          </motion.div>
         </div>
       </section>
 
@@ -127,7 +161,7 @@ const ContactPage = () => {
                 Raise a Ticket
               </h2>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form id="support-form" onSubmit={handleSubmit} className="space-y-4">
               {isAuthenticated && user ? (
                 <div className="rounded-xl border border-border bg-muted/30 p-4">
                   <p className="text-sm font-medium text-foreground">
@@ -208,6 +242,26 @@ const ContactPage = () => {
                 {submitting ? "Submitting..." : "Submit Ticket"}
               </Button>
             </form>
+
+            <div className="mt-6 rounded-xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+              {isAuthenticated ? (
+                <p>
+                  Track status updates and resolution notes in{" "}
+                  <Link to={trackingLink} className="font-semibold text-primary hover:underline">
+                    {user?.role === "ADMIN" ? "Admin Dashboard" : "My Tickets"}
+                  </Link>
+                  .
+                </p>
+              ) : (
+                <p>
+                  Want full ticket history after submission?{" "}
+                  <Link to="/auth/login" className="font-semibold text-primary hover:underline">
+                    Sign in
+                  </Link>{" "}
+                  and use My Tickets tracking.
+                </p>
+              )}
+            </div>
           </motion.div>
 
           {/* Contact Info */}

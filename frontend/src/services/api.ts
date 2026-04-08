@@ -10,10 +10,12 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    // Skip session check for auth endpoints
+    // Skip strict session handling for auth and public endpoints
     const isAuthEndpoint = config.url?.includes('/auth/');
+    const isPublicEndpoint = config.url?.includes('/public/');
+    const isSessionManagedEndpoint = !isAuthEndpoint && !isPublicEndpoint;
     
-    if (!isAuthEndpoint && authService.isSessionExpired()) {
+    if (isSessionManagedEndpoint && authService.isSessionExpired()) {
       authService.logout()
       if (!window.location.pathname.startsWith('/auth/')) {
         window.location.href = '/auth/login'
@@ -21,12 +23,13 @@ api.interceptors.request.use(
       return Promise.reject(new axios.Cancel('Session expired'))
     }
 
-    if (!isAuthEndpoint) {
+    if (isSessionManagedEndpoint) {
       authService.updateSessionActivity()
     }
     
     const token = authService.getAccessToken()
-    if (!isAuthEndpoint && token && config.headers) {
+    const shouldAttachToken = !isAuthEndpoint && token && config.headers && (!isPublicEndpoint || !authService.isSessionExpired())
+    if (shouldAttachToken) {
       ;(config.headers as Record<string, string>).Authorization = `Bearer ${token}`
     }
     return config
@@ -41,8 +44,10 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config as typeof error.config & { _retry?: boolean }
     const isAuthEndpoint = originalRequest?.url?.includes('/auth/')
+    const isPublicEndpoint = originalRequest?.url?.includes('/public/')
+    const shouldHandleAuthFailure = !isAuthEndpoint && !isPublicEndpoint
 
-    if (error.response?.status === 401 && !originalRequest?._retry && !isAuthEndpoint) {
+    if (error.response?.status === 401 && !originalRequest?._retry && shouldHandleAuthFailure) {
       originalRequest._retry = true
       try {
         const refreshResponse = await axios.post(
@@ -70,7 +75,7 @@ api.interceptors.response.use(
       }
     }
 
-    if (error.response?.status === 401 && !isAuthEndpoint) {
+    if (error.response?.status === 401 && shouldHandleAuthFailure) {
       authService.logout()
       if (!window.location.pathname.startsWith('/auth/')) {
         window.location.href = '/auth/login'
