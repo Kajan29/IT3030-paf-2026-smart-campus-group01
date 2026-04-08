@@ -107,6 +107,12 @@ interface ApiRoom {
 
 interface ApiTimetableEntry {
   id: number;
+  buildingId?: number;
+  buildingCode?: string;
+  buildingName?: string;
+  floorId?: number;
+  floorNumber?: number;
+  floorName?: string;
   roomId: number;
   roomCode?: string;
   roomName?: string;
@@ -126,6 +132,15 @@ interface ApiTimetableEntry {
   substituteNotified: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+interface ApiTimetableImportResult {
+  rowNumber: number;
+  imported: boolean;
+  roomCode?: string;
+  staffName?: string;
+  message: string;
+  entry?: ApiTimetableEntry;
 }
 
 export interface BuildingUpsertPayload {
@@ -197,6 +212,15 @@ export interface RoomTimetablePayload {
   notes?: string;
   entryType: string;
   active?: boolean;
+}
+
+export interface RoomTimetableImportResult {
+  rowNumber: number;
+  imported: boolean;
+  roomCode?: string;
+  staffName?: string;
+  message: string;
+  entry?: RoomTimetableEntryType;
 }
 
 const mapUser = (user?: ApiUserSummary): CreatedByUser | undefined => {
@@ -288,6 +312,12 @@ const mapRoom = (room: ApiRoom): Room => ({
 
 const mapTimetableEntry = (entry: ApiTimetableEntry): RoomTimetableEntryType => ({
   id: String(entry.id),
+  buildingId: entry.buildingId != null ? String(entry.buildingId) : undefined,
+  buildingCode: entry.buildingCode,
+  buildingName: entry.buildingName,
+  floorId: entry.floorId != null ? String(entry.floorId) : undefined,
+  floorNumber: entry.floorNumber,
+  floorName: entry.floorName,
   roomId: String(entry.roomId),
   roomCode: entry.roomCode,
   roomName: entry.roomName,
@@ -307,6 +337,15 @@ const mapTimetableEntry = (entry: ApiTimetableEntry): RoomTimetableEntryType => 
   substituteNotified: entry.substituteNotified,
   createdAt: entry.createdAt,
   updatedAt: entry.updatedAt,
+});
+
+const mapTimetableImportResult = (result: ApiTimetableImportResult): RoomTimetableImportResult => ({
+  rowNumber: result.rowNumber,
+  imported: result.imported,
+  roomCode: result.roomCode,
+  staffName: result.staffName,
+  message: result.message,
+  entry: result.entry ? mapTimetableEntry(result.entry) : undefined,
 });
 
 const toMultipartData = (payload: object, image?: File | null) => {
@@ -534,6 +573,11 @@ export const facilityService = {
     return (response.data.data || []).map(mapTimetableEntry);
   },
 
+  async getMyTimetableAllocations() {
+    const response = await api.get<ApiEnvelope<ApiTimetableEntry[]>>(`/management/availability/my-allocations`);
+    return (response.data.data || []).map(mapTimetableEntry);
+  },
+
   async createRoomTimetableEntry(payload: RoomTimetablePayload) {
     const response = await api.post<ApiEnvelope<ApiTimetableEntry>>("/management/availability/entries", {
       ...payload,
@@ -556,6 +600,28 @@ export const facilityService = {
 
   async deleteRoomTimetableEntry(id: string) {
     return api.delete(`/management/availability/entries/${id}`);
+  },
+
+  async importRoomTimetableFromExcel(file: File, defaultRoomId?: string) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await api.post<ApiEnvelope<ApiTimetableImportResult[]>>(
+      "/management/availability/entries/import",
+      formData,
+      {
+        params: defaultRoomId ? { defaultRoomId } : undefined,
+      },
+    );
+
+    return (response.data.data || []).map(mapTimetableImportResult);
+  },
+
+  async downloadRoomTimetableImportTemplate() {
+    const response = await api.get<Blob>("/management/availability/entries/import-template", {
+      responseType: "blob",
+    });
+    return response.data;
   },
 
   async deleteRoom(id: string) {

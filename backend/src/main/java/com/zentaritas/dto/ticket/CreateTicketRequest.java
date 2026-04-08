@@ -31,6 +31,11 @@ public class CreateTicketRequest {
     @NotBlank(message = "description is required")
     private String description;
 
+    private String resourceLocation;
+
+    @NotBlank(message = "preferredContactDetails is required")
+    private String preferredContactDetails;
+
     private String name;
 
     @Email(message = "Invalid email address")

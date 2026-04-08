@@ -68,6 +68,10 @@ public class ZentaritasApplication {
                 .ignoreIfMissing()
                 .load();
 
+            if (!isBackendEnv(dotenv)) {
+                continue;
+            }
+
             applyDotenvToSystemProperties(dotenv);
             break;
         }
@@ -93,5 +97,19 @@ public class ZentaritasApplication {
                 System.setProperty(key, entry.getValue());
             }
         });
+    }
+
+    private static boolean isBackendEnv(Dotenv dotenv) {
+        return hasValue(dotenv.get("DB_HOST"))
+            || hasValue(dotenv.get("DB_NAME"))
+            || hasValue(dotenv.get("JWT_SECRET"))
+            || hasValue(dotenv.get("GOOGLE_CLIENT_ID"))
+            || hasValue(dotenv.get("CLOUDINARY_CLOUD_NAME"))
+            || hasValue(dotenv.get("CLOUDINARY_API_KEY"))
+            || hasValue(dotenv.get("CLOUDINARY_API_SECRET"));
+    }
+
+    private static boolean hasValue(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 }

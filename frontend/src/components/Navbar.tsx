@@ -17,8 +17,10 @@ import { useAuth } from "@/context/AuthContext";
 const navLinks = [
   { label: "Home", path: "/" },
   { label: "About", path: "/about" },
-  { label: "Book Room", path: "/book-room" },
+  { label: "Book Room", path: "/book-room", studentOnly: true },
+  { label: "Find Room", path: "/find-room" },
   { label: "Resources", path: "/resources" },
+  { label: "Gallery", path: "/gallery" },
   { label: "Contact", path: "/contact" },
 ];
 
@@ -28,6 +30,12 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
+  const isStudent = user?.role === "STUDENT";
+
+  const visibleNavLinks = navLinks.filter((link) => {
+    if (!link.studentOnly) return true;
+    return isAuthenticated && isStudent;
+  });
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -67,7 +75,7 @@ const Navbar = () => {
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => (
+          {visibleNavLinks.map((link) => (
             <Link
               key={link.path}
               to={link.path}
@@ -183,7 +191,7 @@ const Navbar = () => {
             className="md:hidden bg-primary/95 backdrop-blur-md overflow-hidden"
           >
             <div className="container mx-auto px-4 py-4 flex flex-col gap-4">
-              {navLinks.map((link) => (
+              {visibleNavLinks.map((link) => (
                 <Link
                   key={link.path}
                   to={link.path}

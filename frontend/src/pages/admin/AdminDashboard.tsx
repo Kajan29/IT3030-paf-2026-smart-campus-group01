@@ -10,6 +10,7 @@ import { BuildingDetailsPage } from "@/components/admin/dashboard/BuildingDetail
 import { RoomDetailsPage } from "@/components/admin/dashboard/RoomDetailsPage";
 import RoomAvailabilityManagementPage from "@/components/admin/dashboard/RoomAvailabilityManagementPage";
 import { BookingsPage } from "@/components/admin/dashboard/BookingsPage";
+import { TicketManagementPage } from "@/components/dashboard/TicketManagementPage";
 import { ReportsAnalyticsPage } from "@/components/admin/dashboard/ReportsAnalyticsPage";
 import { SettingsPage } from "@/components/admin/dashboard/SettingsPage";
 import { SwapRequestManagementPage } from "@/pages/admin/SwapRequestManagementPage";

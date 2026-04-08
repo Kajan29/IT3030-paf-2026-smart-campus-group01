@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { type ChangeEvent, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Building2,
@@ -12,12 +12,13 @@ import {
   Plus,
   Save,
   Trash2,
+  Upload,
   Wrench,
   X,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { AdminLoadingState } from "@/components/admin/dashboard/AdminLoadingState";
-import facilityService, { type RoomTimetablePayload } from "@/services/facilityService";
+import facilityService, { type RoomTimetableImportResult, type RoomTimetablePayload } from "@/services/facilityService";
 import type { Building, Floor, Room } from "@/types/campusManagement";
 import type { RoomTimetableEntry } from "@/types/booking";
 import { cn } from "@/lib/utils";
@@ -108,6 +109,9 @@ const RoomDetailsPage = ({ roomId, onBack }: RoomDetailsPageProps) => {
   const [showEditor, setShowEditor] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editor, setEditor] = useState<EditorState>(emptyEditorState());
+  const [importing, setImporting] = useState(false);
+  const [importResults, setImportResults] = useState<RoomTimetableImportResult[]>([]);
+  const [importFileName, setImportFileName] = useState("");
 
   useEffect(() => {
     if (!roomId) {
@@ -115,6 +119,8 @@ const RoomDetailsPage = ({ roomId, onBack }: RoomDetailsPageProps) => {
       setBuilding(null);
       setFloor(null);
       setTimetable([]);
+      setImportResults([]);
+      setImportFileName("");
       return;
     }
 
@@ -202,6 +208,15 @@ const RoomDetailsPage = ({ roomId, onBack }: RoomDetailsPageProps) => {
     return hours;
   }, [roomWindow]);
 
+  const getSlotMeta = (hour: number) => {
+    const slotStart = `${String(hour).padStart(2, "0")}:00`;
+    const slotEnd = `${String(hour + 1).padStart(2, "0")}:00`;
+    const entry = selectedDayEntries.find((candidate) => candidate.startTime < slotEnd && candidate.endTime > slotStart) || null;
+    const isClosed = roomClosedWeekend && (selectedDay === "SATURDAY" || selectedDay === "SUNDAY");
+    const isOutsideWindow = hour < roomWindow.open.hour || hour >= roomWindow.close.hour;
+    return { slotStart, slotEnd, entry, isClosed, isOutsideWindow };
+  };
+
   const creatorName = [room?.createdBy?.firstName, room?.createdBy?.lastName].filter(Boolean).join(" ");
 
   const openNewEntry = (startHour: number) => {
@@ -243,6 +258,46 @@ const RoomDetailsPage = ({ roomId, onBack }: RoomDetailsPageProps) => {
     if (!roomId) return;
     const entries = await facilityService.getRoomTimetable(roomId);
     setTimetable(entries);
+  };
+
+  const handleExcelImport = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file || !roomId) {
+      return;
+    }
+
+    if (!file.name.toLowerCase().endsWith(".xlsx")) {
+      toast.error("Only .xlsx files are supported");
+      return;
+    }
+
+    setImporting(true);
+    try {
+      const results = await facilityService.importRoomTimetableFromExcel(file, roomId);
+      setImportResults(results);
+      setImportFileName(file.name);
+
+      const successCount = results.filter((result) => result.imported).length;
+      const failedCount = results.length - successCount;
+
+      if (successCount > 0 && failedCount === 0) {
+        toast.success(`Imported ${successCount} timetable row${successCount === 1 ? "" : "s"}`);
+      } else if (successCount > 0) {
+        toast.info(`Imported ${successCount} row${successCount === 1 ? "" : "s"}, skipped ${failedCount}`);
+      } else {
+        toast.error("No rows were imported. Check the import summary.");
+      }
+
+      await refreshTimetable();
+    } catch (error: any) {
+      console.error(error);
+      const message = error?.response?.data?.message || "Failed to import timetable Excel file";
+      toast.error(message);
+    } finally {
+      setImporting(false);
+    }
   };
 
   const handleSave = async () => {
@@ -345,6 +400,14 @@ const RoomDetailsPage = ({ roomId, onBack }: RoomDetailsPageProps) => {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      <input
+        id="room-timetable-import-input"
+        type="file"
+        accept=".xlsx"
+        className="hidden"
+        onChange={handleExcelImport}
+      />
+
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
@@ -408,35 +471,76 @@ const RoomDetailsPage = ({ roomId, onBack }: RoomDetailsPageProps) => {
               <div>
                 <h2 className="text-lg font-semibold text-foreground">Weekly timetable</h2>
                 <p className="text-sm text-muted-foreground">Monday to Sunday. Weekend tabs are disabled if this room or building is closed.</p>
+                <p className="mt-1 text-xs text-muted-foreground">Excel columns supported: staffName/staffEmail, date or dayOfWeek, startTime, endTime or duration, lectureName, subject, batch, purpose, roomCode.</p>
               </div>
-              <button
-                onClick={() => openNewEntry(roomWindow.open.hour)}
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
-              >
-                <Plus className="h-4 w-4" />
-                Add block
-              </button>
+              <div className="flex items-center gap-2">
+                <label
+                  htmlFor="room-timetable-import-input"
+                  className={cn(
+                    "inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-semibold text-foreground transition hover:bg-muted/40",
+                    importing && "pointer-events-none opacity-60",
+                  )}
+                >
+                  <Upload className="h-4 w-4" />
+                  {importing ? "Importing..." : "Import Excel"}
+                </label>
+                <button
+                  onClick={() => openNewEntry(roomWindow.open.hour)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add block
+                </button>
+              </div>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              {weekTabs.map((tab) => {
-                const isActive = tab.day === selectedDay;
-                return (
-                  <button
-                    key={tab.day}
-                    onClick={() => !tab.disabled && setSelectedDay(tab.day)}
-                    disabled={tab.disabled}
-                    className={cn(
-                      "rounded-xl border px-3 py-2 text-left transition",
-                      isActive ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-foreground hover:border-primary/40",
-                      tab.disabled && "cursor-not-allowed border-dashed bg-muted/40 text-muted-foreground opacity-60",
-                    )}
-                  >
-                    <span className="block text-xs font-semibold uppercase tracking-[0.14em]">{tab.day}</span>
-                    <span className="block text-[11px] opacity-80">{tab.disabled ? "Closed" : tab.date}</span>
-                  </button>
-                );
-              })}
+            {importResults.length > 0 && (
+              <div className="mt-4 rounded-2xl border border-border/80 bg-background/70 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-foreground">Latest import {importFileName ? `- ${importFileName}` : ""}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {importResults.filter((result) => result.imported).length} imported / {importResults.filter((result) => !result.imported).length} skipped
+                  </p>
+                </div>
+                <div className="mt-3 max-h-52 space-y-2 overflow-y-auto pr-1">
+                  {importResults.map((result) => (
+                    <div
+                      key={`${result.rowNumber}-${result.message}`}
+                      className={cn(
+                        "rounded-xl border px-3 py-2 text-xs",
+                        result.imported ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-900",
+                      )}
+                    >
+                      Row {result.rowNumber}: {result.message}
+                      {result.roomCode ? ` | Room ${result.roomCode}` : ""}
+                      {result.staffName ? ` | ${result.staffName}` : ""}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4 overflow-x-auto pb-1">
+              <div className="flex min-w-max gap-2">
+                {weekTabs.map((tab) => {
+                  const isActive = tab.day === selectedDay;
+                  return (
+                    <button
+                      key={tab.day}
+                      onClick={() => !tab.disabled && setSelectedDay(tab.day)}
+                      disabled={tab.disabled}
+                      className={cn(
+                        "min-w-[136px] rounded-xl border px-3 py-2 text-left transition",
+                        isActive ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-foreground hover:border-primary/40",
+                        tab.disabled && "cursor-not-allowed border-dashed bg-muted/40 text-muted-foreground opacity-60",
+                      )}
+                    >
+                      <span className="block text-xs font-semibold uppercase tracking-[0.14em]">{tab.day}</span>
+                      <span className="block text-[11px] opacity-80">{tab.disabled ? "Closed" : tab.date}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="mt-4 rounded-2xl border border-border bg-background/70 px-4 py-3 text-sm text-muted-foreground">
@@ -448,77 +552,107 @@ const RoomDetailsPage = ({ roomId, onBack }: RoomDetailsPageProps) => {
             {loadingTimetable ? (
               <div className="mt-4 rounded-2xl border border-border p-6 text-center text-sm text-muted-foreground">Loading timetable...</div>
             ) : (
-              <div className="mt-4 overflow-x-auto rounded-2xl border border-border/60 p-2 sm:p-3">
-                <div className="min-w-[640px]">
-                  <div
-                    className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground"
-                    style={{ gridTemplateColumns: `120px repeat(${timelineHours.length}, minmax(0, 1fr))` }}
-                  >
-                    <div>Time</div>
-                    {timelineHours.map((hour) => (
-                      <div key={hour} className="text-center">{formatClock(hour)}</div>
-                    ))}
-                  </div>
+              <div className="mt-4 space-y-4 rounded-2xl border border-border/60 p-2 sm:p-3">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:hidden">
+                  {timelineHours.map((hour) => {
+                    const { slotStart, slotEnd, entry, isClosed, isOutsideWindow } = getSlotMeta(hour);
 
-                  <div
-                    className="mt-3 grid gap-2"
-                    style={{ gridTemplateColumns: `120px repeat(${timelineHours.length}, minmax(0, 1fr))` }}
-                  >
-                    <div className="rounded-2xl border border-border bg-muted/20 p-3 text-sm font-semibold text-foreground">{room.code}</div>
+                    return (
+                      <button
+                        key={hour}
+                        onClick={() => (entry ? openEditEntry(entry) : openNewEntry(hour))}
+                        disabled={isClosed}
+                        className={cn(
+                          "w-full rounded-xl border p-3 text-left transition",
+                          entry
+                            ? "border-primary/30 bg-primary/5"
+                            : isOutsideWindow
+                              ? "border-dashed border-border bg-muted/20 opacity-60"
+                              : "border-dashed border-emerald-300 bg-emerald-50/70",
+                          isClosed && "cursor-not-allowed border-dashed bg-muted/30 opacity-50",
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                            {slotStart} - {slotEnd}
+                          </span>
+                          {entry ? <Edit3 className="h-4 w-4 text-muted-foreground" /> : null}
+                        </div>
 
-                    {timelineHours.map((hour) => {
-                      const slotStart = `${String(hour).padStart(2, "0")}:00`;
-                      const slotEnd = `${String(hour + 1).padStart(2, "0")}:00`;
-                      const entry = selectedDayEntries.find((candidate) => candidate.startTime < slotEnd && candidate.endTime > slotStart) || null;
-                      const isClosed = roomClosedWeekend && (selectedDay === "SATURDAY" || selectedDay === "SUNDAY");
-                      const isOutsideWindow = hour < roomWindow.open.hour || hour >= roomWindow.close.hour;
+                        {entry ? (
+                          <div className="mt-2 space-y-1">
+                            <p className="text-sm font-semibold text-foreground">{entry.lectureName}</p>
+                            <p className="text-xs text-muted-foreground">{entry.lecturerName}</p>
+                          </div>
+                        ) : (
+                          <p className="mt-2 text-sm font-medium text-emerald-700">
+                            {isClosed || isOutsideWindow ? "Closed" : "Open"}
+                          </p>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
 
-                      return (
-                        <button
-                          key={hour}
-                          onClick={() => (entry ? openEditEntry(entry) : openNewEntry(hour))}
-                          disabled={isClosed}
-                          className={cn(
-                            "group min-h-24 rounded-2xl border p-3 text-left transition-all",
-                            entry
-                              ? "border-primary/30 bg-primary/5 hover:border-primary/50"
-                              : isOutsideWindow
-                                ? "border-dashed border-border bg-muted/20 opacity-50"
-                                : "border-dashed border-emerald-300 bg-emerald-50/60 hover:border-emerald-500 hover:bg-emerald-50",
-                            isClosed && "cursor-not-allowed border-dashed bg-muted/30 opacity-40",
-                          )}
-                        >
-                          {entry ? (
-                            <div className="space-y-1.5">
-                              <div className="flex items-start justify-between gap-2">
-                                <div>
-                                  <p className="text-sm font-semibold text-foreground">{entry.lectureName}</p>
-                                  <p className="text-[11px] text-muted-foreground">{entry.lecturerName}</p>
+                <div className="hidden overflow-x-auto md:block">
+                  <div style={{ minWidth: `${150 + timelineHours.length * 76}px` }}>
+                    <div
+                      className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground"
+                      style={{ gridTemplateColumns: `150px repeat(${timelineHours.length}, minmax(72px, 1fr))` }}
+                    >
+                      <div className="rounded-lg bg-muted/20 px-3 py-2">Time</div>
+                      {timelineHours.map((hour) => (
+                        <div key={hour} className="rounded-lg bg-muted/20 px-2 py-2 text-center">{formatClock(hour)}</div>
+                      ))}
+                    </div>
+
+                    <div
+                      className="mt-3 grid gap-2"
+                      style={{ gridTemplateColumns: `150px repeat(${timelineHours.length}, minmax(72px, 1fr))` }}
+                    >
+                      <div className="rounded-2xl border border-border bg-muted/20 p-3 text-sm font-semibold text-foreground">
+                        {room.code}
+                      </div>
+
+                      {timelineHours.map((hour) => {
+                        const { slotStart, slotEnd, entry, isClosed, isOutsideWindow } = getSlotMeta(hour);
+
+                        return (
+                          <button
+                            key={hour}
+                            onClick={() => (entry ? openEditEntry(entry) : openNewEntry(hour))}
+                            disabled={isClosed}
+                            className={cn(
+                              "group min-h-24 rounded-2xl border p-2 text-left transition-all",
+                              entry
+                                ? "border-primary/30 bg-primary/5 hover:border-primary/50"
+                                : isOutsideWindow
+                                  ? "border-dashed border-border bg-muted/20 opacity-60"
+                                  : "border-dashed border-emerald-300 bg-emerald-50/70 hover:border-emerald-500 hover:bg-emerald-50",
+                              isClosed && "cursor-not-allowed border-dashed bg-muted/30 opacity-45",
+                            )}
+                          >
+                            {entry ? (
+                                <div className="space-y-1" title={`${entry.lectureName} - ${entry.lecturerName}`}>
+                                <div className="flex items-start justify-between gap-1.5">
+                                  <p className="line-clamp-2 text-xs font-semibold leading-tight text-foreground">{entry.lectureName}</p>
+                                  <Edit3 className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
                                 </div>
-                                <Edit3 className="h-4 w-4 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
+                                <p className="truncate text-[10px] text-muted-foreground">{entry.lecturerName}</p>
+                                <p className="text-[11px] text-muted-foreground">{entry.startTime.slice(0, 5)} - {entry.endTime.slice(0, 5)}</p>
                               </div>
-                              {entry.substituteRoomName && (
-                                <p className="rounded-full bg-amber-100 px-2 py-1 text-[11px] font-medium text-amber-700">
-                                  Substitute: {entry.substituteRoomName}
-                                </p>
-                              )}
-                              <p className="text-[11px] text-muted-foreground">
-                                {entry.startTime.slice(0, 5)} - {entry.endTime.slice(0, 5)}
-                              </p>
-                            </div>
-                          ) : isClosed ? (
-                            <div className="text-xs text-muted-foreground">Closed</div>
-                          ) : isOutsideWindow ? (
-                            <div className="text-xs text-muted-foreground">Closed</div>
-                          ) : (
-                            <div className="flex h-full flex-col justify-between">
-                              <span className="text-sm font-medium text-emerald-700">Open</span>
-                              <span className="text-xs text-muted-foreground">{slotStart} - {slotEnd}</span>
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
+                            ) : isClosed || isOutsideWindow ? (
+                              <div className="text-xs text-muted-foreground">Closed</div>
+                            ) : (
+                              <div className="flex h-full flex-col justify-between">
+                                <span className="text-sm font-medium text-emerald-700">Open</span>
+                                <span className="text-xs text-muted-foreground">{slotStart} - {slotEnd}</span>
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>

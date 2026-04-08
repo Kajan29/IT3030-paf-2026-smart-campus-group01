@@ -60,11 +60,13 @@ public class AuthService implements UserDetailsService {
         User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
+        boolean isActive = !Boolean.FALSE.equals(user.getIsActive());
+
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getEmail())
                 .password(user.getPassword())
                 .authorities(Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())))
-                .accountLocked(!user.getIsActive())
+            .accountLocked(!isActive)
                 .build();
     }
 

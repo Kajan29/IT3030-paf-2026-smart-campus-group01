@@ -8,9 +8,12 @@ import AboutPage from './pages/AboutPage'
 import ContactPage from './pages/ContactPage'
 import BookRoomPage from './pages/BookingsPage'
 import ResourcesPage from './pages/CoursesPage'
+import GalleryPage from './pages/GalleryPage'
+import RoomFinderPage from './pages/RoomFinderPage'
 import NotFoundPage from './pages/NotFoundPage'
 import ProfilePage from './pages/ProfilePage'
 import SettingsPage from './pages/SettingsPage'
+import MyTicketsPage from './pages/MyTicketsPage'
 
 // Auth Pages
 import LoginPage from './pages/auth/LoginPage'
@@ -24,6 +27,7 @@ import AdminPage from './pages/admin/AdminPage'
 import AdminProtectedRoute from './components/admin/AdminProtectedRoute'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import GuestOnlyRoute from './components/common/GuestOnlyRoute'
+import StudentProtectedRoute from './components/common/StudentProtectedRoute'
 
 function App(): JSX.Element {
   return (
@@ -35,8 +39,17 @@ function App(): JSX.Element {
         {/* Main Routes */}
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
-        <Route path="/book-room" element={<BookRoomPage />} />
+        <Route
+          path="/book-room"
+          element={
+            <StudentProtectedRoute>
+              <BookRoomPage />
+            </StudentProtectedRoute>
+          }
+        />
+        <Route path="/find-room" element={<RoomFinderPage />} />
         <Route path="/resources" element={<ResourcesPage />} />
+        <Route path="/gallery" element={<GalleryPage />} />
 
         {/* Auth Routes */}
         <Route
@@ -88,6 +101,14 @@ function App(): JSX.Element {
               <SettingsPage />
             </ProtectedRoute>
           } 
+        />
+        <Route
+          path="/my-tickets"
+          element={
+            <ProtectedRoute>
+              <MyTicketsPage />
+            </ProtectedRoute>
+          }
         />
 
         {/* Admin Routes */}

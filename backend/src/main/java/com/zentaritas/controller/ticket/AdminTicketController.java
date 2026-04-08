@@ -3,6 +3,7 @@ package com.zentaritas.controller.ticket;
 import com.zentaritas.dto.management.facility.UserSummaryResponse;
 import com.zentaritas.dto.response.ApiResponse;
 import com.zentaritas.dto.ticket.TicketAssignmentRequest;
+import com.zentaritas.dto.ticket.TicketRejectRequest;
 import com.zentaritas.dto.ticket.TicketResolveRequest;
 import com.zentaritas.dto.ticket.TicketResponse;
 import com.zentaritas.model.ticket.TicketStatus;
@@ -11,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -43,9 +45,10 @@ public class AdminTicketController {
     @PatchMapping("/{ticketId}/assign")
     public ResponseEntity<ApiResponse<TicketResponse>> assignTicket(
             @PathVariable Long ticketId,
-            @Valid @RequestBody TicketAssignmentRequest request) {
+            @Valid @RequestBody TicketAssignmentRequest request,
+            Authentication authentication) {
         return ResponseEntity.ok(ApiResponse.success(
-                ticketService.assignTicket(ticketId, request.getStaffId()),
+                ticketService.assignTicket(ticketId, request.getStaffId(), authentication.getName()),
                 "Ticket assigned successfully"
         ));
     }
@@ -53,10 +56,32 @@ public class AdminTicketController {
     @PatchMapping("/{ticketId}/resolve")
     public ResponseEntity<ApiResponse<TicketResponse>> resolveTicket(
             @PathVariable Long ticketId,
-            @Valid @RequestBody TicketResolveRequest request) {
+            @Valid @RequestBody TicketResolveRequest request,
+            Authentication authentication) {
         return ResponseEntity.ok(ApiResponse.success(
-                ticketService.resolveTicketByAdmin(ticketId, request.getResolutionNote()),
-                "Ticket resolved successfully"
+                ticketService.resolveTicketByAdmin(ticketId, request.getResolutionNote(), authentication.getName()),
+            "Ticket resolved successfully"
+        ));
+    }
+
+    @PatchMapping("/{ticketId}/reject")
+    public ResponseEntity<ApiResponse<TicketResponse>> rejectTicket(
+            @PathVariable Long ticketId,
+            @Valid @RequestBody TicketRejectRequest request,
+            Authentication authentication) {
+        return ResponseEntity.ok(ApiResponse.success(
+                ticketService.rejectTicketByAdmin(ticketId, request.getReason(), authentication.getName()),
+                "Ticket rejected successfully"
+        ));
+    }
+
+    @PatchMapping("/{ticketId}/close")
+    public ResponseEntity<ApiResponse<TicketResponse>> closeTicket(
+            @PathVariable Long ticketId,
+            Authentication authentication) {
+        return ResponseEntity.ok(ApiResponse.success(
+                ticketService.closeTicket(ticketId, authentication.getName()),
+                "Ticket closed successfully"
         ));
     }
 }
