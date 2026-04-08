@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-labelledby="title desc">
+  <title id="title">Graduation Day Mock</title>
+  <desc id="desc">Illustration of a graduation ceremony stage and celebratory scene.</desc>
+  <rect width="1200" height="800" fill="#fef3c7" />
+  <rect y="520" width="1200" height="280" fill="#f59e0b" />
+  <rect x="140" y="250" width="920" height="290" rx="14" fill="#f8fafc" />
+  <rect x="220" y="320" width="760" height="160" rx="10" fill="#e2e8f0" />
+  <rect x="560" y="420" width="80" height="120" fill="#475569" />
+  <polygon points="600,150 760,220 600,290 440,220" fill="#1e293b" />
+  <rect x="595" y="290" width="10" height="120" fill="#1e293b" />
+  <circle cx="608" cy="413" r="14" fill="#ef4444" />
+  <circle cx="220" cy="120" r="22" fill="#ef4444" />
+  <circle cx="980" cy="130" r="18" fill="#3b82f6" />
+  <circle cx="1030" cy="200" r="14" fill="#22c55e" />
+  <text x="60" y="95" font-size="46" font-family="Georgia, serif" fill="#7c2d12">Graduation Day</text>
+</svg>

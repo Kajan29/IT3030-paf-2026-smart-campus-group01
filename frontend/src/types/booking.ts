@@ -26,6 +26,12 @@ export interface RoomAvailability {
 
 export interface RoomTimetableEntry {
   id: string;
+  buildingId?: string;
+  buildingCode?: string;
+  buildingName?: string;
+  floorId?: string;
+  floorNumber?: number;
+  floorName?: string;
   roomId: string;
   roomCode?: string;
   roomName?: string;
