@@ -26,7 +26,7 @@ api.interceptors.request.use(
     }
     
     const token = authService.getAccessToken()
-    if (token && config.headers) {
+    if (!isAuthEndpoint && token && config.headers) {
       ;(config.headers as Record<string, string>).Authorization = `Bearer ${token}`
     }
     return config
@@ -70,7 +70,7 @@ api.interceptors.response.use(
       }
     }
 
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !isAuthEndpoint) {
       authService.logout()
       if (!window.location.pathname.startsWith('/auth/')) {
         window.location.href = '/auth/login'

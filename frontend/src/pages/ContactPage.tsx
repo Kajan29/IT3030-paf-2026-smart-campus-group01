@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Send, MapPin, Phone, Mail, TicketCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -9,28 +9,79 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
 import heroCampus from "@/assets/hero-campus.jpg";
+import { useAuth } from "@/context/AuthContext";
+import ticketService, { type TicketAudience, type TicketCategory } from "@/services/ticketService";
 
-const ticketCategories = [
-  "IT Support",
-  "Facilities",
-  "Academic Issue",
-  "Room Booking",
-  "General Inquiry",
+const ticketCategories: Array<{ label: string; value: TicketCategory }> = [
+  { label: "IT Support", value: "IT_SUPPORT" },
+  { label: "Facilities", value: "FACILITIES" },
+  { label: "Academic Issue", value: "ACADEMIC" },
+  { label: "Room Booking", value: "ROOM_BOOKING" },
+  { label: "General Inquiry", value: "GENERAL_INQUIRY" },
+];
+
+const ticketAudiences: Array<{ label: string; value: TicketAudience }> = [
+  { label: "Student Support", value: "STUDENT" },
+  { label: "Staff Support", value: "STAFF" },
 ];
 
 const ContactPage = () => {
+  const { user, isAuthenticated } = useAuth();
   const [form, setForm] = useState({
     name: "",
     email: "",
-    category: "",
+    category: "IT_SUPPORT" as TicketCategory,
+    audience: "STUDENT" as TicketAudience,
     subject: "",
     message: "",
   });
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const inferredAudience = useMemo<TicketAudience>(() => {
+    if (!isAuthenticated || !user) {
+      return form.audience;
+    }
+    return user.role === "STUDENT" ? "STUDENT" : "STAFF";
+  }, [form.audience, isAuthenticated, user]);
+
+  const roleLabel = useMemo(() => {
+    if (!user) return "Guest";
+    if (user.role === "STUDENT") return "Student";
+    if (user.role === "ACADEMIC_STAFF") return "Academic Staff";
+    if (user.role === "NON_ACADEMIC_STAFF") return "Non-Academic Staff";
+    return "Admin";
+  }, [user]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Ticket Submitted! We'll get back to you soon.");
-    setForm({ name: "", email: "", category: "", subject: "", message: "" });
+    setSubmitting(true);
+    try {
+      await ticketService.createPublicTicket({
+        category: form.category,
+        audience: inferredAudience,
+        subject: form.subject,
+        description: form.message,
+        ...(isAuthenticated
+          ? {}
+          : {
+              name: form.name,
+              email: form.email,
+            }),
+      });
+
+      toast.success("Ticket submitted successfully. Our support team will respond soon.");
+      setForm((prev) => ({
+        ...prev,
+        name: "",
+        email: "",
+        subject: "",
+        message: "",
+      }));
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Could not submit ticket");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -77,36 +128,64 @@ const ContactPage = () => {
               </h2>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid sm:grid-cols-2 gap-4">
-                <Input
-                  placeholder="Your Name"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  required
-                />
-                <Input
-                  type="email"
-                  placeholder="Email Address"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  required
-                />
-              </div>
+              {isAuthenticated && user ? (
+                <div className="rounded-xl border border-border bg-muted/30 p-4">
+                  <p className="text-sm font-medium text-foreground">
+                    Submitting as {user.firstName} {user.lastName}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {user.email} | {roleLabel}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <Input
+                    placeholder="Your Name"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    required
+                  />
+                  <Input
+                    type="email"
+                    placeholder="Email Address"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    required
+                  />
+                </div>
+              )}
               <Select
                 value={form.category}
-                onValueChange={(v) => setForm({ ...form, category: v })}
+                onValueChange={(v) => setForm({ ...form, category: v as TicketCategory })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select Category" />
                 </SelectTrigger>
                 <SelectContent>
                   {ticketCategories.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
+                    <SelectItem key={c.value} value={c.value}>
+                      {c.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {!isAuthenticated && (
+                <Select
+                  value={form.audience}
+                  onValueChange={(v) => setForm({ ...form, audience: v as TicketAudience })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Ticket For" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ticketAudiences.map((audience) => (
+                      <SelectItem key={audience.value} value={audience.value}>
+                        {audience.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <Input
                 placeholder="Subject"
                 value={form.subject}
@@ -122,10 +201,11 @@ const ContactPage = () => {
               />
               <Button
                 type="submit"
+                disabled={submitting}
                 className="w-full bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
               >
                 <Send className="h-4 w-4 mr-2" />
-                Submit Ticket
+                {submitting ? "Submitting..." : "Submit Ticket"}
               </Button>
             </form>
           </motion.div>
