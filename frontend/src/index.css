@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=Libre+Franklin:wght@300;400;500;600;700&display=swap');
-@import './pages/auth/auth.css';
+
 
 @tailwind base;
 @tailwind components;
@@ -9,106 +9,106 @@
 
 @layer base {
   :root {
-    --background: 60 22% 92%;  /* #F3F3E0 - Cream background */
-    --foreground: 200 53% 15%; /* Darker navy text for better visibility */
+    --background: 53 100% 88%;   /* #FFF6C0 - Light cream */
+    --foreground: 136 39% 14%;   /* Very dark green text */
 
-    --card: 0 0% 100%;
-    --card-foreground: 200 53% 15%;
+    --card: 53 100% 96%;         /* Slightly warm white card */
+    --card-foreground: 136 39% 14%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 200 53% 15%;
+    --popover: 53 100% 96%;
+    --popover-foreground: 136 39% 14%;
 
-    --primary: 213 56% 35%;     /* #27548A - Dark blue primary */
-    --primary-foreground: 60 22% 98%; /* Lighter for better contrast */
+    --primary: 136 39% 30%;      /* #2F6B3F - Dark forest green */
+    --primary-foreground: 53 100% 96%;
 
-    --secondary: 37 65% 55%;    /* Slightly darker golden yellow */
-    --secondary-foreground: 200 53% 15%;
+    --secondary: 119 28% 61%;    /* #7FB77E - Sage green */
+    --secondary-foreground: 136 39% 14%;
 
-    --muted: 60 18% 88%;
-    --muted-foreground: 200 25% 35%; /* Darker for better visibility */
+    --muted: 53 50% 84%;
+    --muted-foreground: 136 20% 32%;
 
-    --accent: 37 65% 55%;       /* Slightly darker golden yellow */
-    --accent-foreground: 200 53% 15%;
+    --accent: 42 91% 66%;        /* #F7C85C - Golden yellow */
+    --accent-foreground: 136 39% 14%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 60 15% 85%;
-    --input: 60 15% 85%;
-    --ring: 213 56% 35%;
+    --border: 53 35% 80%;
+    --input: 53 35% 80%;
+    --ring: 136 39% 30%;
 
     --radius: 0.625rem;
 
     --accent-red: 0 72% 51%;
     --accent-red-foreground: 0 0% 100%;
-    --info: 213 56% 35%;
+    --info: 136 39% 30%;
     --info-foreground: 0 0% 100%;
-    --warning: 37 65% 60%;
-    --warning-foreground: 200 53% 20%;
-    --success: 142 76% 36%;
+    --warning: 42 91% 66%;
+    --warning-foreground: 136 39% 14%;
+    --success: 136 50% 38%;
     --success-foreground: 0 0% 100%;
 
-    --sidebar-background: 200 53% 20%;
-    --sidebar-foreground: 60 22% 92%;
-    --sidebar-primary: 37 65% 60%;
-    --sidebar-primary-foreground: 200 53% 20%;
-    --sidebar-accent: 213 40% 28%;
-    --sidebar-accent-foreground: 60 22% 92%;
-    --sidebar-border: 200 40% 25%;
-    --sidebar-ring: 37 65% 60%;
+    --sidebar-background: 136 39% 18%;
+    --sidebar-foreground: 53 100% 88%;
+    --sidebar-primary: 42 91% 66%;
+    --sidebar-primary-foreground: 136 39% 18%;
+    --sidebar-accent: 136 32% 24%;
+    --sidebar-accent-foreground: 53 100% 88%;
+    --sidebar-border: 136 30% 22%;
+    --sidebar-ring: 42 91% 66%;
 
     --font-display: 'Playfair Display', Georgia, serif;
     --font-body: 'Libre Franklin', 'Source Sans 3', system-ui, sans-serif;
     --font-heading: 'Playfair Display', Georgia, serif;
     --font-vintage: 'Crimson Text', Georgia, serif;
 
-    --gradient-primary: linear-gradient(135deg, hsl(213, 56%, 35%), hsl(213, 50%, 42%));
-    --gradient-gold: linear-gradient(135deg, hsl(37, 65%, 60%), hsl(37, 70%, 50%));
-    --gradient-hero: linear-gradient(135deg, hsl(213, 56%, 35%), hsl(37, 65%, 60%));
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(60, 22%, 95%));
-    --gradient-accent: linear-gradient(135deg, hsl(37, 65%, 60%), hsl(213, 56%, 35%));
-    --shadow-card: 0 4px 24px -4px hsl(213 56% 35% / 0.1);
-    --shadow-elevated: 0 12px 40px -8px hsl(213 56% 35% / 0.15);
-    --shadow-hover: 0 8px 32px -8px hsl(213 56% 35% / 0.2);
-    --shadow-hero: 0 20px 60px -15px hsl(213 56% 35% / 0.3);
+    --gradient-primary: linear-gradient(135deg, hsl(136, 39%, 30%), hsl(136, 35%, 38%));
+    --gradient-gold: linear-gradient(135deg, hsl(42, 91%, 66%), hsl(42, 85%, 55%));
+    --gradient-hero: linear-gradient(135deg, hsl(136, 39%, 30%), hsl(42, 91%, 66%));
+    --gradient-card: linear-gradient(180deg, hsl(53 100% 96%), hsl(53, 100%, 90%));
+    --gradient-accent: linear-gradient(135deg, hsl(42, 91%, 66%), hsl(136, 39%, 30%));
+    --shadow-card: 0 4px 24px -4px hsl(136 39% 30% / 0.1);
+    --shadow-elevated: 0 12px 40px -8px hsl(136 39% 30% / 0.15);
+    --shadow-hover: 0 8px 32px -8px hsl(136 39% 30% / 0.2);
+    --shadow-hero: 0 20px 60px -15px hsl(136 39% 30% / 0.3);
   }
 
   .dark {
-    --background: 200 53% 8%;
-    --foreground: 60 22% 92%;
-    --card: 200 45% 12%;
-    --card-foreground: 60 22% 92%;
-    --popover: 200 45% 12%;
-    --popover-foreground: 60 22% 92%;
-    --primary: 37 65% 60%;
-    --primary-foreground: 200 53% 12%;
-    --secondary: 213 40% 28%;
-    --secondary-foreground: 60 22% 92%;
-    --muted: 200 30% 18%;
-    --muted-foreground: 60 15% 55%;
-    --accent: 37 65% 60%;
-    --accent-foreground: 200 53% 12%;
+    --background: 136 30% 8%;
+    --foreground: 53 100% 88%;
+    --card: 136 28% 12%;
+    --card-foreground: 53 100% 88%;
+    --popover: 136 28% 12%;
+    --popover-foreground: 53 100% 88%;
+    --primary: 119 28% 61%;
+    --primary-foreground: 136 39% 10%;
+    --secondary: 136 32% 24%;
+    --secondary-foreground: 53 100% 88%;
+    --muted: 136 20% 18%;
+    --muted-foreground: 119 20% 55%;
+    --accent: 42 91% 66%;
+    --accent-foreground: 136 39% 10%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 100%;
-    --border: 200 30% 20%;
-    --input: 200 30% 20%;
-    --ring: 37 65% 60%;
+    --border: 136 22% 20%;
+    --input: 136 22% 20%;
+    --ring: 42 91% 66%;
     --accent-red: 0 72% 51%;
     --accent-red-foreground: 0 0% 100%;
-    --info: 213 56% 45%;
+    --info: 136 39% 40%;
     --info-foreground: 0 0% 100%;
-    --warning: 37 65% 60%;
-    --warning-foreground: 200 53% 12%;
-    --success: 142 76% 36%;
+    --warning: 42 91% 66%;
+    --warning-foreground: 136 39% 10%;
+    --success: 136 50% 38%;
     --success-foreground: 0 0% 100%;
-    --sidebar-background: 200 53% 8%;
-    --sidebar-foreground: 60 22% 92%;
-    --sidebar-primary: 37 65% 60%;
-    --sidebar-primary-foreground: 200 53% 12%;
-    --sidebar-accent: 200 35% 15%;
-    --sidebar-accent-foreground: 60 22% 92%;
-    --sidebar-border: 200 30% 18%;
-    --sidebar-ring: 37 65% 60%;
+    --sidebar-background: 136 30% 7%;
+    --sidebar-foreground: 53 100% 88%;
+    --sidebar-primary: 42 91% 66%;
+    --sidebar-primary-foreground: 136 39% 10%;
+    --sidebar-accent: 136 26% 14%;
+    --sidebar-accent-foreground: 53 100% 88%;
+    --sidebar-border: 136 22% 16%;
+    --sidebar-ring: 42 91% 66%;
   }
 }
 
@@ -370,5 +370,283 @@
       linear-gradient(45deg, rgba(221,168,83,0.05) 25%, transparent 25%),
       linear-gradient(-45deg, rgba(221,168,83,0.05) 25%, transparent 25%);
     background-size: 30px 30px;
+  }
+
+  /* ===== Authentication Styles ===== */
+
+  /* Container and Layout */
+  .auth-container {
+    @apply min-h-screen flex bg-background;
+  }
+
+  .auth-panel {
+    @apply flex-1 flex flex-col justify-center px-6 py-12 lg:w-1/2 lg:px-16 xl:px-24;
+  }
+
+  /* Auth Hero Panel */
+  .auth-hero {
+    @apply hidden lg:flex w-1/2 text-primary-foreground p-12 relative overflow-hidden flex-col justify-between;
+    background: var(--gradient-hero);
+  }
+
+  .auth-hero::before {
+    content: '';
+    @apply absolute pointer-events-none;
+    top: -50%;
+    right: -30%;
+    width: 80%;
+    height: 150%;
+    background: radial-gradient(ellipse, rgba(247, 200, 92, 0.08) 0%, transparent 70%);
+  }
+
+  .auth-hero::after {
+    content: '';
+    @apply absolute pointer-events-none;
+    bottom: -20%;
+    left: -20%;
+    width: 60%;
+    height: 80%;
+    background: radial-gradient(ellipse, rgba(47, 107, 63, 0.25) 0%, transparent 70%);
+  }
+
+  /* Hero Content */
+  .hero-header,
+  .hero-content,
+  .hero-footer {
+    @apply relative z-10;
+  }
+
+  .hero-logo-wrapper {
+    @apply flex items-center gap-3 mb-2;
+  }
+
+  .hero-logo-box {
+    @apply w-12 h-12 rounded-xl flex items-center justify-center;
+    background: rgba(247, 200, 92, 0.2);
+  }
+
+  .hero-logo-icon {
+    @apply text-secondary;
+  }
+
+  .hero-title {
+    @apply text-2xl font-bold font-display tracking-tight;
+  }
+
+  .hero-subtitle {
+    @apply text-sm opacity-70 font-body;
+  }
+
+  .hero-main-title {
+    @apply text-4xl xl:text-5xl font-bold font-display leading-tight mb-8;
+  }
+
+  .hero-accent {
+    @apply text-secondary;
+  }
+
+  .hero-description {
+    @apply text-lg opacity-80 max-w-md font-body leading-relaxed mb-8;
+  }
+
+  .hero-features {
+    @apply flex flex-col gap-4 pt-4;
+  }
+
+  .hero-feature-item {
+    @apply flex items-center gap-3;
+  }
+
+  .feature-icon-box {
+    @apply w-10 h-10 rounded-lg flex items-center justify-center;
+    background: rgba(247, 200, 92, 0.15);
+  }
+
+  .feature-icon {
+    @apply text-secondary;
+  }
+
+  .feature-label {
+    @apply font-body font-medium opacity-90;
+  }
+
+  .hero-footer {
+    @apply text-sm opacity-50 font-body;
+  }
+
+  /* Auth Content */
+  .auth-content {
+    @apply w-full max-w-md mx-auto;
+  }
+
+  /* Logo for Mobile */
+  .logo-small {
+    @apply w-10 h-10 rounded-lg bg-primary flex items-center justify-center;
+  }
+
+  .logo-letter {
+    @apply text-secondary font-bold text-lg;
+  }
+
+  .logo-text {
+    @apply font-display font-bold text-xl text-foreground;
+  }
+
+  /* Titles and Text */
+  .auth-title {
+    @apply text-3xl font-display font-bold text-foreground mb-2;
+  }
+
+  .auth-subtitle {
+    @apply text-muted-foreground font-body mt-2;
+  }
+
+  .auth-footer-text {
+    @apply mt-8 text-center text-muted-foreground font-body;
+  }
+
+  /* Form Elements */
+  .form-group {
+    @apply space-y-2;
+  }
+
+  .form-label {
+    @apply block text-sm font-medium text-foreground font-body;
+  }
+
+  .input-university {
+    @apply h-12 rounded-lg border border-border bg-card px-4 text-base transition-all duration-200 w-full font-body focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring;
+  }
+
+  /* Password Input */
+  .password-input-wrapper {
+    @apply relative;
+  }
+
+  .password-toggle {
+    @apply absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground bg-transparent border-none cursor-pointer transition-colors duration-200 hover:text-foreground;
+  }
+
+  /* ID Card Upload */
+  .id-card-upload {
+    @apply flex flex-col items-center justify-center p-8 border-2 border-dashed border-border rounded-lg bg-muted/30 cursor-pointer transition-all duration-200 hover:border-primary hover:bg-muted/50;
+  }
+
+  .upload-icon {
+    @apply text-muted-foreground mb-2;
+  }
+
+  .upload-text {
+    @apply font-semibold text-foreground font-body block mb-1;
+  }
+
+  .upload-hint {
+    @apply text-sm text-muted-foreground font-body;
+  }
+
+  .id-card-preview {
+    @apply relative rounded-lg overflow-hidden border border-border;
+  }
+
+  .preview-image {
+    @apply w-full h-auto block;
+  }
+
+  .remove-button {
+    @apply absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center border-none cursor-pointer transition-colors duration-200 text-white;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .remove-button:hover {
+    background: rgba(0, 0, 0, 0.7);
+  }
+
+  /* Buttons */
+  .btn-primary-uni {
+    @apply h-12 rounded-lg font-semibold border-none cursor-pointer transition-all duration-200 flex items-center justify-center gap-2 w-full disabled:opacity-60 disabled:cursor-not-allowed;
+    background: var(--gradient-primary);
+    color: hsl(var(--secondary));
+  }
+
+  .btn-primary-uni:hover:not(:disabled) {
+    filter: brightness(1.1);
+    box-shadow: var(--shadow-elevated);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary-uni:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  /* Links */
+  .auth-link {
+    @apply text-primary font-semibold no-underline transition-colors duration-200 hover:opacity-80;
+  }
+
+  .forgot-password-link {
+    @apply text-sm font-medium text-primary no-underline transition-colors duration-200 hover:opacity-80;
+  }
+
+  .back-link {
+    @apply inline-flex items-center gap-1.5 text-sm text-muted-foreground no-underline mb-8 transition-colors duration-200 hover:text-foreground;
+  }
+
+  /* Spinner */
+  .spinner {
+    @apply w-5 h-5 border-2 rounded-full animate-spin;
+    border-color: rgba(247, 200, 92, 0.3);
+    border-top-color: hsl(var(--secondary));
+  }
+
+  /* Success Message */
+  .success-message {
+    @apply text-center;
+  }
+
+  .icon-wrapper {
+    @apply w-20 h-20 rounded-2xl flex items-center justify-center;
+    background: rgba(47, 107, 63, 0.1);
+  }
+
+  .icon-wrapper-success {
+    background: rgba(247, 200, 92, 0.2);
+  }
+
+  .icon-primary {
+    @apply text-primary;
+  }
+
+  .icon-success {
+    @apply text-secondary;
+  }
+
+  .email-display {
+    @apply font-semibold text-foreground font-body;
+  }
+
+  .small-text {
+    @apply text-sm text-muted-foreground font-body;
+  }
+
+  /* OTP Input */
+  .otp-container {
+    @apply grid grid-cols-6 gap-3 max-w-sm mx-auto;
+  }
+
+  .otp-input {
+    @apply w-full h-14 text-center text-2xl font-semibold border-2 border-border rounded-lg bg-card text-foreground transition-all duration-200 focus:outline-none focus:border-primary;
+  }
+
+  .resend-disabled {
+    @apply text-muted-foreground cursor-not-allowed no-underline;
+  }
+
+  /* Loading Container */
+  .loading-container {
+    @apply min-h-screen flex items-center justify-center bg-background;
+  }
+
+  .loading-container .spinner {
+    @apply w-12 h-12 border-4;
   }
 }

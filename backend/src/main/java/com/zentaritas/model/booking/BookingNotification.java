@@ -30,6 +30,12 @@ public class BookingNotification {
     @Column(name = "related_booking_id")
     private Long relatedBookingId;
 
+    @Column(name = "related_ticket_id")
+    private Long relatedTicketId;
+
+    @Column(name = "target_path")
+    private String targetPath;
+
     @Column(name = "title", nullable = false)
     private String title;
 
@@ -67,6 +73,11 @@ public class BookingNotification {
         BOOKING_CONFIRMED,    // Room booking confirmed
         BOOKING_PENDING,      // Booking waiting approval
         BOOKING_REJECTED,     // Booking rejected
+        TICKET_CREATED,       // New ticket has been created
+        TICKET_ASSIGNED,      // Ticket assigned to staff
+        TICKET_REPLY,         // New ticket reply in thread
+        TICKET_STATUS_UPDATED, // Ticket status updated
+        STUDENT_REGISTERED,   // New student account registered
         SWAP_REQUEST_RECEIVED, // Staff received swap request
         SWAP_REQUEST_APPROVED, // Swap request approved
         SWAP_REQUEST_REJECTED, // Swap request rejected

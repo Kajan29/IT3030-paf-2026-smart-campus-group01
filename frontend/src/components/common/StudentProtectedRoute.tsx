@@ -23,7 +23,7 @@ const StudentProtectedRoute = ({ children }: StudentProtectedRouteProps) => {
 
   if (user?.role !== 'STUDENT') {
     if (user?.role === 'ADMIN') {
-      return <Navigate to="/admin" replace />
+      return <Navigate to="/admin/dashboard" replace />
     }
     return <Navigate to="/" replace />
   }

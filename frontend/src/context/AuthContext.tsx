@@ -33,7 +33,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const currentUser = authService.getCurrentUser()
     if (currentUser) {
-      if (authService.isSessionExpired()) {
+      const hasToken = authService.isAuthenticated()
+      if (!hasToken || authService.isSessionExpired()) {
         authService.logout()
       } else {
         setUser(currentUser)
@@ -62,7 +63,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (authService.isSessionExpired()) {
         authService.logout()
         setUser(null)
-        if (!window.location.pathname.startsWith('/auth/')) {
+        const path = window.location.pathname
+        const publicPaths = ['/', '/about', '/contact', '/find-room', '/resources', '/gallery']
+        const isPublic = publicPaths.includes(path) || path.startsWith('/auth/')
+        if (!isPublic) {
           window.location.href = '/auth/login'
         }
       }
@@ -126,7 +130,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     logout,
     register,
     updateUser,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user && authService.isAuthenticated(),
     loading,
   }
 

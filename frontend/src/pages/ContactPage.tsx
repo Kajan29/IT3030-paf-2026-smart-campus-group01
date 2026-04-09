@@ -109,7 +109,7 @@ const ContactPage = () => {
 
   const trackingLink = isAuthenticated
     ? user?.role === "ADMIN"
-      ? "/admin"
+      ? "/admin/dashboard"
       : "/profile?section=tickets"
     : "/auth/login";
 

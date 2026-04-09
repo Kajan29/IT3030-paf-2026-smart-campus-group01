@@ -1,11 +1,15 @@
 package com.zentaritas.controller.booking;
 
+import com.zentaritas.controller.booking.dto.AdminNotificationRequest;
 import com.zentaritas.model.auth.User;
 import com.zentaritas.model.booking.BookingNotification;
 import com.zentaritas.repository.auth.UserRepository;
 import com.zentaritas.repository.booking.BookingNotificationRepository;
+import com.zentaritas.service.booking.NotificationService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -27,6 +31,7 @@ public class NotificationController {
 
     private final BookingNotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     // ============= NOTIFICATION MANAGEMENT =============
 
@@ -37,8 +42,7 @@ public class NotificationController {
     @GetMapping
     @PreAuthorize("hasAnyRole('STUDENT', 'ACADEMIC_STAFF', 'NON_ACADEMIC_STAFF', 'ADMIN')")
     public ResponseEntity<List<BookingNotification>> getNotifications(Authentication authentication) {
-        User user = userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        User user = getCurrentUser(authentication);
 
         log.debug("Fetching notifications for user {}", user.getId());
         return ResponseEntity.ok(notificationRepository.findNotificationsByUser(user.getId()));
@@ -51,8 +55,7 @@ public class NotificationController {
     @GetMapping("/unread")
     @PreAuthorize("hasAnyRole('STUDENT', 'ACADEMIC_STAFF', 'NON_ACADEMIC_STAFF', 'ADMIN')")
     public ResponseEntity<List<BookingNotification>> getUnreadNotifications(Authentication authentication) {
-        User user = userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        User user = getCurrentUser(authentication);
 
         log.debug("Fetching unread notifications for user {}", user.getId());
         return ResponseEntity.ok(notificationRepository.findUnreadNotifications(user.getId()));
@@ -65,8 +68,7 @@ public class NotificationController {
     @GetMapping("/unread/count")
     @PreAuthorize("hasAnyRole('STUDENT', 'ACADEMIC_STAFF', 'NON_ACADEMIC_STAFF', 'ADMIN')")
     public ResponseEntity<Map<String, Long>> countUnreadNotifications(Authentication authentication) {
-        User user = userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        User user = getCurrentUser(authentication);
 
         Long unreadCount = notificationRepository.countUnreadNotifications(user.getId());
         log.debug("Unread notifications count for user {}: {}", user.getId(), unreadCount);
@@ -80,12 +82,21 @@ public class NotificationController {
      */
     @PutMapping("/{notificationId}/read")
     @PreAuthorize("hasAnyRole('STUDENT', 'ACADEMIC_STAFF', 'NON_ACADEMIC_STAFF', 'ADMIN')")
-    public ResponseEntity<?> markAsRead(@PathVariable Long notificationId) {
+    public ResponseEntity<?> markAsRead(@PathVariable Long notificationId, Authentication authentication) {
         log.info("Marking notification {} as read", notificationId);
+
+        User user = getCurrentUser(authentication);
 
         try {
             BookingNotification notification = notificationRepository.findById(notificationId)
                     .orElseThrow(() -> new IllegalArgumentException("Notification not found"));
+
+            if (!canAccessNotification(user, notification)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                        "success", false,
+                        "error", "You do not have permission to update this notification"
+                ));
+            }
 
             notification.setIsRead(true);
             notification.setReadAt(LocalDateTime.now());
@@ -110,8 +121,7 @@ public class NotificationController {
     @PutMapping("/read-all")
     @PreAuthorize("hasAnyRole('STUDENT', 'ACADEMIC_STAFF', 'NON_ACADEMIC_STAFF', 'ADMIN')")
     public ResponseEntity<?> markAllAsRead(Authentication authentication) {
-        User user = userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        User user = getCurrentUser(authentication);
 
         log.info("Marking all notifications as read for user {}", user.getId());
 
@@ -142,12 +152,14 @@ public class NotificationController {
      */
     @GetMapping("/type/{type}")
     @PreAuthorize("hasAnyRole('STUDENT', 'ACADEMIC_STAFF', 'NON_ACADEMIC_STAFF', 'ADMIN')")
-    public ResponseEntity<List<BookingNotification>> getNotificationsByType(@PathVariable String type) {
+    public ResponseEntity<List<BookingNotification>> getNotificationsByType(@PathVariable String type, Authentication authentication) {
         log.debug("Fetching notifications of type {}", type);
+
+        User user = getCurrentUser(authentication);
 
         try {
             BookingNotification.NotificationType notificationType = BookingNotification.NotificationType.valueOf(type);
-            return ResponseEntity.ok(notificationRepository.findByType(notificationType));
+            return ResponseEntity.ok(notificationRepository.findByUserAndType(user.getId(), notificationType));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
         }
@@ -159,10 +171,22 @@ public class NotificationController {
      */
     @DeleteMapping("/{notificationId}")
     @PreAuthorize("hasAnyRole('STUDENT', 'ACADEMIC_STAFF', 'NON_ACADEMIC_STAFF', 'ADMIN')")
-    public ResponseEntity<?> deleteNotification(@PathVariable Long notificationId) {
+    public ResponseEntity<?> deleteNotification(@PathVariable Long notificationId, Authentication authentication) {
         log.info("Deleting notification {}", notificationId);
 
+        User user = getCurrentUser(authentication);
+
         try {
+            BookingNotification notification = notificationRepository.findById(notificationId)
+                    .orElseThrow(() -> new IllegalArgumentException("Notification not found"));
+
+            if (!canAccessNotification(user, notification)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                        "success", false,
+                        "error", "You do not have permission to delete this notification"
+                ));
+            }
+
             notificationRepository.deleteById(notificationId);
             return ResponseEntity.ok(Map.of(
                     "success", true,
@@ -183,8 +207,7 @@ public class NotificationController {
     @DeleteMapping("/delete-all")
     @PreAuthorize("hasAnyRole('STUDENT', 'ACADEMIC_STAFF', 'NON_ACADEMIC_STAFF', 'ADMIN')")
     public ResponseEntity<?> deleteAllNotifications(Authentication authentication) {
-        User user = userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        User user = getCurrentUser(authentication);
 
         log.info("Deleting all notifications for user {}", user.getId());
 
@@ -214,5 +237,38 @@ public class NotificationController {
     public ResponseEntity<List<BookingNotification>> getPendingNotifications() {
         log.debug("Fetching all pending notifications");
         return ResponseEntity.ok(notificationRepository.findUnsentNotifications());
+    }
+
+    @PostMapping("/admin/send")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> sendAdminNotification(@Valid @RequestBody AdminNotificationRequest request) {
+        int sentCount = notificationService.broadcastAdminNotification(
+                request.getAudience().name(),
+                request.getUserIds(),
+                request.getType(),
+                request.getTitle(),
+                request.getMessage(),
+                request.getTargetPath()
+        );
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Notification sent",
+                "count", sentCount
+        ));
+    }
+
+    private User getCurrentUser(Authentication authentication) {
+        String principal = authentication.getName();
+        return userRepository.findByEmailIgnoreCase(principal)
+                .orElseGet(() -> userRepository.findByUsername(principal)
+                        .orElseThrow(() -> new IllegalArgumentException("User not found")));
+    }
+
+    private boolean canAccessNotification(User actor, BookingNotification notification) {
+        if (actor.getRole() == com.zentaritas.model.auth.Role.ADMIN) {
+            return true;
+        }
+        return notification.getUser() != null && notification.getUser().getId().equals(actor.getId());
     }
 }

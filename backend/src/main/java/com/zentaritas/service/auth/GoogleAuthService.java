@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -59,6 +61,7 @@ public class GoogleAuthService {
             if (email == null || email.isBlank()) {
                 throw new RuntimeException("Google token does not contain an email address");
             }
+            String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
 
             if (!Boolean.TRUE.equals(payload.getEmailVerified())) {
                 throw new RuntimeException("Google email address is not verified");
@@ -71,32 +74,28 @@ public class GoogleAuthService {
 
             // Prefer existing Google-linked account, then fallback to email match.
             User user = userRepository.findByGoogleId(googleId)
-                    .orElseGet(() -> userRepository.findByEmail(email)
-                    .orElseGet(() -> {
-                        User newUser = User.builder()
-                                .email(email)
-                                .username(email)
-                                .password(passwordEncoder.encode(UUID.randomUUID().toString()))
-                                .firstName(firstName)
-                                .lastName(lastName)
-                                .role(role)
-                                .googleId(googleId)
-                                .profilePicture(pictureUrl)
-                                .isVerified(true) // Google accounts are pre-verified
-                                .isActive(true)
-                                .build();
-                        return userRepository.save(newUser);
-                    }));
+                    .orElseGet(() -> findByEmailIgnoreCase(normalizedEmail)
+                            .orElseGet(() -> createGoogleUser(normalizedEmail, firstName, lastName, role, googleId, pictureUrl)));
 
-            // Update Google ID if not set
-            if (user.getGoogleId() == null) {
+            boolean requiresUpdate = false;
+
+            // Link Google ID if this account was previously password-only.
+            if (user.getGoogleId() == null || user.getGoogleId().isBlank()) {
                 user.setGoogleId(googleId);
+                requiresUpdate = true;
+            }
+
+            if (!Boolean.TRUE.equals(user.getIsVerified())) {
                 user.setIsVerified(true);
-                userRepository.save(user);
+                requiresUpdate = true;
             }
 
             if (user.getUsername() == null || user.getUsername().isBlank()) {
                 user.setUsername(user.getEmail());
+                requiresUpdate = true;
+            }
+
+            if (requiresUpdate) {
                 userRepository.save(user);
             }
 
@@ -139,6 +138,27 @@ public class GoogleAuthService {
         }
 
         return configured;
+    }
+
+    private Optional<User> findByEmailIgnoreCase(String normalizedEmail) {
+        return userRepository.findByEmailIgnoreCase(normalizedEmail);
+    }
+
+    private User createGoogleUser(String normalizedEmail, String firstName, String lastName, Role role,
+                                  String googleId, String pictureUrl) {
+        User newUser = User.builder()
+                .email(normalizedEmail)
+                .username(normalizedEmail)
+                .password(passwordEncoder.encode(UUID.randomUUID().toString()))
+                .firstName(firstName)
+                .lastName(lastName)
+                .role(role)
+                .googleId(googleId)
+                .profilePicture(pictureUrl)
+                .isVerified(true) // Google accounts are pre-verified
+                .isActive(true)
+                .build();
+        return userRepository.save(newUser);
     }
 
     private String firstNonBlank(String primary, String fallback) {

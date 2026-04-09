@@ -16,6 +16,7 @@ import facilityService, { RoomUpsertPayload } from "@/services/facilityService";
 import { Breadcrumb } from "@/components/common/Breadcrumb";
 import { RoomCard } from "@/components/common/RoomCard";
 import { AdminLoadingState } from "@/components/admin/dashboard/AdminLoadingState";
+import { useAuth } from "@/context/AuthContext";
 
 interface RoomManagementPageProps {
   selectedBuildingId?: string | null;
@@ -113,6 +114,9 @@ export const RoomManagementPage = ({
   selectedFloorId,
   onOpenRoomDetails,
 }: RoomManagementPageProps) => {
+  const { isAuthenticated, user, loading: authLoading } = useAuth();
+  const canManage = isAuthenticated && user?.role === "ADMIN";
+
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [floors, setFloors] = useState<Floor[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -143,8 +147,20 @@ export const RoomManagementPage = ({
   };
 
   useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
+    if (!canManage) {
+      setLoading(false);
+      setBuildings([]);
+      setFloors([]);
+      setRooms([]);
+      return;
+    }
+
     void loadData();
-  }, []);
+  }, [authLoading, canManage]);
 
   useEffect(() => {
     if (selectedBuildingId) {
@@ -383,6 +399,17 @@ export const RoomManagementPage = ({
         title="Loading Room Management"
         subtitle="Collecting room inventory, status, and facility readiness data."
       />
+    );
+  }
+
+  if (!canManage) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-6">
+        <h2 className="text-xl font-semibold text-foreground">Room Management</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          You do not have permission to manage rooms in this panel.
+        </p>
+      </div>
     );
   }
 

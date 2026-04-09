@@ -6,13 +6,16 @@ import com.zentaritas.exception.ResourceNotFoundException;
 import com.zentaritas.model.auth.Role;
 import com.zentaritas.model.auth.User;
 import com.zentaritas.model.auth.VerificationToken;
+import com.zentaritas.model.booking.BookingNotification;
 import com.zentaritas.repository.auth.UserRepository;
 import com.zentaritas.repository.auth.VerificationTokenRepository;
+import com.zentaritas.service.booking.NotificationService;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -23,6 +26,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.Locale;
 import java.util.Random;
 
 @Service
@@ -35,6 +39,7 @@ public class AuthService implements UserDetailsService {
     private final JwtService jwtService;
         private final RefreshTokenService refreshTokenService;
     private final EmailService emailService;
+    private final NotificationService notificationService;
     private final AuthenticationManager authenticationManager;
 
     public AuthService(
@@ -44,6 +49,7 @@ public class AuthService implements UserDetailsService {
             JwtService jwtService,
                         RefreshTokenService refreshTokenService,
             EmailService emailService,
+                NotificationService notificationService,
             @Lazy AuthenticationManager authenticationManager
     ) {
         this.userRepository = userRepository;
@@ -52,6 +58,7 @@ public class AuthService implements UserDetailsService {
         this.jwtService = jwtService;
                 this.refreshTokenService = refreshTokenService;
         this.emailService = emailService;
+        this.notificationService = notificationService;
         this.authenticationManager = authenticationManager;
     }
 
@@ -72,15 +79,17 @@ public class AuthService implements UserDetailsService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        String normalizedEmail = normalizeEmail(request.getEmail());
+
         // Check if user already exists
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already registered");
+        if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
+            throw new RuntimeException("Email is already registered. Please log in instead.");
         }
 
         // Create new user (only students can register)
         User user = User.builder()
-                .email(request.getEmail())
-                .username(request.getEmail())
+                .email(normalizedEmail)
+                .username(normalizedEmail)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
@@ -90,6 +99,15 @@ public class AuthService implements UserDetailsService {
                 .build();
 
         userRepository.save(user);
+
+        notificationService.notifyAdmins(
+            BookingNotification.NotificationType.STUDENT_REGISTERED,
+            "New Student Registered",
+            user.getFirstName() + " " + user.getLastName() + " (" + user.getEmail() + ") created a new account.",
+            null,
+            null,
+            "/admin?view=users"
+        );
 
         // Generate and send verification code
         String verificationCode = generateVerificationCode();
@@ -108,14 +126,19 @@ public class AuthService implements UserDetailsService {
     }
 
     public AuthResponse login(LoginRequest request) {
-        authenticationManager.authenticate(
+        String normalizedEmail = normalizeEmail(request.getEmail());
+        try {
+            authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()
+                    normalizedEmail,
+                    request.getPassword()
                 )
-        );
+            );
+        } catch (AuthenticationException ex) {
+            throw new RuntimeException("Invalid email or password.");
+        }
 
-        User user = userRepository.findByEmailIgnoreCase(request.getEmail())
+        User user = userRepository.findByEmailIgnoreCase(normalizedEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (!user.getIsVerified()) {
@@ -192,12 +215,13 @@ public class AuthService implements UserDetailsService {
 
     @Transactional
     public void forgotPassword(ForgotPasswordRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with this email"));
+        String normalizedEmail = normalizeEmail(request.getEmail());
+        User user = userRepository.findByEmailIgnoreCase(normalizedEmail)
+            .orElseThrow(() -> new ResourceNotFoundException("No account found with this email address."));
 
         // Delete old password reset tokens
         verificationTokenRepository.deleteByEmailAndTokenType(
-                request.getEmail(),
+            user.getEmail(),
                 VerificationToken.TokenType.PASSWORD_RESET
         );
 
@@ -207,6 +231,10 @@ public class AuthService implements UserDetailsService {
         emailService.sendPasswordResetEmail(user.getEmail(), verificationCode);
 
         log.info("Password reset code sent to: {}", user.getEmail());
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase(Locale.ROOT);
     }
 
     @Transactional
