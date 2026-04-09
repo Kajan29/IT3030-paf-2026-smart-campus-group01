@@ -27,22 +27,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ResourceManagementService {
-
-    private static final Set<String> ALLOWED_RESOURCE_TYPES = Set.of(
-            "chair",
-            "table",
-            "projector",
-            "ac_unit",
-            "light",
-            "power_plug",
-            "window"
-    );
+    private static final int MAX_RESOURCE_TYPE_LENGTH = 100;
 
     private final BuildingRepository buildingRepository;
     private final FloorRepository floorRepository;
@@ -86,6 +76,10 @@ public class ResourceManagementService {
         String name = sanitizeName(request.getName());
         String type = normalizeAndValidateType(request.getType());
 
+        if (roomResourceRepository.existsByRoomIdAndType(room.getId(), type)) {
+            throw new IllegalArgumentException("This resource type already exists in the selected room. Please edit the existing one.");
+        }
+
         RoomResource resource = RoomResource.builder()
             .name(name)
             .type(type)
@@ -116,6 +110,10 @@ public class ResourceManagementService {
         Room room = getRoomEntity(request.getRoomId());
         String name = sanitizeName(request.getName());
         String type = normalizeAndValidateType(request.getType());
+
+        if (roomResourceRepository.existsByRoomIdAndTypeAndIdNot(room.getId(), type, resource.getId())) {
+            throw new IllegalArgumentException("This resource type already exists in the selected room. Please edit the existing one.");
+        }
 
         resource.setName(name);
         resource.setType(type);
@@ -226,8 +224,12 @@ public class ResourceManagementService {
                 ? ""
                 : type.trim().toLowerCase(Locale.ROOT).replace(" ", "_");
 
-        if (!ALLOWED_RESOURCE_TYPES.contains(normalized)) {
-            throw new IllegalArgumentException("Invalid resource type. Allowed values: chair, table, projector, ac_unit, light, power_plug, window");
+        if (normalized.isBlank()) {
+            throw new IllegalArgumentException("Resource type is required");
+        }
+
+        if (normalized.length() > MAX_RESOURCE_TYPE_LENGTH) {
+            throw new IllegalArgumentException("Resource type must not exceed 100 characters");
         }
 
         return normalized;

@@ -7,4 +7,8 @@ import java.util.List;
 
 public interface RoomResourceRepository extends JpaRepository<RoomResource, Long> {
     List<RoomResource> findByRoomIdOrderByNameAsc(Long roomId);
+
+    boolean existsByRoomIdAndType(Long roomId, String type);
+
+    boolean existsByRoomIdAndTypeAndIdNot(Long roomId, String type, Long id);
 }
