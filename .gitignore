@@ -68,9 +68,9 @@ tmp/
 *.swp
 *~.nib
 
-# VS Code
-.vscode/
-!.vscode/extensions.json
+# # VS Code
+# .vscode/
+# !.vscode/extensions.json
 
 # NetBeans
 /nbproject/private/
