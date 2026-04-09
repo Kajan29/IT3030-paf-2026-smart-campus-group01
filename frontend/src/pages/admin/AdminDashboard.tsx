@@ -1,4 +1,5 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Sidebar } from "@/components/admin/dashboard/Sidebar";
 import { Navbar } from "@/components/admin/dashboard/Navbar";
 import { DashboardOverview } from "@/components/admin/dashboard/DashboardOverview";
@@ -10,9 +11,9 @@ import { BuildingDetailsPage } from "@/components/admin/dashboard/BuildingDetail
 import { RoomDetailsPage } from "@/components/admin/dashboard/RoomDetailsPage";
 import RoomAvailabilityManagementPage from "@/components/admin/dashboard/RoomAvailabilityManagementPage";
 import { BookingsPage } from "@/components/admin/dashboard/BookingsPage";
+import { TicketManagementPage } from "@/components/dashboard/TicketManagementPage";
 import { ReportsAnalyticsPage } from "@/components/admin/dashboard/ReportsAnalyticsPage";
 import { SettingsPage } from "@/components/admin/dashboard/SettingsPage";
-import { ResourceManagementPage } from "@/components/admin/dashboard/ResourceManagementPage";
 import { SwapRequestManagementPage } from "@/pages/admin/SwapRequestManagementPage";
 import { NotificationsPage } from "@/pages/admin/NotificationsPage";
 import { Menu } from "lucide-react";
@@ -21,6 +22,7 @@ import { cn } from "@/lib/utils";
 const pageTitles: Record<string, string> = {
   dashboard: "Dashboard",
   users: "User Management",
+  tickets: "Ticket Management",
   buildings: "Building Management",
   floors: "Floor Management",
   rooms: "Room Management",
@@ -29,20 +31,29 @@ const pageTitles: Record<string, string> = {
   buildingDetails: "Building Details",
   roomDetails: "Room Details",
   bookings: "Bookings",
-  swapRequests: "Staff Override Requests",
   notifications: "Notifications",
   reports: "Reports & Analytics",
   settings: "Settings",
 };
 
 const AdminDashboard = () => {
-  const [activeItem, setActiveItem] = useState("dashboard");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialView = searchParams.get("view");
+  const [activeItem, setActiveItem] = useState(() =>
+    initialView && Object.prototype.hasOwnProperty.call(pageTitles, initialView)
+      ? initialView
+      : "dashboard"
+  );
   const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
   const [selectedFloorId, setSelectedFloorId] = useState<string | null>(null);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    void facilityService.preloadFacilitySnapshot();
+  }, []);
 
   const toggleDark = () => {
     setDarkMode((d) => {
@@ -89,6 +100,8 @@ const AdminDashboard = () => {
         return <DashboardOverview />;
       case "users":
         return <UserManagementPage />;
+      case "tickets":
+        return <TicketManagementPage />;
       case "buildings":
         return (
           <BuildingManagementPage
@@ -129,8 +142,6 @@ const AdminDashboard = () => {
         return <RoomDetailsPage roomId={selectedRoomId} onBack={() => setActiveItem("availability")} />;
       case "bookings":
         return <BookingsPage />;
-      case "swapRequests":
-        return <SwapRequestManagementPage />;
       case "notifications":
         return <NotificationsPage />;
       case "reports":
@@ -156,7 +167,7 @@ const AdminDashboard = () => {
       <div className="hidden md:flex">
         <Sidebar
           activeItem={navActiveItem}
-          onItemClick={setActiveItem}
+          onItemClick={handleSetActiveItem}
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed((c) => !c)}
         />
@@ -168,7 +179,7 @@ const AdminDashboard = () => {
       )}>
         <Sidebar
           activeItem={navActiveItem}
-          onItemClick={(id) => { setActiveItem(id); setMobileSidebarOpen(false); }}
+          onItemClick={(id) => { handleSetActiveItem(id); setMobileSidebarOpen(false); }}
           collapsed={false}
           onToggle={() => setMobileSidebarOpen(false)}
         />

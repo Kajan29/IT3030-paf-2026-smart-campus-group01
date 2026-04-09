@@ -184,6 +184,18 @@ public class BookingController {
     }
 
     /**
+     * Get all bookings for admin management
+     * GET /api/bookings/admin/all?status=PENDING
+     */
+    @GetMapping("/admin/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<RoomBooking>> getAllBookingsForAdmin(
+            @RequestParam(required = false) RoomBooking.BookingStatus status) {
+        log.debug("Fetching all bookings for admin, status={}", status);
+        return ResponseEntity.ok(bookingService.getAllBookings(status));
+    }
+
+    /**
      * Get bookings for current user
      * GET /api/bookings/my-bookings
      */

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-labelledby="title desc">
+  <title id="title">Library Study Hall Mock</title>
+  <desc id="desc">Illustration of a library study hall with bookshelves and desks.</desc>
+  <rect width="1200" height="800" fill="#f8fafc" />
+  <rect y="580" width="1200" height="220" fill="#dbeafe" />
+  <rect x="90" y="140" width="220" height="420" rx="10" fill="#334155" />
+  <rect x="350" y="140" width="220" height="420" rx="10" fill="#334155" />
+  <rect x="610" y="140" width="220" height="420" rx="10" fill="#334155" />
+  <rect x="870" y="140" width="220" height="420" rx="10" fill="#334155" />
+  <g fill="#fde68a">
+    <rect x="120" y="190" width="160" height="28" rx="4" />
+    <rect x="380" y="190" width="160" height="28" rx="4" />
+    <rect x="640" y="190" width="160" height="28" rx="4" />
+    <rect x="900" y="190" width="160" height="28" rx="4" />
+    <rect x="120" y="260" width="160" height="28" rx="4" />
+    <rect x="380" y="260" width="160" height="28" rx="4" />
+    <rect x="640" y="260" width="160" height="28" rx="4" />
+    <rect x="900" y="260" width="160" height="28" rx="4" />
+  </g>
+  <rect x="300" y="600" width="600" height="80" rx="10" fill="#93c5fd" />
+  <rect x="360" y="560" width="40" height="120" fill="#64748b" />
+  <rect x="800" y="560" width="40" height="120" fill="#64748b" />
+  <text x="60" y="95" font-size="46" font-family="Georgia, serif" fill="#1e293b">Library Study Hall</text>
+</svg>

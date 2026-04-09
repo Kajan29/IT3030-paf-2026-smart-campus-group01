@@ -1,4 +1,4 @@
-﻿import { Routes, Route } from 'react-router-dom'
+﻿import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
@@ -8,9 +8,12 @@ import AboutPage from './pages/AboutPage'
 import ContactPage from './pages/ContactPage'
 import BookRoomPage from './pages/BookingsPage'
 import ResourcesPage from './pages/CoursesPage'
+import GalleryPage from './pages/GalleryPage'
+import RoomFinderPage from './pages/RoomFinderPage'
 import NotFoundPage from './pages/NotFoundPage'
 import ProfilePage from './pages/ProfilePage'
 import SettingsPage from './pages/SettingsPage'
+import MyTicketsPage from './pages/MyTicketsPage'
 
 // Auth Pages
 import LoginPage from './pages/auth/LoginPage'
@@ -20,10 +23,15 @@ import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard'
-import AdminPage from './pages/admin/AdminPage'
 import AdminProtectedRoute from './components/admin/AdminProtectedRoute'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import GuestOnlyRoute from './components/common/GuestOnlyRoute'
+import StudentProtectedRoute from './components/common/StudentProtectedRoute'
+
+function LegacyAdminDashboardRedirect(): JSX.Element {
+  const location = useLocation()
+  return <Navigate to={`/admin${location.search}${location.hash}`} replace />
+}
 
 function App(): JSX.Element {
   return (
@@ -35,8 +43,17 @@ function App(): JSX.Element {
         {/* Main Routes */}
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
-        <Route path="/book-room" element={<BookRoomPage />} />
+        <Route
+          path="/book-room"
+          element={
+            <StudentProtectedRoute>
+              <BookRoomPage />
+            </StudentProtectedRoute>
+          }
+        />
+        <Route path="/find-room" element={<RoomFinderPage />} />
         <Route path="/resources" element={<ResourcesPage />} />
+        <Route path="/gallery" element={<GalleryPage />} />
 
         {/* Auth Routes */}
         <Route
@@ -89,24 +106,25 @@ function App(): JSX.Element {
             </ProtectedRoute>
           } 
         />
+        <Route
+          path="/my-tickets"
+          element={
+            <ProtectedRoute>
+              <MyTicketsPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Admin Routes */}
         <Route 
           path="/admin" 
           element={
             <AdminProtectedRoute>
-              <AdminPage />
-            </AdminProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/admin/dashboard" 
-          element={
-            <AdminProtectedRoute>
               <AdminDashboard />
             </AdminProtectedRoute>
           } 
         />
+        <Route path="/admin/dashboard" element={<LegacyAdminDashboardRedirect />} />
 
         {/* Catch all route */}
         <Route path="*" element={<NotFoundPage />} />

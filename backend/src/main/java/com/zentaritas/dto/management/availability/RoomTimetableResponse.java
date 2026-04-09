@@ -14,6 +14,12 @@ import java.time.LocalTime;
 @AllArgsConstructor
 public class RoomTimetableResponse {
     private Long id;
+    private Long buildingId;
+    private String buildingCode;
+    private String buildingName;
+    private Long floorId;
+    private Integer floorNumber;
+    private String floorName;
     private Long roomId;
     private String roomCode;
     private String roomName;

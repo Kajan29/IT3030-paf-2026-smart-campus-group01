@@ -25,4 +25,15 @@ public interface RoomTimetableRepository extends JpaRepository<RoomTimetableEntr
             @Param("roomId") Long roomId,
             @Param("dayOfWeek") String dayOfWeek
     );
+
+    @Query("SELECT e FROM RoomTimetableEntry e WHERE e.active = true AND (" +
+            "LOWER(COALESCE(e.lecturerEmail, '')) = LOWER(:email) OR " +
+            "LOWER(COALESCE(e.lecturerName, '')) = LOWER(:fullName) OR " +
+            "LOWER(COALESCE(e.lecturerName, '')) = LOWER(:username)) " +
+            "ORDER BY e.dayOfWeek ASC, e.startTime ASC")
+    List<RoomTimetableEntry> findActiveEntriesForLecturer(
+            @Param("email") String email,
+            @Param("fullName") String fullName,
+            @Param("username") String username
+    );
 }

@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, Search, Sun, Moon, ChevronDown, User, Settings, LogOut, ShieldCheck } from "lucide-react";
+import { Bell, Search, Sun, Moon, ChevronDown, User, Settings, LogOut, ShieldCheck, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { mockNotifications } from "@/data/mockData";
 import { useAuth } from "@/context/AuthContext";
+import notificationService from "@/services/notificationService";
+import type { BookingNotification } from "@/types/booking";
+import { resolveNotificationPath } from "@/utils/notificationNavigation";
 
 interface NavbarProps {
   darkMode: boolean;
@@ -12,23 +14,89 @@ interface NavbarProps {
 
 export const Navbar = ({ darkMode, onToggleDark }: NavbarProps) => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
+  const [notifications, setNotifications] = useState<BookingNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate("/auth/login");
   };
 
-  const unreadCount = mockNotifications.filter((n) => !n.read).length;
+  const loadNotifications = async () => {
+    setLoadingNotifications(true);
+    try {
+      const [list, unread] = await Promise.all([
+        notificationService.getNotifications(),
+        notificationService.getUnreadCount(),
+      ]);
+      setNotifications(list.slice(0, 8));
+      setUnreadCount(unread);
+    } catch {
+      setNotifications([]);
+      setUnreadCount(0);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
 
-  const notifTypeColor: Record<string, string> = {
-    info: "bg-info",
-    warning: "bg-warning",
-    error: "bg-destructive",
-    success: "bg-success",
+  useEffect(() => {
+    void loadNotifications();
+
+    const interval = window.setInterval(() => {
+      void loadNotifications();
+    }, 25000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const notifTypeColor: Record<BookingNotification["type"], string> = {
+    BOOKING_CONFIRMED: "bg-success",
+    BOOKING_PENDING: "bg-warning",
+    BOOKING_REJECTED: "bg-destructive",
+    TICKET_CREATED: "bg-info",
+    TICKET_ASSIGNED: "bg-primary",
+    TICKET_REPLY: "bg-info",
+    TICKET_STATUS_UPDATED: "bg-warning",
+    STUDENT_REGISTERED: "bg-primary",
+    SWAP_REQUEST_RECEIVED: "bg-info",
+    SWAP_REQUEST_APPROVED: "bg-success",
+    SWAP_REQUEST_REJECTED: "bg-destructive",
+    BOOKING_REMINDER: "bg-warning",
+    BOOKING_CANCELLED: "bg-destructive",
+    ADMIN_ALERT: "bg-primary",
+  };
+
+  const formatNotificationTime = (value: string) => {
+    const createdAt = new Date(value).getTime();
+    if (Number.isNaN(createdAt)) {
+      return "Just now";
+    }
+
+    const diffMinutes = Math.floor((Date.now() - createdAt) / 60000);
+    if (diffMinutes < 1) return "Just now";
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
+  };
+
+  const handleNotificationClick = async (notification: BookingNotification) => {
+    if (!notification.isRead) {
+      try {
+        await notificationService.markAsRead(notification.id);
+      } catch {
+        // Continue with navigation even if mark-as-read fails.
+      }
+    }
+
+    setShowNotifications(false);
+    navigate(resolveNotificationPath(notification, "ADMIN"));
   };
 
   return (
@@ -95,25 +163,41 @@ export const Navbar = ({ darkMode, onToggleDark }: NavbarProps) => {
                 <span className="text-xs text-muted-foreground">{unreadCount} unread</span>
               </div>
               <div className="max-h-72 overflow-y-auto divide-y divide-border">
-                {mockNotifications.map((notif) => (
-                  <div
-                    key={notif.id}
-                    className={cn(
-                      "flex gap-3 p-4 hover:bg-muted/40 cursor-pointer transition-colors",
-                      !notif.read && "bg-primary/5"
-                    )}
-                  >
-                    <div className={cn("w-2 h-2 rounded-full mt-1.5 flex-shrink-0", notifTypeColor[notif.type])} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground">{notif.title}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{notif.message}</p>
-                      <p className="text-[10px] text-muted-foreground mt-1">{notif.time}</p>
-                    </div>
+                {loadingNotifications ? (
+                  <div className="p-4 text-xs text-muted-foreground flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading notifications...
                   </div>
-                ))}
+                ) : notifications.length === 0 ? (
+                  <div className="p-4 text-xs text-muted-foreground">No notifications yet.</div>
+                ) : (
+                  notifications.map((notif) => (
+                    <button
+                      key={notif.id}
+                      onClick={() => void handleNotificationClick(notif)}
+                      className={cn(
+                        "w-full text-left flex gap-3 p-4 hover:bg-muted/40 cursor-pointer transition-colors",
+                        !notif.isRead && "bg-primary/5"
+                      )}
+                    >
+                      <div className={cn("w-2 h-2 rounded-full mt-1.5 flex-shrink-0", notifTypeColor[notif.type])} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground">{notif.title}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{notif.message}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">{formatNotificationTime(notif.createdAt)}</p>
+                      </div>
+                    </button>
+                  ))
+                )}
               </div>
               <div className="p-3 border-t border-border">
-                <button className="w-full text-center text-xs font-medium text-primary hover:underline">
+                <button
+                  className="w-full text-center text-xs font-medium text-primary hover:underline"
+                  onClick={() => {
+                    setShowNotifications(false);
+                    navigate("/admin?view=notifications");
+                  }}
+                >
                   View all notifications
                 </button>
               </div>
@@ -133,8 +217,10 @@ export const Navbar = ({ darkMode, onToggleDark }: NavbarProps) => {
               AD
             </div>
             <div className="hidden md:block text-left">
-              <p className="text-sm font-semibold text-foreground leading-none">Admin User</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">Super Admin</p>
+              <p className="text-sm font-semibold text-foreground leading-none">
+                {user?.firstName || "Admin"} {user?.lastName || "User"}
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{user?.role || "ADMIN"}</p>
             </div>
             <ChevronDown size={14} className="text-muted-foreground group-hover:text-foreground transition-all duration-200 hidden md:block" />
           </button>
@@ -146,7 +232,7 @@ export const Navbar = ({ darkMode, onToggleDark }: NavbarProps) => {
                   AD
                 </div>
                 <p className="font-semibold text-foreground text-sm">Admin User</p>
-                <p className="text-xs text-muted-foreground">admin@unihub.edu</p>
+                <p className="text-xs text-muted-foreground">{user?.email || "admin@zentaritas.com"}</p>
               </div>
               <div className="p-2">
                 {[

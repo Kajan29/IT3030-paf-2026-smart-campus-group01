@@ -28,6 +28,7 @@ public class BookingService {
     private final BookingValidationRulesService rulesService;
     private final BookingNotificationRepository notificationRepository;
     private final RoomRepository roomRepository;
+    private final NotificationService notificationService;
 
     // ============= BOOKING CREATION =============
 
@@ -65,7 +66,17 @@ public class BookingService {
                 request.getRoomId(), startDateTime, endDateTime
         );
 
-        // 5. Create booking with status based on availability
+        RoomBooking.BookingStatus initialStatus;
+        if (request.getBookingType() == RoomBooking.BookingType.STUDENT) {
+            // Student bookings always require admin approval.
+            initialStatus = RoomBooking.BookingStatus.PENDING;
+        } else {
+            initialStatus = availabilityStatus.status == AvailabilityEngineService.AvailabilityStatus.AVAILABLE
+                    ? RoomBooking.BookingStatus.APPROVED
+                    : RoomBooking.BookingStatus.PENDING;
+        }
+
+        // 5. Create booking with status based on role and availability
         RoomBooking booking = RoomBooking.builder()
                 .room(room)
                 .booker(booker)
@@ -80,9 +91,7 @@ public class BookingService {
                 .recurringEndDate(request.getRecurringEndDate())
                 .requiresOverride(availabilityStatus.status == AvailabilityEngineService.AvailabilityStatus.RESERVED)
                 .createdById(booker.getId())
-                // If available, approve directly; else set to pending
-                .status(availabilityStatus.status == AvailabilityEngineService.AvailabilityStatus.AVAILABLE ?
-                        RoomBooking.BookingStatus.APPROVED : RoomBooking.BookingStatus.PENDING)
+                .status(initialStatus)
                 .build();
 
         RoomBooking savedBooking = roomBookingRepository.save(booking);
@@ -91,8 +100,16 @@ public class BookingService {
         // 6. Send notifications
         if (booking.getStatus() == RoomBooking.BookingStatus.APPROVED) {
             createNotification(savedBooking, BookingNotification.NotificationType.BOOKING_CONFIRMED, booker);
-        } else if (booking.getRequiresOverride()) {
+        } else if (booking.getStatus() == RoomBooking.BookingStatus.PENDING) {
             createNotification(savedBooking, BookingNotification.NotificationType.BOOKING_PENDING, booker);
+            notificationService.notifyAdmins(
+                    BookingNotification.NotificationType.BOOKING_PENDING,
+                    "Booking Approval Required",
+                    "A new booking request from " + booker.getEmail() + " is waiting for admin approval.",
+                    savedBooking.getId(),
+                    null,
+                    "/admin?view=bookings"
+            );
         }
 
         return new BookingResultDTO(true, savedBooking, null);
@@ -112,7 +129,7 @@ public class BookingService {
             return new BookingResult(false, null, List.of("Only pending bookings can be approved"));
         }
 
-        booking.setStatus(RoomBooking.BookingStatus.CONFIRMED);
+        booking.setStatus(RoomBooking.BookingStatus.APPROVED);
         booking.setApprovedById(approver.getId());
         booking.setApprovalNotes(notes);
 
@@ -187,6 +204,13 @@ public class BookingService {
 
     public List<RoomBooking> getBookingsForUser(Long userId) {
         return roomBookingRepository.findStudentBookingsByUser(userId);
+    }
+
+    public List<RoomBooking> getAllBookings(RoomBooking.BookingStatus status) {
+        if (status == null) {
+            return roomBookingRepository.findAllByOrderByCreatedAtDesc();
+        }
+        return roomBookingRepository.findByStatusOrderByCreatedAtDesc(status);
     }
 
     public List<RoomBooking> getBookingsInDateRange(Long roomId, LocalDateTime startDate, LocalDateTime endDate) {

@@ -6,8 +6,10 @@ import com.zentaritas.exception.ResourceNotFoundException;
 import com.zentaritas.model.auth.Role;
 import com.zentaritas.model.auth.User;
 import com.zentaritas.model.auth.VerificationToken;
+import com.zentaritas.model.booking.BookingNotification;
 import com.zentaritas.repository.auth.UserRepository;
 import com.zentaritas.repository.auth.VerificationTokenRepository;
+import com.zentaritas.service.booking.NotificationService;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
@@ -35,6 +37,7 @@ public class AuthService implements UserDetailsService {
     private final JwtService jwtService;
         private final RefreshTokenService refreshTokenService;
     private final EmailService emailService;
+    private final NotificationService notificationService;
     private final AuthenticationManager authenticationManager;
 
     public AuthService(
@@ -44,6 +47,7 @@ public class AuthService implements UserDetailsService {
             JwtService jwtService,
                         RefreshTokenService refreshTokenService,
             EmailService emailService,
+                NotificationService notificationService,
             @Lazy AuthenticationManager authenticationManager
     ) {
         this.userRepository = userRepository;
@@ -52,6 +56,7 @@ public class AuthService implements UserDetailsService {
         this.jwtService = jwtService;
                 this.refreshTokenService = refreshTokenService;
         this.emailService = emailService;
+        this.notificationService = notificationService;
         this.authenticationManager = authenticationManager;
     }
 
@@ -60,11 +65,13 @@ public class AuthService implements UserDetailsService {
         User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
+        boolean isActive = !Boolean.FALSE.equals(user.getIsActive());
+
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getEmail())
                 .password(user.getPassword())
                 .authorities(Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())))
-                .accountLocked(!user.getIsActive())
+            .accountLocked(!isActive)
                 .build();
     }
 
@@ -88,6 +95,15 @@ public class AuthService implements UserDetailsService {
                 .build();
 
         userRepository.save(user);
+
+        notificationService.notifyAdmins(
+            BookingNotification.NotificationType.STUDENT_REGISTERED,
+            "New Student Registered",
+            user.getFirstName() + " " + user.getLastName() + " (" + user.getEmail() + ") created a new account.",
+            null,
+            null,
+            "/admin?view=users"
+        );
 
         // Generate and send verification code
         String verificationCode = generateVerificationCode();

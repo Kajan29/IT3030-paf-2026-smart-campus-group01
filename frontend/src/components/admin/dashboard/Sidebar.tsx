@@ -2,16 +2,17 @@ import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
+  Ticket,
   Building2,
   Layers,
   DoorOpen,
   Armchair,
   Clock3,
   BookOpen,
-  RefreshCw,
   Bell,
   BarChart3,
   Settings,
+  House,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -30,14 +31,13 @@ interface SidebarProps {
 
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "users", label: "User Management", icon: Users, badge: 5 },
+  { id: "users", label: "User Management", icon: Users },
+  { id: "tickets", label: "Ticket Management", icon: Ticket },
   { id: "buildings", label: "Building Management", icon: Building2 },
   { id: "floors", label: "Floor Management", icon: Layers },
   { id: "rooms", label: "Room Management", icon: DoorOpen, badge: 12 },
-  { id: "resources", label: "Resource Management", icon: Armchair },
   { id: "availability", label: "Room Availability", icon: Clock3 },
   { id: "bookings", label: "Bookings", icon: BookOpen },
-  { id: "swapRequests", label: "Staff Override Requests", icon: RefreshCw },
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "reports", label: "Reports & Analytics", icon: BarChart3 },
   { id: "settings", label: "Settings", icon: Settings },
@@ -50,6 +50,10 @@ export const Sidebar = ({ activeItem, onItemClick, collapsed, onToggle }: Sideba
   const handleLogout = () => {
     logout();
     navigate("/auth/login");
+  };
+
+  const handleBackToHome = () => {
+    navigate("/");
   };
 
   return (
@@ -157,6 +161,19 @@ export const Sidebar = ({ activeItem, onItemClick, collapsed, onToggle }: Sideba
       </nav>
 
       <div className="relative px-2 pb-4 border-t border-sidebar-border/70 pt-3">
+        <button
+          onClick={handleBackToHome}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-sidebar-foreground hover:bg-white/10 hover:text-white transition-all duration-200 group relative"
+        >
+          <House size={18} className="flex-shrink-0 group-hover:-translate-x-1 transition-transform duration-200" />
+          {!collapsed && <span className="animate-fade-in">Back to Home</span>}
+          {collapsed && (
+            <div className="absolute left-full ml-2 px-2 py-1 bg-sidebar-accent text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+              Back to Home
+            </div>
+          )}
+        </button>
+
         <button
           onClick={handleLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-sidebar-foreground hover:bg-destructive/20 hover:text-destructive-foreground transition-all duration-200 group"

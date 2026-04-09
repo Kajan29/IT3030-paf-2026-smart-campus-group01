@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-labelledby="title desc">
+  <title id="title">Student Commons Mock</title>
+  <desc id="desc">Illustration of an indoor student commons with seating and windows.</desc>
+  <rect width="1200" height="800" fill="#eff6ff" />
+  <rect x="80" y="100" width="1040" height="600" rx="16" fill="#f8fafc" stroke="#cbd5e1" stroke-width="4" />
+  <rect x="150" y="160" width="220" height="200" rx="8" fill="#bfdbfe" />
+  <rect x="420" y="160" width="220" height="200" rx="8" fill="#bfdbfe" />
+  <rect x="690" y="160" width="220" height="200" rx="8" fill="#bfdbfe" />
+  <rect x="960" y="160" width="90" height="200" rx="8" fill="#bfdbfe" />
+  <rect x="180" y="480" width="200" height="50" rx="10" fill="#f59e0b" />
+  <rect x="440" y="480" width="200" height="50" rx="10" fill="#84cc16" />
+  <rect x="700" y="480" width="200" height="50" rx="10" fill="#3b82f6" />
+  <circle cx="280" cy="560" r="38" fill="#475569" />
+  <circle cx="540" cy="560" r="38" fill="#475569" />
+  <circle cx="800" cy="560" r="38" fill="#475569" />
+  <text x="60" y="90" font-size="46" font-family="Georgia, serif" fill="#1e3a8a">Student Commons</text>
+</svg>
