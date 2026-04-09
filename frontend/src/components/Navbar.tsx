@@ -286,7 +286,7 @@ const Navbar = () => {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {user?.role === "ADMIN" && (
-                    <DropdownMenuItem onClick={() => navigate("/admin")}>
+                    <DropdownMenuItem onClick={() => navigate("/admin/dashboard")}>
                       <LayoutDashboard className="mr-2 h-4 w-4" />
                       <span>Admin Dashboard</span>
                     </DropdownMenuItem>
@@ -430,7 +430,7 @@ const Navbar = () => {
                       <Button
                         variant="outline"
                         className="w-full border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 justify-start"
-                        onClick={() => navigate("/admin")}
+                        onClick={() => navigate("/admin/dashboard")}
                       >
                         <LayoutDashboard className="mr-2 h-4 w-4" />
                         Admin Dashboard

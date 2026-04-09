@@ -18,7 +18,7 @@ const GuestOnlyRoute = ({ children }: GuestOnlyRouteProps) => {
   }
 
   if (isAuthenticated) {
-    const redirectPath = user?.role === 'ADMIN' ? '/admin' : '/'
+    const redirectPath = user?.role === 'ADMIN' ? '/admin/dashboard' : '/'
     return <Navigate to={redirectPath} replace />
   }
 

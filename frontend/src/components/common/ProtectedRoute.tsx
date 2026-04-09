@@ -23,7 +23,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   if (user?.role === 'ADMIN' && !location.pathname.startsWith('/admin')) {
-    return <Navigate to="/admin" replace />
+    return <Navigate to="/admin/dashboard" replace />
   }
 
   return <>{children}</>

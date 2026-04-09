@@ -64,7 +64,7 @@ const LoginPage = () => {
         
         // Redirect based on user role
         if (userData.role === "ADMIN") {
-          navigate("/admin", { replace: true });
+          navigate("/admin/dashboard", { replace: true });
         } else {
           navigate("/", { replace: true });
         }
@@ -91,7 +91,7 @@ const LoginPage = () => {
         
         // Redirect based on user role
         if (userData.role === "ADMIN") {
-          navigate("/admin", { replace: true });
+          navigate("/admin/dashboard", { replace: true });
         } else {
           navigate("/", { replace: true });
         }
