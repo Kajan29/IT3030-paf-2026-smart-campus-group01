@@ -3,6 +3,17 @@ import authService from './authService'
 
 const API_URL = import.meta.env.VITE_API_URL || '/api'
 
+/** Pages guests can view without being redirected to login */
+const PUBLIC_PATHS = ['/', '/about', '/contact', '/find-room', '/resources', '/gallery']
+
+const isOnPublicPage = (): boolean => {
+  const path = window.location.pathname
+  return (
+    PUBLIC_PATHS.includes(path) ||
+    path.startsWith('/auth/')
+  )
+}
+
 const api = axios.create({
   baseURL: API_URL,
   withCredentials: true,
@@ -14,10 +25,12 @@ api.interceptors.request.use(
     const isAuthEndpoint = config.url?.includes('/auth/');
     const isPublicEndpoint = config.url?.includes('/public/');
     const isSessionManagedEndpoint = !isAuthEndpoint && !isPublicEndpoint;
-    
+
+    // Only redirect on session expiry if user was previously logged in AND is on a protected page
     if (isSessionManagedEndpoint && authService.isSessionExpired()) {
+      const hadSession = !!authService.getAccessToken()
       authService.logout()
-      if (!window.location.pathname.startsWith('/auth/')) {
+      if (hadSession && !isOnPublicPage()) {
         window.location.href = '/auth/login'
       }
       return Promise.reject(new axios.Cancel('Session expired'))
@@ -26,7 +39,7 @@ api.interceptors.request.use(
     if (isSessionManagedEndpoint) {
       authService.updateSessionActivity()
     }
-    
+
     const token = authService.getAccessToken()
     const shouldAttachToken = !isAuthEndpoint && token && (!isPublicEndpoint || !authService.isSessionExpired())
     if (shouldAttachToken) {
@@ -49,6 +62,12 @@ api.interceptors.response.use(
     const shouldHandleAuthFailure = !isAuthEndpoint && !isPublicEndpoint
     const status = error.response?.status
 
+    // On public pages, never redirect to login — just let the error propagate
+    // so components can gracefully fall back to local/cached data
+    if (isOnPublicPage()) {
+      return Promise.reject(error)
+    }
+
     if ((status === 401 || status === 403) && !originalRequest?._retry && shouldHandleAuthFailure) {
       originalRequest._retry = true
       try {
@@ -70,18 +89,14 @@ api.interceptors.response.use(
         }
       } catch (refreshError) {
         authService.logout()
-        if (!window.location.pathname.startsWith('/auth/')) {
-          window.location.href = '/auth/login'
-        }
+        window.location.href = '/auth/login'
         return Promise.reject(refreshError)
       }
     }
 
     if (status === 401 && shouldHandleAuthFailure) {
       authService.logout()
-      if (!window.location.pathname.startsWith('/auth/')) {
-        window.location.href = '/auth/login'
-      }
+      window.location.href = '/auth/login'
     }
     return Promise.reject(error)
   }

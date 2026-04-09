@@ -62,7 +62,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (authService.isSessionExpired()) {
         authService.logout()
         setUser(null)
-        if (!window.location.pathname.startsWith('/auth/')) {
+        const path = window.location.pathname
+        const publicPaths = ['/', '/about', '/contact', '/find-room', '/resources', '/gallery']
+        const isPublic = publicPaths.includes(path) || path.startsWith('/auth/')
+        if (!isPublic) {
           window.location.href = '/auth/login'
         }
       }

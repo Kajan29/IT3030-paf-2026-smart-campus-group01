@@ -15,7 +15,6 @@ import { ResourceManagementPage } from "@/components/admin/dashboard/ResourceMan
 import { TicketManagementPage } from "@/components/dashboard/TicketManagementPage";
 import { ReportsAnalyticsPage } from "@/components/admin/dashboard/ReportsAnalyticsPage";
 import { SettingsPage } from "@/components/admin/dashboard/SettingsPage";
-import { SwapRequestManagementPage } from "@/pages/admin/SwapRequestManagementPage";
 import { NotificationsPage } from "@/pages/admin/NotificationsPage";
 import { facilityService } from "@/services/facilityService";
 import { Menu } from "lucide-react";

@@ -6,6 +6,23 @@ import AuthHeroPanel from "../../components/common/AuthHeroPanel";
 import { useAuth } from "../../context/AuthContext";
 import { toast } from "react-toastify";
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const getApiErrorMessage = (error: any, fallback: string) => {
+  const responseData = error?.response?.data;
+  const message = responseData?.message;
+  const validationErrors = responseData?.data;
+
+  if (message === "Validation failed" && validationErrors && typeof validationErrors === "object") {
+    const firstValidationError = Object.values(validationErrors)[0];
+    if (typeof firstValidationError === "string" && firstValidationError.trim()) {
+      return firstValidationError;
+    }
+  }
+
+  return message || fallback;
+};
+
 const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,22 +34,29 @@ const LoginPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedPassword = password.trim();
     
-    if (!email || !password) {
+    if (!normalizedEmail || !normalizedPassword) {
       toast.error("Please fill in all fields");
+      return;
+    }
+
+    if (!EMAIL_PATTERN.test(normalizedEmail)) {
+      toast.error("Please enter a valid email address");
       return;
     }
 
     setLoading(true);
     try {
-      const response = await login({ email, password });
+      const response = await login({ email: normalizedEmail, password });
       
       if (response.data.success) {
         const { token, ...userData } = response.data.data;
         
         if (!userData.isVerified) {
           toast.warning("Please verify your email first");
-          navigate("/auth/verify-otp", { state: { email } });
+          navigate("/auth/verify-otp", { state: { email: normalizedEmail } });
           return;
         }
         
@@ -40,13 +64,13 @@ const LoginPage = () => {
         
         // Redirect based on user role
         if (userData.role === "ADMIN") {
-          navigate("/admin", { replace: true });
+          navigate("/admin/dashboard", { replace: true });
         } else {
           navigate("/", { replace: true });
         }
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Login failed. Please try again.");
+      toast.error(getApiErrorMessage(error, "Login failed. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -67,7 +91,7 @@ const LoginPage = () => {
         
         // Redirect based on user role
         if (userData.role === "ADMIN") {
-          navigate("/admin", { replace: true });
+          navigate("/admin/dashboard", { replace: true });
         } else {
           navigate("/", { replace: true });
         }

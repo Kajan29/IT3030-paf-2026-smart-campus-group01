@@ -7,6 +7,25 @@ import authService from "../../services/authService";
 import { useAuth } from "../../context/AuthContext";
 import { toast } from "react-toastify";
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const NAME_PATTERN = /^[A-Za-z][A-Za-z\s'-]{1,49}$/;
+const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+
+const getApiErrorMessage = (error: any, fallback: string) => {
+  const responseData = error?.response?.data;
+  const message = responseData?.message;
+  const validationErrors = responseData?.data;
+
+  if (message === "Validation failed" && validationErrors && typeof validationErrors === "object") {
+    const firstValidationError = Object.values(validationErrors)[0];
+    if (typeof firstValidationError === "string" && firstValidationError.trim()) {
+      return firstValidationError;
+    }
+  }
+
+  return message || fallback;
+};
+
 const RegisterPage = () => {
   const [form, setForm] = useState({
     firstName: "",
@@ -28,16 +47,37 @@ const RegisterPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { firstName, lastName, email, password, confirmPassword } = form;
+    const firstName = form.firstName.trim();
+    const lastName = form.lastName.trim();
+    const email = form.email.trim().toLowerCase();
+    const password = form.password;
+    const confirmPassword = form.confirmPassword;
 
     if (!firstName || !lastName || !email || !password || !confirmPassword) {
       toast.error("Please fill in all fields");
       return;
     }
-    if (password.length < 8) {
-      toast.error("Password must be at least 8 characters");
+
+    if (!NAME_PATTERN.test(firstName)) {
+      toast.error("First name must be 2-50 letters and can include spaces, apostrophes, or hyphens");
       return;
     }
+
+    if (!NAME_PATTERN.test(lastName)) {
+      toast.error("Last name must be 2-50 letters and can include spaces, apostrophes, or hyphens");
+      return;
+    }
+
+    if (!EMAIL_PATTERN.test(email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    if (!PASSWORD_PATTERN.test(password)) {
+      toast.error("Password must be at least 8 characters and include uppercase, lowercase, and a number");
+      return;
+    }
+
     if (password !== confirmPassword) {
       toast.error("Passwords do not match");
       return;
@@ -57,7 +97,7 @@ const RegisterPage = () => {
         navigate("/auth/verify-otp", { state: { email } });
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Registration failed. Please try again.");
+      toast.error(getApiErrorMessage(error, "Registration failed. Please try again."));
     } finally {
       setLoading(false);
     }

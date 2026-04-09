@@ -20,6 +20,10 @@ import {
 import heroCampus from "@/assets/hero-campus.jpg";
 
 type BookingStep = "building" | "floor" | "room" | "confirm";
+type MyBookingSummary = {
+  status?: string;
+  endTime?: string | null;
+};
 
 const STUDY_ROOM_TYPE_KEYWORDS = [
   "study",
@@ -31,8 +35,10 @@ const STUDY_ROOM_TYPE_KEYWORDS = [
   "seminar",
   "computer lab",
 ];
+const ACTIVE_BOOKING_STATUSES = new Set(["PENDING", "APPROVED", "CONFIRMED"]);
 
 const normalizeRoomStatus = (status?: string) => (status || "").trim().toLowerCase();
+const normalizeValue = (value?: string) => (value || "").trim().toLowerCase();
 
 const isStudyAreaRoom = (room: Room) => {
   const normalizedType = (room.type || "").trim().toLowerCase();
@@ -44,9 +50,28 @@ const isStudyAreaRoom = (room: Room) => {
 };
 
 const isRoomBookableForStudents = (room: Room) => {
-  const normalizedStatus = normalizeRoomStatus(room.status);
-  const statusBookable = normalizedStatus === "available" || normalizedStatus === "open";
-  return statusBookable && room.bookingAvailable !== false;
+  const statusBookable = ["available", "open"].includes(normalizeRoomStatus(room.status));
+  const maintenanceOperational = normalizeValue(room.maintenanceStatus) === "operational";
+  const conditionSuitable = ["excellent", "good"].includes(normalizeValue(room.condition));
+  return statusBookable && room.bookingAvailable !== false && maintenanceOperational && conditionSuitable;
+};
+
+const hasActiveStudentBooking = (bookings: MyBookingSummary[]) => {
+  const nowTs = Date.now();
+
+  return bookings.some((booking) => {
+    const status = (booking.status || "").trim().toUpperCase();
+    if (!ACTIVE_BOOKING_STATUSES.has(status)) {
+      return false;
+    }
+
+    if (!booking.endTime) {
+      return true;
+    }
+
+    const endTs = Date.parse(booking.endTime);
+    return Number.isNaN(endTs) || endTs > nowTs;
+  });
 };
 
 const timeSlots = [
@@ -81,6 +106,7 @@ const BookRoomPage = () => {
   const [selectedTime, setSelectedTime] = useState("");
   const [booked, setBooked] = useState(false);
   const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
+  const [hasExistingActiveBooking, setHasExistingActiveBooking] = useState(false);
 
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [floors, setFloors] = useState<Floor[]>([]);
@@ -97,6 +123,7 @@ const BookRoomPage = () => {
           facilityService.getFloors(),
           facilityService.getRooms(),
         ]);
+        const myBookings = (await bookingService.getMyBookings().catch(() => [])) as MyBookingSummary[];
 
         if (!mounted) return;
 
@@ -109,6 +136,8 @@ const BookRoomPage = () => {
           setFloors(fallbackFloors);
           setRooms(fallbackRooms);
         }
+
+        setHasExistingActiveBooking(hasActiveStudentBooking(Array.isArray(myBookings) ? myBookings : []));
       } catch {
         if (!mounted) return;
         setBuildings(fallbackBuildings);
@@ -152,6 +181,11 @@ const BookRoomPage = () => {
   });
 
   const handleBuildingSelect = (building: Building) => {
+    if (hasExistingActiveBooking) {
+      toast.info("You already booked a seat. Please wait for admin action or cancel your current booking first.");
+      return;
+    }
+
     setSelectedBuilding(building);
     setSelectedFloor(null);
     setSelectedRoom(null);
@@ -159,12 +193,22 @@ const BookRoomPage = () => {
   };
 
   const handleFloorSelect = (floor: Floor) => {
+    if (hasExistingActiveBooking) {
+      toast.info("You already booked a seat. Please wait for admin action or cancel your current booking first.");
+      return;
+    }
+
     setSelectedFloor(floor);
     setSelectedRoom(null);
     setStep("room");
   };
 
   const handleRoomSelect = (room: Room) => {
+    if (hasExistingActiveBooking) {
+      toast.info("You already booked a seat. Please wait for admin action or cancel your current booking first.");
+      return;
+    }
+
     setSelectedRoom(room);
     setStep("confirm");
   };
@@ -207,8 +251,9 @@ const BookRoomPage = () => {
       });
 
       setBooked(true);
+      setHasExistingActiveBooking(true);
       if (response?.status === "PENDING") {
-        toast.success("Booking request submitted. Waiting for admin approval.");
+        toast.success("Booking request submitted and is pending admin approval.");
       } else {
         toast.success("Booking submitted successfully.");
       }
@@ -230,6 +275,10 @@ const BookRoomPage = () => {
         error?.response?.data?.message ||
         error?.message ||
         "Failed to create booking.";
+
+      if (String(apiMessage).toLowerCase().includes("already booked a seat")) {
+        setHasExistingActiveBooking(true);
+      }
       toast.error(apiMessage);
     } finally {
       setIsSubmittingBooking(false);
@@ -288,6 +337,12 @@ const BookRoomPage = () => {
 
       {/* Booking Section */}
       <section className="container mx-auto px-4 py-12">
+        {hasExistingActiveBooking && (
+          <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900">
+            You already booked a seat. You can create a new booking only after your current request is completed or cancelled.
+          </div>
+        )}
+
         {/* Breadcrumb & Back Button */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex-1">
@@ -512,7 +567,7 @@ const BookRoomPage = () => {
               <div className="text-center">
                 <Button
                   size="lg"
-                  disabled={!selectedDate || !selectedTime || booked || isSubmittingBooking}
+                  disabled={!selectedDate || !selectedTime || booked || isSubmittingBooking || hasExistingActiveBooking}
                   onClick={handleBook}
                   className="bg-primary text-primary-foreground hover:bg-primary/90 px-12 py-6 text-lg font-bold"
                 >
@@ -525,6 +580,11 @@ const BookRoomPage = () => {
                 {(!selectedDate || !selectedTime) && !booked && (
                   <p className="text-muted-foreground text-sm mt-3">
                     Please select both date and time to confirm
+                  </p>
+                )}
+                {hasExistingActiveBooking && (
+                  <p className="text-amber-700 text-sm mt-3">
+                    New booking is disabled because you already have an active booking.
                   </p>
                 )}
               </div>
