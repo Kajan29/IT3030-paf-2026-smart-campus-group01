@@ -58,6 +58,11 @@ public class BookingValidationRulesService {
             RoomBooking.BookingStatus.APPROVED,
             RoomBooking.BookingStatus.CONFIRMED
     );
+    private static final EnumSet<RoomBooking.BookingStatus> STUDENT_SINGLE_BOOKING_BLOCKING_STATUSES = EnumSet.of(
+            RoomBooking.BookingStatus.PENDING,
+            RoomBooking.BookingStatus.APPROVED,
+            RoomBooking.BookingStatus.CONFIRMED
+    );
 
     /**
      * Main validation method
@@ -73,7 +78,7 @@ public class BookingValidationRulesService {
 
         // Role-specific validations
         if (booker.getRole() == Role.STUDENT) {
-            errors.addAll(validateStudentBooking(request));
+            errors.addAll(validateStudentBooking(request, booker));
         } else if (booker.getRole() == Role.ACADEMIC_STAFF || booker.getRole() == Role.NON_ACADEMIC_STAFF) {
             errors.addAll(validateStaffBooking(request));
         }
@@ -128,8 +133,20 @@ public class BookingValidationRulesService {
         return errors;
     }
 
-    private List<String> validateStudentBooking(BookingRequestDTO request) {
+    private List<String> validateStudentBooking(BookingRequestDTO request, User booker) {
         List<String> errors = new ArrayList<>();
+
+        // Rule: A student can only keep one active/upcoming booking at a time.
+        if (booker != null && booker.getId() != null) {
+            boolean hasBlockingBooking = roomBookingRepository.existsActiveBookingForUser(
+                    booker.getId(),
+                    STUDENT_SINGLE_BOOKING_BLOCKING_STATUSES,
+                    LocalDateTime.now()
+            );
+            if (hasBlockingBooking) {
+                errors.add("You already booked a seat. You can submit a new booking only after the current one is completed or cancelled.");
+            }
+        }
 
         // Rule: Only 1 seat per student per booking
         if (request.getSeatsBooked() == null || request.getSeatsBooked() != 1) {

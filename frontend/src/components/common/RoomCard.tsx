@@ -71,7 +71,8 @@ export const RoomCard = ({
   index = 0,
   showDetails = true 
 }: RoomCardProps) => {
-  const isBookable = room.status === "Available" && room.bookingAvailable;
+  const normalizedStatus = (room.status || "").trim().toLowerCase();
+  const isBookable = (normalizedStatus === "available" || normalizedStatus === "open") && room.bookingAvailable !== false;
   const statusInfo = resolveStatusInfo(room.status);
   const facilities = Array.isArray(room.facilities) ? room.facilities : [];
 

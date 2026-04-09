@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 
 public interface RoomBookingRepository extends JpaRepository<RoomBooking, Long> {
@@ -68,6 +69,17 @@ public interface RoomBookingRepository extends JpaRepository<RoomBooking, Long> 
     // Find student bookings for a user
     @Query("SELECT b FROM RoomBooking b WHERE b.booker.id = :userId AND b.bookingType = com.zentaritas.model.booking.RoomBooking.BookingType.STUDENT")
     List<RoomBooking> findStudentBookingsByUser(@Param("userId") Long userId);
+
+    // Check whether the user already has an active/future booking in a blocking status
+    @Query("SELECT CASE WHEN COUNT(b) > 0 THEN true ELSE false END FROM RoomBooking b " +
+            "WHERE b.booker.id = :userId " +
+            "AND b.status IN :statuses " +
+            "AND b.endTime > :referenceTime")
+    boolean existsActiveBookingForUser(
+            @Param("userId") Long userId,
+            @Param("statuses") Collection<RoomBooking.BookingStatus> statuses,
+            @Param("referenceTime") LocalDateTime referenceTime
+    );
 
     // Find bookings by status
     List<RoomBooking> findByStatus(RoomBooking.BookingStatus status);
