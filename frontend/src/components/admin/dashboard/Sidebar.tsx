@@ -36,6 +36,7 @@ const navItems = [
   { id: "buildings", label: "Building Management", icon: Building2 },
   { id: "floors", label: "Floor Management", icon: Layers },
   { id: "rooms", label: "Room Management", icon: DoorOpen, badge: 12 },
+  { id: "resources", label: "Resource Management", icon: Armchair },
   { id: "availability", label: "Room Availability", icon: Clock3 },
   { id: "bookings", label: "Bookings", icon: BookOpen },
   { id: "notifications", label: "Notifications", icon: Bell },
