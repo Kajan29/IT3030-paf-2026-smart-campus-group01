@@ -11,11 +11,13 @@ import { BuildingDetailsPage } from "@/components/admin/dashboard/BuildingDetail
 import { RoomDetailsPage } from "@/components/admin/dashboard/RoomDetailsPage";
 import RoomAvailabilityManagementPage from "@/components/admin/dashboard/RoomAvailabilityManagementPage";
 import { BookingsPage } from "@/components/admin/dashboard/BookingsPage";
+import { ResourceManagementPage } from "@/components/admin/dashboard/ResourceManagementPage";
 import { TicketManagementPage } from "@/components/dashboard/TicketManagementPage";
 import { ReportsAnalyticsPage } from "@/components/admin/dashboard/ReportsAnalyticsPage";
 import { SettingsPage } from "@/components/admin/dashboard/SettingsPage";
 import { SwapRequestManagementPage } from "@/pages/admin/SwapRequestManagementPage";
 import { NotificationsPage } from "@/pages/admin/NotificationsPage";
+import { facilityService } from "@/services/facilityService";
 import { Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -92,6 +94,16 @@ const AdminDashboard = () => {
   const selectRoomFromAvailability = (roomId: string) => {
     setSelectedRoomId(roomId);
     setActiveItem("availability");
+  };
+
+  const handleSetActiveItem = (item: string) => {
+    setActiveItem(item);
+    if (item === "dashboard") {
+      setSearchParams({});
+      return;
+    }
+
+    setSearchParams({ view: item });
   };
 
   const renderPage = () => {
