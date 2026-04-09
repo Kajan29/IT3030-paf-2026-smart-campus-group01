@@ -21,12 +21,17 @@ const KNOWN_RESOURCE_TYPES = [
 const CUSTOM_TYPE_KEY = "__custom__";
 
 type ProductDraft = {
-  buildingId: string;
-  floorId: string;
-  roomId: string;
+  id: string;
   name: string;
   typeKey: string;
   customType: string;
+  quantity: number;
+};
+
+type ProductLocationDraft = {
+  buildingId: string;
+  floorId: string;
+  roomId: string;
 };
 
 type EditDraft = {
@@ -57,12 +62,17 @@ const getDraftType = (typeKey: string, customType: string) => {
 };
 
 const buildProductDraft = (): ProductDraft => ({
-  buildingId: "",
-  floorId: "",
-  roomId: "",
+  id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   name: "",
   typeKey: KNOWN_RESOURCE_TYPES[0],
   customType: "",
+  quantity: 1,
+});
+
+const buildProductLocationDraft = (): ProductLocationDraft => ({
+  buildingId: "",
+  floorId: "",
+  roomId: "",
 });
 
 const buildEditDraft = (): EditDraft => ({
@@ -92,13 +102,17 @@ export const ResourceManagementPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const [locationDialogOpen, setLocationDialogOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [roomDialogOpen, setRoomDialogOpen] = useState(false);
   const [roomDialogRoomId, setRoomDialogRoomId] = useState("");
 
-  const [productDraft, setProductDraft] = useState<ProductDraft>(buildProductDraft);
+  const [productLocationDraft, setProductLocationDraft] = useState<ProductLocationDraft>(buildProductLocationDraft);
+  const [productDrafts, setProductDrafts] = useState<ProductDraft[]>([buildProductDraft()]);
   const [editingResourceId, setEditingResourceId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<EditDraft>(buildEditDraft);
+
+  const addFlowOpen = locationDialogOpen || addDialogOpen;
 
   useEffect(() => {
     if (authLoading || !canManage) {
@@ -192,63 +206,63 @@ export const ResourceManagementPage = () => {
   }, [rooms]);
 
   const floorsForSelectedBuilding = useMemo(
-    () => floors.filter((floor) => floor.buildingId === productDraft.buildingId),
-    [floors, productDraft.buildingId]
+    () => floors.filter((floor) => floor.buildingId === productLocationDraft.buildingId),
+    [floors, productLocationDraft.buildingId]
   );
 
   const roomsForSelectedFloor = useMemo(
-    () => rooms.filter((room) => room.floorId === productDraft.floorId),
-    [rooms, productDraft.floorId]
+    () => rooms.filter((room) => room.floorId === productLocationDraft.floorId),
+    [rooms, productLocationDraft.floorId]
   );
 
   useEffect(() => {
-    if (!addDialogOpen) {
+    if (!addFlowOpen) {
       return;
     }
 
-    if (!productDraft.buildingId) {
+    if (!productLocationDraft.buildingId) {
       const firstBuildingId = buildings[0]?.id || "";
-      setProductDraft((current) => ({ ...current, buildingId: firstBuildingId }));
+      setProductLocationDraft((current) => ({ ...current, buildingId: firstBuildingId }));
       return;
     }
 
-    const hasBuilding = buildings.some((building) => building.id === productDraft.buildingId);
+    const hasBuilding = buildings.some((building) => building.id === productLocationDraft.buildingId);
     if (!hasBuilding) {
-      setProductDraft((current) => ({ ...current, buildingId: buildings[0]?.id || "" }));
+      setProductLocationDraft((current) => ({ ...current, buildingId: buildings[0]?.id || "" }));
     }
-  }, [addDialogOpen, buildings, productDraft.buildingId]);
+  }, [addFlowOpen, buildings, productLocationDraft.buildingId]);
 
   useEffect(() => {
-    if (!addDialogOpen) {
+    if (!addFlowOpen) {
       return;
     }
 
     if (floorsForSelectedBuilding.length === 0) {
-      setProductDraft((current) => ({ ...current, floorId: "", roomId: "" }));
+      setProductLocationDraft((current) => ({ ...current, floorId: "", roomId: "" }));
       return;
     }
 
-    const hasFloor = floorsForSelectedBuilding.some((floor) => floor.id === productDraft.floorId);
-    if (!productDraft.floorId || !hasFloor) {
-      setProductDraft((current) => ({ ...current, floorId: floorsForSelectedBuilding[0].id }));
+    const hasFloor = floorsForSelectedBuilding.some((floor) => floor.id === productLocationDraft.floorId);
+    if (!productLocationDraft.floorId || !hasFloor) {
+      setProductLocationDraft((current) => ({ ...current, floorId: floorsForSelectedBuilding[0].id }));
     }
-  }, [addDialogOpen, floorsForSelectedBuilding, productDraft.floorId]);
+  }, [addFlowOpen, floorsForSelectedBuilding, productLocationDraft.floorId]);
 
   useEffect(() => {
-    if (!addDialogOpen) {
+    if (!addFlowOpen) {
       return;
     }
 
     if (roomsForSelectedFloor.length === 0) {
-      setProductDraft((current) => ({ ...current, roomId: "" }));
+      setProductLocationDraft((current) => ({ ...current, roomId: "" }));
       return;
     }
 
-    const hasRoom = roomsForSelectedFloor.some((room) => room.id === productDraft.roomId);
-    if (!productDraft.roomId || !hasRoom) {
-      setProductDraft((current) => ({ ...current, roomId: roomsForSelectedFloor[0].id }));
+    const hasRoom = roomsForSelectedFloor.some((room) => room.id === productLocationDraft.roomId);
+    if (!productLocationDraft.roomId || !hasRoom) {
+      setProductLocationDraft((current) => ({ ...current, roomId: roomsForSelectedFloor[0].id }));
     }
-  }, [addDialogOpen, roomsForSelectedFloor, productDraft.roomId]);
+  }, [addFlowOpen, roomsForSelectedFloor, productLocationDraft.roomId]);
 
   const roomDialogResources = useMemo(
     () => resourcesByRoom[roomDialogRoomId] || [],
@@ -311,8 +325,50 @@ export const ResourceManagementPage = () => {
   }, [buildings.length, floors.length, rooms.length, resourcesByRoom]);
 
   const openAddDialog = () => {
-    setProductDraft(buildProductDraft());
+    setProductLocationDraft(buildProductLocationDraft());
+    setProductDrafts([buildProductDraft()]);
+    setLocationDialogOpen(true);
+  };
+
+  const closeAddFlow = () => {
+    if (savingProduct) {
+      return;
+    }
+
+    setLocationDialogOpen(false);
+    setAddDialogOpen(false);
+    setProductLocationDraft(buildProductLocationDraft());
+    setProductDrafts([buildProductDraft()]);
+  };
+
+  const goToProductDialog = () => {
+    if (!productLocationDraft.buildingId || !productLocationDraft.floorId || !productLocationDraft.roomId) {
+      setErrorMessage("Select building, floor and room.");
+      return;
+    }
+
+    setErrorMessage(null);
+    setLocationDialogOpen(false);
     setAddDialogOpen(true);
+  };
+
+  const addProductRow = () => {
+    setProductDrafts((current) => [...current, buildProductDraft()]);
+  };
+
+  const removeProductRow = (draftId: string) => {
+    setProductDrafts((current) => {
+      if (current.length <= 1) {
+        return current;
+      }
+      return current.filter((entry) => entry.id !== draftId);
+    });
+  };
+
+  const updateProductRow = (draftId: string, changes: Partial<Omit<ProductDraft, "id">>) => {
+    setProductDrafts((current) =>
+      current.map((entry) => (entry.id === draftId ? { ...entry, ...changes } : entry))
+    );
   };
 
   const openRoomDialog = (roomId: string) => {
@@ -424,47 +480,86 @@ export const ResourceManagementPage = () => {
   };
 
   const handleAddProduct = async () => {
-    const normalizedName = productDraft.name.trim();
-    const normalizedType = getDraftType(productDraft.typeKey, productDraft.customType);
-
-    if (!productDraft.buildingId || !productDraft.floorId || !productDraft.roomId) {
+    if (!productLocationDraft.buildingId || !productLocationDraft.floorId || !productLocationDraft.roomId) {
       setErrorMessage("Select building, floor and room.");
       return;
     }
 
-    if (!normalizedName) {
-      setErrorMessage("Product name is required.");
+    if (productDrafts.length === 0) {
+      setErrorMessage("Add at least one product.");
       return;
     }
 
-    if (!normalizedType) {
-      setErrorMessage("Product type is required.");
-      return;
-    }
+    const roomResources = resourcesByRoom[productLocationDraft.roomId] || [];
+    const existingKeys = new Set(
+      roomResources.map((resource) => `${resource.name.trim().toLowerCase()}::${normalizeType(resource.type)}`)
+    );
+
+    const batchKeys = new Set<string>();
+    const payloads = productDrafts.map((draft, index) => {
+      const normalizedName = draft.name.trim();
+      const normalizedType = getDraftType(draft.typeKey, draft.customType);
+      const quantity = Number(draft.quantity);
+
+      if (!normalizedName) {
+        throw new Error(`Product name is required on row ${index + 1}.`);
+      }
+
+      if (!normalizedType) {
+        throw new Error(`Product type is required on row ${index + 1}.`);
+      }
+
+      if (!Number.isFinite(quantity) || quantity < 1) {
+        throw new Error(`Quantity must be at least 1 on row ${index + 1}.`);
+      }
+
+      const compositeKey = `${normalizedName.toLowerCase()}::${normalizedType}`;
+      if (existingKeys.has(compositeKey)) {
+        throw new Error(
+          `${normalizedName} (${toLabel(normalizedType)}) already exists in this room. Edit the existing product instead of adding it again.`
+        );
+      }
+
+      if (batchKeys.has(compositeKey)) {
+        throw new Error(
+          `${normalizedName} (${toLabel(normalizedType)}) is duplicated in this popup. Keep only one entry and continue.`
+        );
+      }
+
+      batchKeys.add(compositeKey);
+      return {
+        name: normalizedName,
+        type: normalizedType,
+        quantity,
+        roomId: productLocationDraft.roomId,
+      };
+    });
 
     try {
       setSavingProduct(true);
       setErrorMessage(null);
 
-      const created = await resourceManagementService.createResource({
-        name: normalizedName,
-        type: normalizedType,
-        quantity: 1,
-        roomId: productDraft.roomId,
-      });
+      const createdResources: RoomResource[] = [];
+      for (const payload of payloads) {
+        const created = await resourceManagementService.createResource(payload);
+        createdResources.push(created);
+      }
 
       setResourcesByRoom((current) => {
-        const roomResources = current[productDraft.roomId] || [];
+        const roomResourcesById = current[productLocationDraft.roomId] || [];
         return {
           ...current,
-          [productDraft.roomId]: [...roomResources, created],
+          [productLocationDraft.roomId]: [...roomResourcesById, ...createdResources],
         };
       });
 
-      setAddDialogOpen(false);
-      setProductDraft(buildProductDraft());
+      closeAddFlow();
     } catch (error) {
-      setErrorMessage(getApiError(error));
+      if (error instanceof Error) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage(getApiError(error));
+      }
     } finally {
       setSavingProduct(false);
     }
@@ -627,22 +722,33 @@ export const ResourceManagementPage = () => {
         </div>
       </div>
 
-      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Add New Product</DialogTitle>
-            <DialogDescription>
-              Select building, floor and room, then add a new product entry.
-            </DialogDescription>
-          </DialogHeader>
+      <Dialog
+        open={locationDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeAddFlow();
+            return;
+          }
+          setLocationDialogOpen(true);
+        }}
+      >
+        <DialogContent className="max-w-xl overflow-hidden rounded-3xl border border-primary/20 bg-background p-0 shadow-2xl">
+          <div className="bg-gradient-to-r from-primary/12 via-primary/5 to-transparent px-6 py-5">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-foreground">Select Room Location</DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground">
+                Choose building, floor and room before adding products.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
 
-          <div className="space-y-3">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-foreground">Building</label>
+          <div className="space-y-4 px-6 py-5">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Building</label>
               <select
-                value={productDraft.buildingId}
-                onChange={(event) => setProductDraft((current) => ({ ...current, buildingId: event.target.value }))}
-                className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm"
+                value={productLocationDraft.buildingId}
+                onChange={(event) => setProductLocationDraft((current) => ({ ...current, buildingId: event.target.value }))}
+                className="h-11 w-full rounded-xl border border-border bg-card px-3 text-sm shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 {buildings.map((building) => (
                   <option key={building.id} value={building.id}>{building.name}</option>
@@ -650,12 +756,12 @@ export const ResourceManagementPage = () => {
               </select>
             </div>
 
-            <div>
-              <label className="mb-1 block text-sm font-medium text-foreground">Floor</label>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Floor</label>
               <select
-                value={productDraft.floorId}
-                onChange={(event) => setProductDraft((current) => ({ ...current, floorId: event.target.value }))}
-                className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm"
+                value={productLocationDraft.floorId}
+                onChange={(event) => setProductLocationDraft((current) => ({ ...current, floorId: event.target.value }))}
+                className="h-11 w-full rounded-xl border border-border bg-card px-3 text-sm shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 {floorsForSelectedBuilding.map((floor) => (
                   <option key={floor.id} value={floor.id}>{floor.floorName}</option>
@@ -663,60 +769,159 @@ export const ResourceManagementPage = () => {
               </select>
             </div>
 
-            <div>
-              <label className="mb-1 block text-sm font-medium text-foreground">Room</label>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Room</label>
               <select
-                value={productDraft.roomId}
-                onChange={(event) => setProductDraft((current) => ({ ...current, roomId: event.target.value }))}
-                className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm"
+                value={productLocationDraft.roomId}
+                onChange={(event) => setProductLocationDraft((current) => ({ ...current, roomId: event.target.value }))}
+                className="h-11 w-full rounded-xl border border-border bg-card px-3 text-sm shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 {roomsForSelectedFloor.map((room) => (
                   <option key={room.id} value={room.id}>{room.name} ({room.code})</option>
                 ))}
               </select>
             </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-foreground">Product Name</label>
-              <input
-                value={productDraft.name}
-                onChange={(event) => setProductDraft((current) => ({ ...current, name: event.target.value }))}
-                placeholder="Example: Teacher Laptop"
-                className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-foreground">Product Type</label>
-              <select
-                value={productDraft.typeKey}
-                onChange={(event) => setProductDraft((current) => ({ ...current, typeKey: event.target.value }))}
-                className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm"
-              >
-                {knownTypeOptions.map((type) => (
-                  <option key={type} value={type}>{toLabel(type)}</option>
-                ))}
-                <option value={CUSTOM_TYPE_KEY}>Custom Type</option>
-              </select>
-            </div>
-
-            {productDraft.typeKey === CUSTOM_TYPE_KEY && (
-              <div>
-                <label className="mb-1 block text-sm font-medium text-foreground">Custom Type</label>
-                <input
-                  value={productDraft.customType}
-                  onChange={(event) => setProductDraft((current) => ({ ...current, customType: event.target.value }))}
-                  placeholder="Example: Microphone"
-                  className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm"
-                />
-              </div>
-            )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="border-t border-border bg-muted/30 px-6 py-4">
             <button
-              onClick={() => setAddDialogOpen(false)}
-              className="px-4 py-2.5 rounded-xl border border-border text-sm hover:bg-muted transition-colors"
+              onClick={closeAddFlow}
+              className="h-10 rounded-xl border border-border px-4 text-sm font-medium hover:bg-muted transition-colors"
+              disabled={savingProduct}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={goToProductDialog}
+              disabled={savingProduct}
+              className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-white shadow-md transition hover:bg-primary/90 disabled:opacity-60"
+            >
+              Next
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={addDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeAddFlow();
+            return;
+          }
+          setAddDialogOpen(true);
+        }}
+      >
+        <DialogContent className="max-w-3xl overflow-hidden rounded-3xl border border-primary/20 bg-background p-0 shadow-2xl">
+          <div className="bg-gradient-to-r from-primary/12 via-primary/5 to-transparent px-7 py-5">
+            <DialogHeader>
+              <DialogTitle className="text-3xl font-bold text-foreground">Add Products</DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground">
+                Add one or more product name and type entries for the selected room.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="px-7 py-5">
+            <div className="rounded-2xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground shadow-sm">
+              {`${buildingNameById.get(productLocationDraft.buildingId) || "-"} / ${floorNameById.get(productLocationDraft.floorId) || "-"} / ${roomById.get(productLocationDraft.roomId)?.name || "-"}`}
+            </div>
+          </div>
+
+          <div className="space-y-4 max-h-[48vh] overflow-auto px-7 pb-5 pr-5">
+            {productDrafts.map((draft, index) => (
+              <div key={draft.id} className="space-y-4 rounded-2xl border border-border/80 bg-gradient-to-br from-card via-card to-muted/25 p-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <p className="text-base font-semibold text-foreground">Product #{index + 1}</p>
+                  <button
+                    onClick={() => removeProductRow(draft.id)}
+                    disabled={savingProduct || productDrafts.length === 1}
+                    className="inline-flex h-8 items-center gap-1 rounded-lg border border-destructive/40 bg-destructive/5 px-3 text-xs font-medium text-destructive transition hover:bg-destructive/10 disabled:opacity-50"
+                  >
+                    <Trash2 size={12} />
+                    Remove
+                  </button>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Product Name</label>
+                  <input
+                    value={draft.name}
+                    onChange={(event) => updateProductRow(draft.id, { name: event.target.value })}
+                    placeholder="Example: Teacher Laptop"
+                    className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_160px]">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Product Type</label>
+                    <select
+                      value={draft.typeKey}
+                      onChange={(event) => updateProductRow(draft.id, { typeKey: event.target.value })}
+                      className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                      {knownTypeOptions.map((type) => (
+                        <option key={type} value={type}>{toLabel(type)}</option>
+                      ))}
+                      <option value={CUSTOM_TYPE_KEY}>Custom Type</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Quantity</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={draft.quantity}
+                      onChange={(event) =>
+                        updateProductRow(draft.id, {
+                          quantity: Math.max(1, Number(event.target.value) || 1),
+                        })
+                      }
+                      className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                </div>
+
+                {draft.typeKey === CUSTOM_TYPE_KEY && (
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Custom Type</label>
+                    <input
+                      value={draft.customType}
+                      onChange={(event) => updateProductRow(draft.id, { customType: event.target.value })}
+                      placeholder="Example: Microphone"
+                      className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+
+            <button
+              onClick={addProductRow}
+              disabled={savingProduct}
+              className="inline-flex h-11 items-center gap-2 rounded-xl border border-dashed border-primary/50 bg-primary/5 px-5 text-sm font-medium text-primary transition hover:bg-primary/10 disabled:opacity-60"
+            >
+              <Plus size={14} />
+              Add Another Product
+            </button>
+          </div>
+
+          <DialogFooter className="border-t border-border bg-muted/30 px-7 py-4">
+            <button
+              onClick={() => {
+                setAddDialogOpen(false);
+                setLocationDialogOpen(true);
+              }}
+              className="h-10 rounded-xl border border-border bg-background px-4 text-sm font-medium hover:bg-muted transition-colors"
+              disabled={savingProduct}
+            >
+              Back
+            </button>
+            <button
+              onClick={closeAddFlow}
+              className="h-10 rounded-xl border border-border bg-background px-4 text-sm font-medium hover:bg-muted transition-colors"
               disabled={savingProduct}
             >
               Cancel
@@ -724,10 +929,10 @@ export const ResourceManagementPage = () => {
             <button
               onClick={handleAddProduct}
               disabled={savingProduct}
-              className="px-4 py-2.5 rounded-xl bg-primary text-white text-sm hover:bg-primary/90 transition-colors disabled:opacity-60 inline-flex items-center gap-2"
+              className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-white shadow-md transition hover:bg-primary/90 disabled:opacity-60"
             >
               {savingProduct ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-              Add Product
+              Add Products
             </button>
           </DialogFooter>
         </DialogContent>

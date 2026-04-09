@@ -76,8 +76,25 @@ public class ResourceManagementService {
         String name = sanitizeName(request.getName());
         String type = normalizeAndValidateType(request.getType());
 
-        if (roomResourceRepository.existsByRoomIdAndType(room.getId(), type)) {
-            throw new IllegalArgumentException("This resource type already exists in the selected room. Please edit the existing one.");
+        List<RoomResource> existingByType = roomResourceRepository.findByRoomIdAndType(room.getId(), type);
+        if (!existingByType.isEmpty()) {
+            RoomResource primary = existingByType.get(0);
+            int mergedQuantity = request.getQuantity();
+            for (RoomResource entry : existingByType) {
+                mergedQuantity += entry.getQuantity();
+            }
+
+            primary.setName(name);
+            primary.setQuantity(mergedQuantity);
+            RoomResource updated = roomResourceRepository.save(primary);
+
+            if (existingByType.size() > 1) {
+                for (int index = 1; index < existingByType.size(); index++) {
+                    roomResourceRepository.delete(existingByType.get(index));
+                }
+            }
+
+            return toResourceResponse(updated);
         }
 
         RoomResource resource = RoomResource.builder()

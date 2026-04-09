@@ -213,6 +213,14 @@ const mapLayout = (entry: ApiLayout): ResourceLayout => ({
   scale: entry.scale,
 });
 
+const toValidRoomNumber = (roomId: string): number | null => {
+  const parsed = Number(roomId);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+  return parsed;
+};
+
 const resourceManagementService = {
   async getBuildings(): Promise<Building[]> {
     return withReadGuard("buildings", async () => {
@@ -236,28 +244,43 @@ const resourceManagementService = {
   },
 
   async getResources(roomId: string): Promise<RoomResource[]> {
+    const numericRoomId = toValidRoomNumber(roomId);
+    if (numericRoomId === null) {
+      return [];
+    }
+
     return withReadGuard(`resources:${roomId}`, async () => {
-      const response = await api.get<ApiEnvelope<ApiResource[]>>(`${BASE}/resources`, { params: { roomId } });
+      const response = await api.get<ApiEnvelope<ApiResource[]>>(`${BASE}/resources`, { params: { roomId: numericRoomId } });
       return response.data.data.map(mapResource);
     }, []);
   },
 
   async createResource(payload: ResourceCreatePayload): Promise<RoomResource> {
+    const numericRoomId = toValidRoomNumber(payload.roomId);
+    if (numericRoomId === null) {
+      throw new Error("Invalid room selection. Please choose a valid room and try again.");
+    }
+
     const response = await api.post<ApiEnvelope<ApiResource>>(`${BASE}/resources`, {
       name: payload.name,
       type: payload.type,
       quantity: payload.quantity,
-      roomId: Number(payload.roomId),
+      roomId: numericRoomId,
     });
     return mapResource(response.data.data);
   },
 
   async updateResource(id: string, payload: ResourceCreatePayload): Promise<RoomResource> {
+    const numericRoomId = toValidRoomNumber(payload.roomId);
+    if (numericRoomId === null) {
+      throw new Error("Invalid room selection. Please choose a valid room and try again.");
+    }
+
     const response = await api.put<ApiEnvelope<ApiResource>>(`${BASE}/resources/${id}`, {
       name: payload.name,
       type: payload.type,
       quantity: payload.quantity,
-      roomId: Number(payload.roomId),
+      roomId: numericRoomId,
     });
     return mapResource(response.data.data);
   },
@@ -274,8 +297,13 @@ const resourceManagementService = {
   },
 
   async saveLayout(payload: LayoutSavePayload): Promise<ResourceLayout[]> {
+    const numericRoomId = toValidRoomNumber(payload.roomId);
+    if (numericRoomId === null) {
+      throw new Error("Invalid room selection. Please choose a valid room and try again.");
+    }
+
     const response = await api.post<ApiEnvelope<ApiLayout[]>>(`${BASE}/layout/save`, {
-      roomId: Number(payload.roomId),
+      roomId: numericRoomId,
       layouts: payload.layouts.map((layout) => ({
         resourceId: Number(layout.resourceId),
         roomId: Number(layout.roomId),
@@ -290,9 +318,14 @@ const resourceManagementService = {
   },
 
   async updateLayout(layout: ResourceLayout): Promise<ResourceLayout> {
+    const numericRoomId = toValidRoomNumber(layout.roomId);
+    if (numericRoomId === null) {
+      throw new Error("Invalid room selection. Please choose a valid room and try again.");
+    }
+
     const response = await api.put<ApiEnvelope<ApiLayout>>(`${BASE}/layout/update`, {
       resourceId: Number(layout.resourceId),
-      roomId: Number(layout.roomId),
+      roomId: numericRoomId,
       x: layout.x,
       y: layout.y,
       z: layout.z,

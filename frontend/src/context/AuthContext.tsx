@@ -33,7 +33,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const currentUser = authService.getCurrentUser()
     if (currentUser) {
-      if (authService.isSessionExpired()) {
+      const hasToken = authService.isAuthenticated()
+      if (!hasToken || authService.isSessionExpired()) {
         authService.logout()
       } else {
         setUser(currentUser)
@@ -129,7 +130,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     logout,
     register,
     updateUser,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user && authService.isAuthenticated(),
     loading,
   }
 
