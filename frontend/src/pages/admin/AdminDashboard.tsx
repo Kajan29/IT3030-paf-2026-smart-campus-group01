@@ -14,7 +14,6 @@ import { BookingsPage } from "@/components/admin/dashboard/BookingsPage";
 import { TicketManagementPage } from "@/components/dashboard/TicketManagementPage";
 import { ReportsAnalyticsPage } from "@/components/admin/dashboard/ReportsAnalyticsPage";
 import { SettingsPage } from "@/components/admin/dashboard/SettingsPage";
-import { SwapRequestManagementPage } from "@/pages/admin/SwapRequestManagementPage";
 import { NotificationsPage } from "@/pages/admin/NotificationsPage";
 import { Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -31,7 +30,6 @@ const pageTitles: Record<string, string> = {
   buildingDetails: "Building Details",
   roomDetails: "Room Details",
   bookings: "Bookings",
-  swapRequests: "Staff Override Requests",
   notifications: "Notifications",
   reports: "Reports & Analytics",
   settings: "Settings",
@@ -157,8 +155,6 @@ const AdminDashboard = () => {
         return <RoomDetailsPage roomId={selectedRoomId} onBack={() => setActiveItem("availability")} />;
       case "bookings":
         return <BookingsPage />;
-      case "swapRequests":
-        return <SwapRequestManagementPage />;
       case "notifications":
         return <NotificationsPage />;
       case "reports":

@@ -15,7 +15,7 @@ const AdminPage = () => {
           </p>
           <div className="mt-6">
             <Link
-              to="/admin/dashboard"
+              to="/admin"
               className="inline-flex items-center rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
             >
               Open Full Dashboard
@@ -38,19 +38,19 @@ const AdminPage = () => {
             <AdminQuickActionCard
               title="User Management"
               description="Review students and staff, manage account status, and control role-based access."
-              to="/admin/dashboard"
+              to="/admin"
               icon={<Users className="h-5 w-5" />}
             />
             <AdminQuickActionCard
               title="Facility Setup"
               description="Maintain buildings, floors, and rooms used by the reservation system."
-              to="/admin/dashboard"
+              to="/admin"
               icon={<Building2 className="h-5 w-5" />}
             />
             <AdminQuickActionCard
               title="Booking Operations"
               description="Track booking activity and handle operational booking decisions."
-              to="/admin/dashboard"
+              to="/admin"
               icon={<CalendarCheck2 className="h-5 w-5" />}
             />
           </div>

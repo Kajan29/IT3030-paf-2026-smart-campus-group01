@@ -138,7 +138,7 @@ public class TicketService {
                 "A new ticket " + savedTicket.getTicketNumber() + " was submitted: " + savedTicket.getSubject(),
                 null,
                 savedTicket.getId(),
-                "/admin/dashboard?view=tickets"
+                "/admin?view=tickets"
         );
 
         return toResponse(savedTicket);
@@ -962,7 +962,7 @@ public class TicketService {
         }
 
         return switch (recipient.getRole()) {
-            case ADMIN -> "/admin/dashboard?view=tickets";
+            case ADMIN -> "/admin?view=tickets";
             case NON_ACADEMIC_STAFF -> "/profile?section=assignedTickets";
             default -> "/my-tickets";
         };

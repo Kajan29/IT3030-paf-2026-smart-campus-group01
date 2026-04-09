@@ -5,6 +5,23 @@ import AuthHeroPanel from "../../components/common/AuthHeroPanel";
 import authService from "../../services/authService";
 import { toast } from "react-toastify";
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const getApiErrorMessage = (error: any, fallback: string) => {
+  const responseData = error?.response?.data;
+  const message = responseData?.message;
+  const validationErrors = responseData?.data;
+
+  if (message === "Validation failed" && validationErrors && typeof validationErrors === "object") {
+    const firstValidationError = Object.values(validationErrors)[0];
+    if (typeof firstValidationError === "string" && firstValidationError.trim()) {
+      return firstValidationError;
+    }
+  }
+
+  return message || fallback;
+};
+
 const ForgotPasswordPage = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -27,21 +44,28 @@ const ForgotPasswordPage = () => {
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const normalizedEmail = email.trim().toLowerCase();
     
-    if (!email) {
+    if (!normalizedEmail) {
       toast.error("Please enter your email address");
+      return;
+    }
+
+    if (!EMAIL_PATTERN.test(normalizedEmail)) {
+      toast.error("Please enter a valid email address");
       return;
     }
 
     setLoading(true);
     try {
-      const response = await authService.forgotPassword({ email });
+      const response = await authService.forgotPassword({ email: normalizedEmail });
       if (response.data.success) {
+        setEmail(normalizedEmail);
         setStep('verify');
         toast.success(response.data.message || "Verification code sent to your email!");
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to send verification code. Please try again.");
+      toast.error(getApiErrorMessage(error, "Failed to send verification code. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -118,7 +142,7 @@ const ForgotPasswordPage = () => {
         navigate("/auth/login");
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to reset password. Please try again.");
+      toast.error(getApiErrorMessage(error, "Failed to reset password. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -135,7 +159,7 @@ const ForgotPasswordPage = () => {
         toast.success(response.data.message || "New verification code sent!");
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to resend code. Please try again.");
+      toast.error(getApiErrorMessage(error, "Failed to resend code. Please try again."));
     }
   };
 

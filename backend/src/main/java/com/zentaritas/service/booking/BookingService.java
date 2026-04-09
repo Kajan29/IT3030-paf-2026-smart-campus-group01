@@ -108,7 +108,7 @@ public class BookingService {
                     "A new booking request from " + booker.getEmail() + " is waiting for admin approval.",
                     savedBooking.getId(),
                     null,
-                    "/admin/dashboard?view=bookings"
+                    "/admin?view=bookings"
             );
         }
 

@@ -400,7 +400,7 @@ export const NotificationsPage = (): JSX.Element => {
                 onChange={(event) =>
                   setForm((previous) => ({ ...previous, targetPath: event.target.value }))
                 }
-                placeholder="Example: /admin/dashboard?view=tickets"
+                placeholder="Example: /admin?view=tickets"
                 className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
               />
             </div>
