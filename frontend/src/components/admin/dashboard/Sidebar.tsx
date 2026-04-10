@@ -10,7 +10,7 @@ import {
   Clock3,
   BookOpen,
   Bell,
-  BarChart3,
+  PieChart,
   Settings,
   House,
   LogOut,
@@ -31,16 +31,16 @@ interface SidebarProps {
 
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "users", label: "User Management", icon: Users },
-  { id: "tickets", label: "Ticket Management", icon: Ticket },
   { id: "buildings", label: "Building Management", icon: Building2 },
   { id: "floors", label: "Floor Management", icon: Layers },
-  { id: "rooms", label: "Room Management", icon: DoorOpen, badge: 12 },
+  { id: "rooms", label: "Room Management", icon: DoorOpen },
   { id: "resources", label: "Resource Management", icon: Armchair },
   { id: "availability", label: "Room Availability", icon: Clock3 },
   { id: "bookings", label: "Bookings", icon: BookOpen },
+  { id: "users", label: "User Management", icon: Users },
+  { id: "tickets", label: "Ticket Management", icon: Ticket },
   { id: "notifications", label: "Notifications", icon: Bell },
-  { id: "reports", label: "Reports & Analytics", icon: BarChart3 },
+  { id: "resourceAnalytics", label: "Resource Analytics", icon: PieChart },
   { id: "settings", label: "Settings", icon: Settings },
 ];
 

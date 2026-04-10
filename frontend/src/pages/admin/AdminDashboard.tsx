@@ -13,7 +13,7 @@ import RoomAvailabilityManagementPage from "@/components/admin/dashboard/RoomAva
 import { BookingsPage } from "@/components/admin/dashboard/BookingsPage";
 import { ResourceManagementPage } from "@/components/admin/dashboard/ResourceManagementPage";
 import { TicketManagementPage } from "@/components/dashboard/TicketManagementPage";
-import { ReportsAnalyticsPage } from "@/components/admin/dashboard/ReportsAnalyticsPage";
+import { ResourceAnalyticsPage } from "@/components/admin/dashboard/ResourceAnalyticsPage";
 import { SettingsPage } from "@/components/admin/dashboard/SettingsPage";
 import { NotificationsPage } from "@/pages/admin/NotificationsPage";
 import { facilityService } from "@/services/facilityService";
@@ -33,7 +33,7 @@ const pageTitles: Record<string, string> = {
   roomDetails: "Room Details",
   bookings: "Bookings",
   notifications: "Notifications",
-  reports: "Reports & Analytics",
+  resourceAnalytics: "Resource Analytics",
   settings: "Settings",
 };
 
@@ -155,8 +155,8 @@ const AdminDashboard = () => {
         return <BookingsPage />;
       case "notifications":
         return <NotificationsPage />;
-      case "reports":
-        return <ReportsAnalyticsPage />;
+      case "resourceAnalytics":
+        return <ResourceAnalyticsPage />;
       case "settings":
         return <SettingsPage />;
       default:

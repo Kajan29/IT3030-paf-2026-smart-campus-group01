@@ -223,9 +223,6 @@ public class FacilityManagementService {
         if (roomRepository.existsByCodeIgnoreCase(request.getCode())) {
             throw new IllegalArgumentException("Room code already exists");
         }
-        if (request.getMaxOccupancy() < request.getSeatingCapacity()) {
-            throw new IllegalArgumentException("Max occupancy cannot be less than seating capacity");
-        }
 
         Building building = getBuildingEntity(request.getBuildingId());
         Floor floor = getFloorEntity(request.getFloorId());
@@ -243,7 +240,6 @@ public class FacilityManagementService {
                 .areaSqMeters(roundToTwoDecimals(request.getLengthMeters() * request.getWidthMeters()))
                 .areaSqFeet(roundToTwoDecimals(request.getLengthMeters() * request.getWidthMeters() * 10.7639))
                 .seatingCapacity(request.getSeatingCapacity())
-                .maxOccupancy(request.getMaxOccupancy())
                 .facilities(normalizeStringList(request.getFacilities()))
                 .status(request.getStatus().trim())
                 .description(request.getDescription().trim())
@@ -253,8 +249,6 @@ public class FacilityManagementService {
                 .projectorAvailable(Boolean.TRUE.equals(request.getProjectorAvailable()))
                 .boardType(request.getBoardType().trim())
                 .internetAvailable(Boolean.TRUE.equals(request.getInternetAvailable()))
-                .chairs(request.getChairs())
-                .tables(request.getTables())
                 .labEquipmentAvailable(Boolean.TRUE.equals(request.getLabEquipmentAvailable()))
                 .powerBackupAvailable(Boolean.TRUE.equals(request.getPowerBackupAvailable()))
                 .accessibilitySupport(Boolean.TRUE.equals(request.getAccessibilitySupport()))
@@ -289,9 +283,6 @@ public class FacilityManagementService {
         if (!room.getCode().equalsIgnoreCase(nextCode) && roomRepository.existsByCodeIgnoreCase(nextCode)) {
             throw new IllegalArgumentException("Room code already exists");
         }
-        if (request.getMaxOccupancy() < request.getSeatingCapacity()) {
-            throw new IllegalArgumentException("Max occupancy cannot be less than seating capacity");
-        }
 
         Building building = getBuildingEntity(request.getBuildingId());
         Floor floor = getFloorEntity(request.getFloorId());
@@ -307,7 +298,6 @@ public class FacilityManagementService {
         room.setAreaSqMeters(roundToTwoDecimals(request.getLengthMeters() * request.getWidthMeters()));
         room.setAreaSqFeet(roundToTwoDecimals(request.getLengthMeters() * request.getWidthMeters() * 10.7639));
         room.setSeatingCapacity(request.getSeatingCapacity());
-        room.setMaxOccupancy(request.getMaxOccupancy());
         room.setFacilities(normalizeStringList(request.getFacilities()));
         room.setStatus(request.getStatus().trim());
         room.setDescription(request.getDescription().trim());
@@ -317,8 +307,6 @@ public class FacilityManagementService {
         room.setProjectorAvailable(Boolean.TRUE.equals(request.getProjectorAvailable()));
         room.setBoardType(request.getBoardType().trim());
         room.setInternetAvailable(Boolean.TRUE.equals(request.getInternetAvailable()));
-        room.setChairs(request.getChairs());
-        room.setTables(request.getTables());
         room.setLabEquipmentAvailable(Boolean.TRUE.equals(request.getLabEquipmentAvailable()));
         room.setPowerBackupAvailable(Boolean.TRUE.equals(request.getPowerBackupAvailable()));
         room.setAccessibilitySupport(Boolean.TRUE.equals(request.getAccessibilitySupport()));
@@ -431,7 +419,6 @@ public class FacilityManagementService {
                 .areaSqMeters(room.getAreaSqMeters())
                 .areaSqFeet(room.getAreaSqFeet())
                 .seatingCapacity(room.getSeatingCapacity())
-                .maxOccupancy(room.getMaxOccupancy())
                 .facilities(new ArrayList<>(Optional.ofNullable(room.getFacilities()).orElseGet(ArrayList::new)))
                 .status(room.getStatus())
                 .description(room.getDescription())
@@ -441,8 +428,6 @@ public class FacilityManagementService {
                 .projectorAvailable(room.getProjectorAvailable())
                 .boardType(room.getBoardType())
                 .internetAvailable(room.getInternetAvailable())
-                .chairs(room.getChairs())
-                .tables(room.getTables())
                 .labEquipmentAvailable(room.getLabEquipmentAvailable())
                 .powerBackupAvailable(room.getPowerBackupAvailable())
                 .accessibilitySupport(room.getAccessibilitySupport())

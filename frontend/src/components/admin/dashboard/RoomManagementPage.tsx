@@ -34,7 +34,6 @@ interface RoomFormState {
   lengthMeters: number;
   widthMeters: number;
   seatingCapacity: number;
-  maxOccupancy: number;
   facilities: string;
   status: RoomStatus;
   description: string;
@@ -44,8 +43,6 @@ interface RoomFormState {
   projectorAvailable: boolean;
   boardType: BoardType;
   internetAvailable: boolean;
-  chairs: number;
-  tables: number;
   labEquipmentAvailable: boolean;
   powerBackupAvailable: boolean;
   accessibilitySupport: boolean;
@@ -71,7 +68,6 @@ const emptyForm: RoomFormState = {
   lengthMeters: 8,
   widthMeters: 6,
   seatingCapacity: 30,
-  maxOccupancy: 35,
   facilities: "",
   status: "Available",
   description: "",
@@ -81,8 +77,6 @@ const emptyForm: RoomFormState = {
   projectorAvailable: false,
   boardType: "Whiteboard",
   internetAvailable: true,
-  chairs: 30,
-  tables: 12,
   labEquipmentAvailable: false,
   powerBackupAvailable: true,
   accessibilitySupport: true,
@@ -127,6 +121,7 @@ export const RoomManagementPage = ({
   const [floorFilter, setFloorFilter] = useState(selectedFloorId || "");
   const [typeFilter, setTypeFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [bookingFilter, setBookingFilter] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [formState, setFormState] = useState<RoomFormState>(emptyForm);
   const [formErrors, setFormErrors] = useState<RoomFormErrors>({});
@@ -201,9 +196,10 @@ export const RoomManagementPage = ({
       const matchesFloor = !floorFilter || room.floorId === floorFilter;
       const matchesType = !typeFilter || room.type === typeFilter;
       const matchesStatus = !statusFilter || room.status === statusFilter;
-      return matchesSearch && matchesBuilding && matchesFloor && matchesType && matchesStatus;
+      const matchesBooking = !bookingFilter || (bookingFilter === "available" && room.bookingAvailable) || (bookingFilter === "unavailable" && !room.bookingAvailable);
+      return matchesSearch && matchesBuilding && matchesFloor && matchesType && matchesStatus && matchesBooking;
     });
-  }, [rooms, buildings, floors, searchTerm, buildingFilter, floorFilter, typeFilter, statusFilter]);
+  }, [rooms, buildings, floors, searchTerm, buildingFilter, floorFilter, typeFilter, statusFilter, bookingFilter]);
 
   const stats = useMemo(() => {
     return {
@@ -234,7 +230,6 @@ export const RoomManagementPage = ({
       lengthMeters: room.lengthMeters,
       widthMeters: room.widthMeters,
       seatingCapacity: room.seatingCapacity,
-      maxOccupancy: room.maxOccupancy,
       facilities: room.facilities.join(", "),
       status: room.status,
       description: room.description,
@@ -244,8 +239,6 @@ export const RoomManagementPage = ({
       projectorAvailable: room.projectorAvailable,
       boardType: room.boardType,
       internetAvailable: room.internetAvailable,
-      chairs: room.chairs,
-      tables: room.tables,
       labEquipmentAvailable: room.labEquipmentAvailable,
       powerBackupAvailable: room.powerBackupAvailable,
       accessibilitySupport: room.accessibilitySupport,
@@ -295,17 +288,6 @@ export const RoomManagementPage = ({
     if (formState.seatingCapacity < 1 || formState.seatingCapacity > 1000) {
       errors.seatingCapacity = "Seating capacity must be between 1 and 1000.";
     }
-    if (formState.maxOccupancy < 1 || formState.maxOccupancy > 1200) {
-      errors.maxOccupancy = "Max occupancy must be between 1 and 1200.";
-    } else if (formState.maxOccupancy < formState.seatingCapacity) {
-      errors.maxOccupancy = "Max occupancy cannot be less than seating capacity.";
-    }
-    if (formState.chairs < 0 || formState.chairs > 2000) {
-      errors.chairs = "Number of chairs must be between 0 and 2000.";
-    }
-    if (formState.tables < 0 || formState.tables > 500) {
-      errors.tables = "Number of tables must be between 0 and 500.";
-    }
 
     const duplicateCode = rooms.some(
       (room) => room.id !== formState.id && room.code.toLowerCase() === formState.code.trim().toLowerCase()
@@ -342,7 +324,6 @@ export const RoomManagementPage = ({
       lengthMeters: formState.lengthMeters,
       widthMeters: formState.widthMeters,
       seatingCapacity: formState.seatingCapacity,
-      maxOccupancy: formState.maxOccupancy,
       facilities,
       status: formState.status,
       description: formState.description.trim(),
@@ -352,8 +333,6 @@ export const RoomManagementPage = ({
       projectorAvailable: formState.projectorAvailable,
       boardType: formState.boardType,
       internetAvailable: formState.internetAvailable,
-      chairs: formState.chairs,
-      tables: formState.tables,
       labEquipmentAvailable: formState.labEquipmentAvailable,
       powerBackupAvailable: formState.powerBackupAvailable,
       accessibilitySupport: formState.accessibilitySupport,
@@ -547,6 +526,16 @@ export const RoomManagementPage = ({
                 </option>
               ))}
             </select>
+            <select
+              value={bookingFilter}
+              onChange={(event) => setBookingFilter(event.target.value)}
+              className="px-3 py-2.5 rounded-xl border border-border bg-background text-sm"
+              title="Filter rooms by student availability"
+            >
+              <option value="">All Rooms (Student Booking)</option>
+              <option value="available">✓ Available for Students</option>
+              <option value="unavailable">✗ Not Available for Students</option>
+            </select>
           </div>
         </div>
       </div>
@@ -559,10 +548,9 @@ export const RoomManagementPage = ({
                 <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Room</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Building / Floor</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Capacity</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Area</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Booking</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">For Students</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>
               </tr>
             </thead>
@@ -598,9 +586,6 @@ export const RoomManagementPage = ({
                       </div>
                     </td>
                     <td className="py-3 px-4 text-sm text-foreground">{room.type}</td>
-                    <td className="py-3 px-4 text-sm text-foreground">
-                      {room.seatingCapacity} seats / {room.maxOccupancy} max
-                    </td>
                     <td className="py-3 px-4 text-sm text-muted-foreground">{room.areaSqMeters} sqm</td>
                     <td className="py-3 px-4">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${statusBadgeClass[room.status]}`}>
@@ -608,8 +593,8 @@ export const RoomManagementPage = ({
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      <span className={`text-xs font-medium ${room.bookingAvailable ? "text-success" : "text-muted-foreground"}`}>
-                        {room.bookingAvailable ? "Enabled" : "Disabled"}
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${room.bookingAvailable ? "bg-success/10 text-success" : "bg-muted/30 text-muted-foreground"}`}>
+                        {room.bookingAvailable ? "Yes" : "No"}
                       </span>
                     </td>
                     <td className="py-3 px-4">
@@ -793,25 +778,11 @@ export const RoomManagementPage = ({
                   value={formState.seatingCapacity}
                   onChange={(event) => {
                     setFormState((current) => ({ ...current, seatingCapacity: Number(event.target.value || 1) }));
-                    setFormErrors((current) => ({ ...current, seatingCapacity: undefined, maxOccupancy: undefined }));
+                    setFormErrors((current) => ({ ...current, seatingCapacity: undefined }));
                   }}
                   className={`w-full px-3 py-2.5 rounded-xl border bg-background text-sm ${formErrors.seatingCapacity ? "border-destructive" : "border-border"}`}
                 />
                 {formErrors.seatingCapacity && <p className="mt-1 text-xs text-destructive">{formErrors.seatingCapacity}</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Max Occupancy</label>
-                <input
-                  type="number"
-                  min={1}
-                  value={formState.maxOccupancy}
-                  onChange={(event) => {
-                    setFormState((current) => ({ ...current, maxOccupancy: Number(event.target.value || 1) }));
-                    setFormErrors((current) => ({ ...current, maxOccupancy: undefined }));
-                  }}
-                  className={`w-full px-3 py-2.5 rounded-xl border bg-background text-sm ${formErrors.maxOccupancy ? "border-destructive" : "border-border"}`}
-                />
-                {formErrors.maxOccupancy && <p className="mt-1 text-xs text-destructive">{formErrors.maxOccupancy}</p>}
               </div>
 
               <div>
@@ -879,35 +850,6 @@ export const RoomManagementPage = ({
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Number of Chairs</label>
-                <input
-                  type="number"
-                  min={0}
-                  value={formState.chairs}
-                  onChange={(event) => {
-                    setFormState((current) => ({ ...current, chairs: Number(event.target.value || 0) }));
-                    setFormErrors((current) => ({ ...current, chairs: undefined }));
-                  }}
-                  className={`w-full px-3 py-2.5 rounded-xl border bg-background text-sm ${formErrors.chairs ? "border-destructive" : "border-border"}`}
-                />
-                {formErrors.chairs && <p className="mt-1 text-xs text-destructive">{formErrors.chairs}</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Number of Tables</label>
-                <input
-                  type="number"
-                  min={0}
-                  value={formState.tables}
-                  onChange={(event) => {
-                    setFormState((current) => ({ ...current, tables: Number(event.target.value || 0) }));
-                    setFormErrors((current) => ({ ...current, tables: undefined }));
-                  }}
-                  className={`w-full px-3 py-2.5 rounded-xl border bg-background text-sm ${formErrors.tables ? "border-destructive" : "border-border"}`}
-                />
-                {formErrors.tables && <p className="mt-1 text-xs text-destructive">{formErrors.tables}</p>}
-              </div>
-
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-foreground mb-1">Room Image {formState.id ? "(optional on update)" : ""}</label>
                 <input
@@ -956,7 +898,6 @@ export const RoomManagementPage = ({
                   { key: "labEquipmentAvailable", label: "Lab Equipment" },
                   { key: "powerBackupAvailable", label: "Power Backup" },
                   { key: "accessibilitySupport", label: "Accessibility" },
-                  { key: "bookingAvailable", label: "Booking Available" },
                 ].map((option) => (
                   <label key={option.key} className="flex items-center gap-2 text-sm text-foreground">
                     <input
@@ -972,6 +913,26 @@ export const RoomManagementPage = ({
                     {option.label}
                   </label>
                 ))}
+              </div>
+
+              <div className="md:col-span-2 border-t border-border pt-4 mt-2">
+                <label className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border cursor-pointer hover:bg-muted/50 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={formState.bookingAvailable}
+                    onChange={(event) =>
+                      setFormState((current) => ({
+                        ...current,
+                        bookingAvailable: event.target.checked,
+                      }))
+                    }
+                    className="w-4 h-4"
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Available for Students</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">When enabled, students can book this room</p>
+                  </div>
+                </label>
               </div>
 
               <div className="md:col-span-2">

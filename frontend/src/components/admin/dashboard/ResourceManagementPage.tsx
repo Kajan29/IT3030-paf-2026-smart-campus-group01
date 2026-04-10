@@ -305,9 +305,14 @@ export const ResourceManagementPage = () => {
   }, [visibleRooms, resourcesByRoom]);
 
   const totals = useMemo(() => {
-    const allResources = Object.values(resourcesByRoom).flat();
-    const totalProducts = allResources.length;
-    const totalACUnits = allResources.reduce((sum, resource) => {
+    const visibleRoomIds = new Set(visibleRooms.map((room) => room.id));
+    const visibleResources = Object.entries(resourcesByRoom)
+      .filter(([roomId]) => visibleRoomIds.has(roomId))
+      .flatMap(([, resources]) => resources);
+
+    const totalResourceTypes = visibleResources.length;
+    const totalResourceUnits = visibleResources.reduce((sum, resource) => sum + resource.quantity, 0);
+    const totalACUnits = visibleResources.reduce((sum, resource) => {
       const type = normalizeType(resource.type);
       if (type === "ac_unit" || type === "ac") {
         return sum + resource.quantity;
@@ -318,11 +323,13 @@ export const ResourceManagementPage = () => {
     return {
       buildings: buildings.length,
       floors: floors.length,
-      rooms: rooms.length,
-      products: totalProducts,
+      rooms: visibleRooms.length,
+      totalRooms: rooms.length,
+      resourceTypes: totalResourceTypes,
+      resourceUnits: totalResourceUnits,
       acUnits: totalACUnits,
     };
-  }, [buildings.length, floors.length, rooms.length, resourcesByRoom]);
+  }, [buildings.length, floors.length, rooms.length, visibleRooms, resourcesByRoom]);
 
   const openAddDialog = () => {
     setProductLocationDraft(buildProductLocationDraft());
@@ -634,20 +641,23 @@ export const ResourceManagementPage = () => {
             <DoorOpen className="h-5 w-5 text-primary/70" />
           </div>
           <p className="text-3xl font-bold text-foreground">{totals.rooms}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Showing {totals.rooms} of {totals.totalRooms}</p>
         </div>
         <div className="glass-card rounded-2xl p-6 border border-border hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium text-muted-foreground">Products</p>
+            <p className="text-sm font-medium text-muted-foreground">Resource Types</p>
             <DoorOpen className="h-5 w-5 text-primary/70" />
           </div>
-          <p className="text-3xl font-bold text-foreground">{totals.products}</p>
+          <p className="text-3xl font-bold text-foreground">{totals.resourceTypes}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Distinct resource entries</p>
         </div>
         <div className="glass-card rounded-2xl p-6 border border-border hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium text-muted-foreground">AC Units</p>
+            <p className="text-sm font-medium text-muted-foreground">Total Units</p>
             <Snowflake className="h-5 w-5 text-primary/70" />
           </div>
-          <p className="text-3xl font-bold text-foreground">{totals.acUnits}</p>
+          <p className="text-3xl font-bold text-foreground">{totals.resourceUnits}</p>
+          <p className="mt-1 text-xs text-muted-foreground">AC Units: {totals.acUnits}</p>
         </div>
       </div>
 

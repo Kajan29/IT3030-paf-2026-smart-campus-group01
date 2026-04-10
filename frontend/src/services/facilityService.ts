@@ -178,7 +178,6 @@ export interface RoomUpsertPayload {
   lengthMeters: number;
   widthMeters: number;
   seatingCapacity: number;
-  maxOccupancy: number;
   facilities: string[];
   status: RoomStatus;
   description: string;
@@ -188,8 +187,6 @@ export interface RoomUpsertPayload {
   projectorAvailable: boolean;
   boardType: Room["boardType"];
   internetAvailable: boolean;
-  chairs: number;
-  tables: number;
   labEquipmentAvailable: boolean;
   powerBackupAvailable: boolean;
   accessibilitySupport: boolean;

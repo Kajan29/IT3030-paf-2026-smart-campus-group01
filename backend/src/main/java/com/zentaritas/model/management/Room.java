@@ -55,9 +55,6 @@ public class Room {
     @Column(name = "seating_capacity", nullable = false)
     private Integer seatingCapacity;
 
-    @Column(name = "max_occupancy", nullable = false)
-    private Integer maxOccupancy;
-
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "room_facilities", joinColumns = @JoinColumn(name = "room_id"))
     @Column(name = "facility")
@@ -87,12 +84,6 @@ public class Room {
 
     @Column(name = "internet_available", nullable = false)
     private Boolean internetAvailable;
-
-    @Column(nullable = false)
-    private Integer chairs;
-
-    @Column(nullable = false)
-    private Integer tables;
 
     @Column(name = "lab_equipment_available", nullable = false)
     private Boolean labEquipmentAvailable;

@@ -25,7 +25,6 @@ public class RoomResponse {
     private Double areaSqMeters;
     private Double areaSqFeet;
     private Integer seatingCapacity;
-    private Integer maxOccupancy;
     private List<String> facilities;
     private String status;
     private String description;
@@ -35,8 +34,6 @@ public class RoomResponse {
     private Boolean projectorAvailable;
     private String boardType;
     private Boolean internetAvailable;
-    private Integer chairs;
-    private Integer tables;
     private Boolean labEquipmentAvailable;
     private Boolean powerBackupAvailable;
     private Boolean accessibilitySupport;
