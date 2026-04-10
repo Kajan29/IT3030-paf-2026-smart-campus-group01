@@ -111,6 +111,9 @@ export interface Room {
   closingTime?: string;
   maintenanceHistory: string[];
   imageUrl?: string;
+  assignedStaffId?: string | null;
+  assignedStaffName?: string | null;
+  assignedStaffEmail?: string | null;
   createdBy?: CreatedByUser;
   createdAt?: string;
   updatedAt?: string;

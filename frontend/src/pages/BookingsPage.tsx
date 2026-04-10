@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Calendar, Clock, Building2, Layers, ArrowLeft } from "lucide-react";
+import { Calendar, Clock, Building2, Layers, ArrowLeft, Users, AlertTriangle, Ban, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Breadcrumb, type BreadcrumbItem } from "@/components/common/Breadcrumb";
@@ -10,6 +11,7 @@ import { FloorCard } from "@/components/common/FloorCard";
 import { RoomCard } from "@/components/common/RoomCard";
 import facilityService from "@/services/facilityService";
 import bookingService from "@/services/bookingService";
+import userService from "@/services/userService";
 import type { Building, Floor, Room } from "@/types/campusManagement";
 import { toast } from "react-toastify";
 import {
@@ -20,10 +22,6 @@ import {
 import heroCampus from "@/assets/hero-campus.jpg";
 
 type BookingStep = "building" | "floor" | "room" | "confirm";
-type MyBookingSummary = {
-  status?: string;
-  endTime?: string | null;
-};
 
 const STUDY_ROOM_TYPE_KEYWORDS = [
   "study",
@@ -35,7 +33,6 @@ const STUDY_ROOM_TYPE_KEYWORDS = [
   "seminar",
   "computer lab",
 ];
-const ACTIVE_BOOKING_STATUSES = new Set(["PENDING", "APPROVED", "CONFIRMED"]);
 
 const normalizeRoomStatus = (status?: string) => (status || "").trim().toLowerCase();
 const normalizeValue = (value?: string) => (value || "").trim().toLowerCase();
@@ -53,60 +50,41 @@ const isRoomBookableForStudents = (room: Room) => {
   const statusBookable = ["available", "open"].includes(normalizeRoomStatus(room.status));
   const maintenanceOperational = normalizeValue(room.maintenanceStatus) === "operational";
   const conditionSuitable = ["excellent", "good"].includes(normalizeValue(room.condition));
-  return statusBookable && room.bookingAvailable !== false && maintenanceOperational && conditionSuitable;
+  const hasAssignedStaff = !!room.assignedStaffId;
+  return statusBookable && room.bookingAvailable !== false && maintenanceOperational && conditionSuitable && hasAssignedStaff;
 };
 
-const hasActiveStudentBooking = (bookings: MyBookingSummary[]) => {
-  const nowTs = Date.now();
-
-  return bookings.some((booking) => {
-    const status = (booking.status || "").trim().toUpperCase();
-    if (!ACTIVE_BOOKING_STATUSES.has(status)) {
-      return false;
-    }
-
-    if (!booking.endTime) {
-      return true;
-    }
-
-    const endTs = Date.parse(booking.endTime);
-    return Number.isNaN(endTs) || endTs > nowTs;
-  });
-};
-
+// Two-hour time slots from 08:00 to 16:00 (last slot ends at 18:00)
 const timeSlots = [
-  "08:00 AM", "09:00 AM", "10:00 AM", "11:00 AM", 
-  "12:00 PM", "01:00 PM", "02:00 PM", "03:00 PM", 
-  "04:00 PM", "05:00 PM"
+  { label: "08:00 AM - 10:00 AM", start: "08:00", end: "10:00" },
+  { label: "10:00 AM - 12:00 PM", start: "10:00", end: "12:00" },
+  { label: "12:00 PM - 02:00 PM", start: "12:00", end: "14:00" },
+  { label: "02:00 PM - 04:00 PM", start: "14:00", end: "16:00" },
+  { label: "04:00 PM - 06:00 PM", start: "16:00", end: "18:00" },
 ];
 
-const to24HourTime = (slot: string): string => {
-  const [timePart, period] = slot.split(" ");
-  const [rawHour, rawMinute] = timePart.split(":").map(Number);
-  let hour = rawHour;
-
-  if (period === "PM" && hour !== 12) hour += 12;
-  if (period === "AM" && hour === 12) hour = 0;
-
-  return `${String(hour).padStart(2, "0")}:${String(rawMinute).padStart(2, "0")}`;
-};
-
-const addOneHour = (time24: string): string => {
-  const [hour, minute] = time24.split(":").map(Number);
-  const nextHour = (hour + 1) % 24;
-  return `${String(nextHour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-};
+// Returns today's date as YYYY-MM-DD
+const getTodayStr = () => new Date().toISOString().split("T")[0];
 
 const BookRoomPage = () => {
+  const navigate = useNavigate();
   const [step, setStep] = useState<BookingStep>("building");
   const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null);
   const [selectedFloor, setSelectedFloor] = useState<Floor | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [selectedDate, setSelectedDate] = useState("");
-  const [selectedTime, setSelectedTime] = useState("");
+  const [selectedSlot, setSelectedSlot] = useState<typeof timeSlots[number] | null>(null);
+  const [seatsToBook, setSeatsToBook] = useState(1);
   const [booked, setBooked] = useState(false);
   const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
-  const [hasExistingActiveBooking, setHasExistingActiveBooking] = useState(false);
+
+  // Booking restriction state
+  const [bookingRestricted, setBookingRestricted] = useState(false);
+  const [restrictionReason, setRestrictionReason] = useState<string | null>(null);
+
+  // Seat availability state
+  const [seatInfo, setSeatInfo] = useState<{ totalCapacity: number; seatsBooked: number; seatsAvailable: number } | null>(null);
+  const [loadingSeats, setLoadingSeats] = useState(false);
 
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [floors, setFloors] = useState<Floor[]>([]);
@@ -123,7 +101,6 @@ const BookRoomPage = () => {
           facilityService.getFloors(),
           facilityService.getRooms(),
         ]);
-        const myBookings = (await bookingService.getMyBookings().catch(() => [])) as MyBookingSummary[];
 
         if (!mounted) return;
 
@@ -136,8 +113,6 @@ const BookRoomPage = () => {
           setFloors(fallbackFloors);
           setRooms(fallbackRooms);
         }
-
-        setHasExistingActiveBooking(hasActiveStudentBooking(Array.isArray(myBookings) ? myBookings : []));
       } catch {
         if (!mounted) return;
         setBuildings(fallbackBuildings);
@@ -151,6 +126,51 @@ const BookRoomPage = () => {
     loadData();
     return () => { mounted = false; };
   }, []);
+
+  // Check if user's booking access is restricted
+  useEffect(() => {
+    const checkRestriction = async () => {
+      try {
+        const response = await userService.getProfile();
+        const profile = response.data?.data || response.data;
+        if (profile?.bookingRestricted) {
+          setBookingRestricted(true);
+          setRestrictionReason(profile.bookingRestrictionReason || null);
+        }
+      } catch {
+        // Not logged in or error — restriction check will happen server-side
+      }
+    };
+    checkRestriction();
+  }, []);
+
+  // Fetch seat availability whenever room, date, or slot changes
+  useEffect(() => {
+    if (!selectedRoom || !selectedDate || !selectedSlot) {
+      setSeatInfo(null);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchSeats = async () => {
+      setLoadingSeats(true);
+      try {
+        const startTime = `${selectedDate}T${selectedSlot.start}:00`;
+        const endTime = `${selectedDate}T${selectedSlot.end}:00`;
+        const data = await bookingService.getSeatAvailability(String(selectedRoom.id), startTime, endTime);
+        if (!cancelled) {
+          setSeatInfo(data);
+        }
+      } catch {
+        if (!cancelled) setSeatInfo(null);
+      } finally {
+        if (!cancelled) setLoadingSeats(false);
+      }
+    };
+
+    fetchSeats();
+    return () => { cancelled = true; };
+  }, [selectedRoom, selectedDate, selectedSlot]);
 
   const studyBookableRooms = rooms.filter(
     (room) => isRoomBookableForStudents(room) && isStudyAreaRoom(room)
@@ -181,11 +201,6 @@ const BookRoomPage = () => {
   });
 
   const handleBuildingSelect = (building: Building) => {
-    if (hasExistingActiveBooking) {
-      toast.info("You already booked a seat. Please wait for admin action or cancel your current booking first.");
-      return;
-    }
-
     setSelectedBuilding(building);
     setSelectedFloor(null);
     setSelectedRoom(null);
@@ -193,23 +208,17 @@ const BookRoomPage = () => {
   };
 
   const handleFloorSelect = (floor: Floor) => {
-    if (hasExistingActiveBooking) {
-      toast.info("You already booked a seat. Please wait for admin action or cancel your current booking first.");
-      return;
-    }
-
     setSelectedFloor(floor);
     setSelectedRoom(null);
     setStep("room");
   };
 
   const handleRoomSelect = (room: Room) => {
-    if (hasExistingActiveBooking) {
-      toast.info("You already booked a seat. Please wait for admin action or cancel your current booking first.");
-      return;
-    }
-
     setSelectedRoom(room);
+    setSelectedSlot(null);
+    setSelectedDate("");
+    setSeatInfo(null);
+    setSeatsToBook(1);
     setStep("confirm");
   };
 
@@ -223,11 +232,27 @@ const BookRoomPage = () => {
       setSelectedRoom(null);
     } else if (step === "confirm") {
       setStep("room");
+      setSelectedSlot(null);
+      setSelectedDate("");
+      setSeatInfo(null);
     }
   };
 
   const handleBook = async () => {
-    if (!selectedRoom || !selectedDate || !selectedTime) {
+    if (!selectedRoom || !selectedDate || !selectedSlot) {
+      return;
+    }
+
+    // Validate date is not in the past
+    const today = getTodayStr();
+    if (selectedDate < today) {
+      toast.error("Cannot book a date in the past. Please select today or a future date.");
+      return;
+    }
+
+    // Validate seat availability
+    if (seatInfo && seatInfo.seatsAvailable < seatsToBook) {
+      toast.error(`Only ${seatInfo.seatsAvailable} seat(s) available. Room is ${seatInfo.seatsAvailable === 0 ? "fully booked" : "almost full"} for this time.`);
       return;
     }
 
@@ -238,35 +263,32 @@ const BookRoomPage = () => {
         throw new Error("This room cannot be booked right now. Please refresh and try again.");
       }
 
-      const startClock = to24HourTime(selectedTime);
-      const endClock = addOneHour(startClock);
-
       const response = await bookingService.createBooking({
         roomId: String(roomIdAsNumber),
-        startTime: `${selectedDate}T${startClock}:00`,
-        endTime: `${selectedDate}T${endClock}:00`,
+        startTime: `${selectedDate}T${selectedSlot.start}:00`,
+        endTime: `${selectedDate}T${selectedSlot.end}:00`,
         bookingType: "STUDENT",
         purpose: `Study booking for ${selectedRoom.name}`,
-        seatsBooked: 1,
+        seatsBooked: seatsToBook,
       });
 
       setBooked(true);
-      setHasExistingActiveBooking(true);
       if (response?.status === "PENDING") {
-        toast.success("Booking request submitted and is pending admin approval.");
+        toast.success("Booking request submitted and is pending admin approval. You'll receive an OTP email once approved.");
       } else {
         toast.success("Booking submitted successfully.");
       }
 
       setTimeout(() => {
         setBooked(false);
-        // Reset to start
         setStep("building");
         setSelectedBuilding(null);
         setSelectedFloor(null);
         setSelectedRoom(null);
         setSelectedDate("");
-        setSelectedTime("");
+        setSelectedSlot(null);
+        setSeatInfo(null);
+        setSeatsToBook(1);
       }, 3000);
     } catch (error: any) {
       const apiMessage =
@@ -276,8 +298,13 @@ const BookRoomPage = () => {
         error?.message ||
         "Failed to create booking.";
 
-      if (String(apiMessage).toLowerCase().includes("already booked a seat")) {
-        setHasExistingActiveBooking(true);
+      if (String(apiMessage).toLowerCase().includes("already have a booking at this time")) {
+        // User has a conflicting booking at this time
+      }
+      if (String(apiMessage).toLowerCase().includes("booking access has been restricted")) {
+        setBookingRestricted(true);
+        toast.error("Your booking access is restricted. Please visit the Contact Us page.");
+        return;
       }
       toast.error(apiMessage);
     } finally {
@@ -337,10 +364,37 @@ const BookRoomPage = () => {
 
       {/* Booking Section */}
       <section className="container mx-auto px-4 py-12">
-        {hasExistingActiveBooking && (
-          <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900">
-            You already booked a seat. You can create a new booking only after your current request is completed or cancelled.
-          </div>
+
+        {/* Booking Restriction Banner */}
+        {bookingRestricted && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 rounded-xl border-2 border-red-300 bg-red-50 p-6 text-center"
+          >
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex items-center gap-2 text-red-700">
+                <Ban className="h-8 w-8" />
+                <h3 className="text-xl font-bold">Booking Access Restricted</h3>
+              </div>
+              <p className="text-red-700 max-w-xl">
+                Your booking access has been restricted by administration
+                {restrictionReason ? ` (${restrictionReason})` : ""}.
+                You are currently unable to make new room bookings.
+              </p>
+              <p className="text-red-600 text-sm">
+                If you believe this is an error or would like to resolve this, please contact us.
+              </p>
+              <Button
+                onClick={() => navigate("/contact")}
+                className="bg-red-600 text-white hover:bg-red-700 gap-2 px-8 py-3 text-base font-semibold"
+                size="lg"
+              >
+                <MessageSquare className="h-5 w-5" />
+                Contact Us to Resolve
+              </Button>
+            </div>
+          </motion.div>
         )}
 
         {/* Breadcrumb & Back Button */}
@@ -525,6 +579,16 @@ const BookRoomPage = () => {
                 />
               </div>
 
+              {/* Room capacity info */}
+              {(selectedRoom as any).seatingCapacity && (
+                <div className="mb-4 flex items-center gap-2 px-4 py-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-800">
+                  <Users className="h-5 w-5" />
+                  <span className="text-sm font-medium">
+                    Total Room Capacity: {(selectedRoom as any).seatingCapacity} seats
+                  </span>
+                </div>
+              )}
+
               {/* Date & Time Selection */}
               <div className="bg-card border border-border rounded-lg p-6 mb-6">
                 <div className="grid md:grid-cols-2 gap-6">
@@ -535,39 +599,126 @@ const BookRoomPage = () => {
                     <input
                       type="date"
                       value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                      min={new Date().toISOString().split('T')[0]}
+                      onChange={(e) => {
+                        setSelectedDate(e.target.value);
+                        setSelectedSlot(null);
+                        setSeatInfo(null);
+                      }}
+                      min={getTodayStr()}
                       className="w-full p-3 rounded-lg border-2 border-border bg-background text-foreground focus:border-primary transition-colors"
                     />
+                    {selectedDate && selectedDate < getTodayStr() && (
+                      <p className="text-red-600 text-xs mt-1">Cannot select a past date.</p>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                      <Clock className="h-5 w-5 text-primary" /> Select Time Slot
+                      <Clock className="h-5 w-5 text-primary" /> Select 2-Hour Time Slot
                     </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {timeSlots.map((t) => (
+                    <div className="grid grid-cols-1 gap-2">
+                      {timeSlots.map((slot) => {
+                        // Disable time slots that have already passed when date is today
+                        const isToday = selectedDate === getTodayStr();
+                        const now = new Date();
+                        const slotEndHour = parseInt(slot.end.split(":")[0], 10);
+                        const isPast = isToday && now.getHours() >= slotEndHour;
+
+                        return (
                         <button
-                          key={t}
-                          onClick={() => setSelectedTime(t)}
-                          className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
-                            selectedTime === t
-                              ? "bg-primary text-primary-foreground shadow-md scale-105"
+                          key={slot.start}
+                          onClick={() => !isPast && setSelectedSlot(slot)}
+                          disabled={isPast}
+                          className={`px-4 py-3 rounded-lg text-sm font-semibold transition-all text-left ${
+                            isPast
+                              ? "bg-gray-100 text-gray-400 cursor-not-allowed line-through"
+                              : selectedSlot?.start === slot.start
+                              ? "bg-primary text-primary-foreground shadow-md scale-[1.02]"
                               : "bg-muted text-muted-foreground hover:bg-primary/20 hover:text-primary"
                           }`}
                         >
-                          {t}
+                          {slot.label}
+                          {isPast && <span className="ml-2 text-xs font-normal">(Past)</span>}
                         </button>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
               </div>
 
+              {/* Seat Availability Info */}
+              {selectedDate && selectedSlot && (
+                <div className="mb-6">
+                  {loadingSeats ? (
+                    <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 text-gray-600">
+                      <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                      <span className="text-sm">Checking seat availability...</span>
+                    </div>
+                  ) : seatInfo ? (
+                    <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${
+                      seatInfo.seatsAvailable === 0
+                        ? "bg-red-50 border-red-200 text-red-800"
+                        : seatInfo.seatsAvailable <= 3
+                        ? "bg-amber-50 border-amber-200 text-amber-800"
+                        : "bg-emerald-50 border-emerald-200 text-emerald-800"
+                    }`}>
+                      {seatInfo.seatsAvailable === 0 ? (
+                        <AlertTriangle className="h-5 w-5" />
+                      ) : (
+                        <Users className="h-5 w-5" />
+                      )}
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold">
+                          {seatInfo.seatsAvailable === 0
+                            ? "Room is fully booked for this time slot!"
+                            : `${seatInfo.seatsAvailable} of ${seatInfo.totalCapacity} seats available`}
+                        </p>
+                        <p className="text-xs opacity-80">
+                          {seatInfo.seatsBooked} seat(s) already booked for {selectedSlot.label}
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+
+              {/* Seats to book */}
+              {seatInfo && seatInfo.seatsAvailable > 0 && (
+                <div className="bg-card border border-border rounded-lg p-4 mb-6">
+                  <label className="text-sm font-semibold text-foreground mb-2 block">
+                    How many seats do you want to book?
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      min={1}
+                      max={seatInfo.seatsAvailable}
+                      value={seatsToBook}
+                      onChange={(e) => {
+                        const v = Math.max(1, Math.min(seatInfo.seatsAvailable, Number(e.target.value) || 1));
+                        setSeatsToBook(v);
+                      }}
+                      className="w-20 p-2 rounded-lg border-2 border-border bg-background text-foreground text-center font-semibold"
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      (Max {seatInfo.seatsAvailable} available)
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Confirm Button */}
               <div className="text-center">
                 <Button
                   size="lg"
-                  disabled={!selectedDate || !selectedTime || booked || isSubmittingBooking || hasExistingActiveBooking}
+                  disabled={
+                    !selectedDate || 
+                    !selectedSlot || 
+                    booked || 
+                    isSubmittingBooking || 
+                    (seatInfo !== null && seatInfo.seatsAvailable === 0) ||
+                    selectedDate < getTodayStr()
+                  }
                   onClick={handleBook}
                   className="bg-primary text-primary-foreground hover:bg-primary/90 px-12 py-6 text-lg font-bold"
                 >
@@ -577,14 +728,14 @@ const BookRoomPage = () => {
                     ? "Submitting..."
                     : "Submit Booking Request"}
                 </Button>
-                {(!selectedDate || !selectedTime) && !booked && (
+                {(!selectedDate || !selectedSlot) && !booked && (
                   <p className="text-muted-foreground text-sm mt-3">
-                    Please select both date and time to confirm
+                    Please select both date and a 2-hour time slot to confirm
                   </p>
                 )}
-                {hasExistingActiveBooking && (
-                  <p className="text-amber-700 text-sm mt-3">
-                    New booking is disabled because you already have an active booking.
+                {seatInfo && seatInfo.seatsAvailable === 0 && (
+                  <p className="text-red-600 text-sm mt-3">
+                    This room is fully booked for the selected time slot. Please choose a different time or room.
                   </p>
                 )}
               </div>

@@ -2,6 +2,7 @@ package com.zentaritas.model.booking;
 
 import com.zentaritas.model.auth.User;
 import com.zentaritas.model.management.Room;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -15,6 +16,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Entity
 @Table(name = "room_bookings")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class RoomBooking {
 
     @Id
@@ -76,6 +78,28 @@ public class RoomBooking {
     @Column(name = "cancelled_reason", columnDefinition = "TEXT")
     private String cancelledReason;
 
+    // OTP for booking check-in verification (4 alphanumeric chars)
+    @Column(name = "check_in_otp", length = 4)
+    private String checkInOtp;
+
+    @Column(name = "otp_sent_at")
+    private LocalDateTime otpSentAt;
+
+    // Attendance tracking
+    @Column(name = "attended")
+    private Boolean attended;
+
+    @Column(name = "attended_at")
+    private LocalDateTime attendedAt;
+
+    @Column(name = "verified_by_staff_id")
+    private Long verifiedByStaffId;
+
+    // Staff assigned by admin for booking management
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assigned_staff_id")
+    private User assignedStaff;
+
     @Column(name = "created_by", updatable = false)
     private Long createdById;
 
@@ -99,6 +123,7 @@ public class RoomBooking {
         CANCELLED,    // Cancelled by user
         REJECTED,     // Rejected by admin
         COMPLETED,    // Booking time has passed
+        ATTENDED,     // User verified attendance via OTP
         NO_SHOW       // User didn't show up
     }
 }

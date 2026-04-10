@@ -161,4 +161,20 @@ public class FacilityManagementController {
         facilityManagementService.deleteRoom(id);
         return ResponseEntity.ok(ApiResponse.success(null, "Room deleted successfully"));
     }
+
+    /**
+     * Permanently assign a non-academic staff member to a room.
+     * PUT /api/management/facilities/rooms/{roomId}/assign-staff
+     * Body: { "staffId": 123 }  (or { "staffId": null } to unassign)
+     */
+    @PutMapping("/rooms/{roomId}/assign-staff")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<RoomResponse>> assignStaffToRoom(
+            @PathVariable Long roomId,
+            @RequestBody java.util.Map<String, Long> body
+    ) {
+        Long staffId = body.get("staffId");
+        RoomResponse response = facilityManagementService.assignStaffToRoom(roomId, staffId);
+        return ResponseEntity.ok(ApiResponse.success(response, "Staff assigned to room successfully"));
+    }
 }

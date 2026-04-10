@@ -162,6 +162,50 @@ public class EmailService {
         }
     }
 
+    /**
+     * Send booking confirmation email with OTP for check-in verification
+     */
+    public void sendBookingOtpEmail(String toEmail, String userName, String otp, String roomName, String startTime, String endTime) {
+        try {
+            String htmlContent = """
+                <div style="font-family: Arial, sans-serif; background: #f8fafc; padding: 32px; color: #0f172a;">
+                    <div style="max-width: 640px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; overflow: hidden;">
+                        <div style="background: linear-gradient(135deg, #0f766e, #115e59); padding: 28px 32px; color: white;">
+                            <div style="font-size: 12px; letter-spacing: .18em; text-transform: uppercase; opacity: .85;">Zentaritas</div>
+                            <h2 style="margin: 8px 0 0; font-size: 26px; line-height: 1.2;">Booking Confirmed!</h2>
+                        </div>
+                        <div style="padding: 32px;">
+                            <p style="font-size: 16px; line-height: 1.6; margin: 0 0 16px;">Hello ${userName},</p>
+                            <p style="font-size: 15px; line-height: 1.6; margin: 0 0 16px;">Your room booking has been approved. Please use the OTP code below when checking in with the front desk staff.</p>
+                            <div style="background: #f0fdf4; border: 2px solid #86efac; border-radius: 14px; padding: 24px; margin: 20px 0; text-align: center;">
+                                <p style="margin: 0 0 8px; font-size: 13px; color: #475569; text-transform: uppercase; letter-spacing: 0.1em;">Your Check-in OTP</p>
+                                <p style="margin: 0; font-size: 40px; font-weight: bold; letter-spacing: 8px; color: #0f766e; font-family: 'Courier New', monospace;">${otp}</p>
+                            </div>
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px 20px; margin: 20px 0;">
+                                <p style="margin: 0 0 8px;"><strong>Room:</strong> ${roomName}</p>
+                                <p style="margin: 0 0 8px;"><strong>Start:</strong> ${startTime}</p>
+                                <p style="margin: 0;"><strong>End:</strong> ${endTime}</p>
+                            </div>
+                            <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0;">Please show this OTP to the assigned staff member at the venue for verification.</p>
+                        </div>
+                    </div>
+                </div>
+                """;
+
+            htmlContent = htmlContent.replace("${userName}", userName != null ? userName : "Student")
+                    .replace("${otp}", otp)
+                    .replace("${roomName}", roomName)
+                    .replace("${startTime}", startTime)
+                    .replace("${endTime}", endTime);
+
+            sendHtmlEmail(toEmail, "Booking Confirmed - Your Check-in OTP | Zentaritas", htmlContent);
+            log.info("Booking OTP email sent to: {}", toEmail);
+        } catch (Exception e) {
+            log.error("Failed to send booking OTP email to: {}", toEmail, e);
+            throw new RuntimeException("Failed to send booking OTP email", e);
+        }
+    }
+
         public void sendRoomChangeEmail(
                         String toEmail,
                         String lecturerName,

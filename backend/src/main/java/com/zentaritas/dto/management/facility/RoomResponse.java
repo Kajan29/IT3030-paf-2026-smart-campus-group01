@@ -44,6 +44,9 @@ public class RoomResponse {
     private LocalTime closingTime;
     private List<String> maintenanceHistory;
     private String imageUrl;
+    private Long assignedStaffId;
+    private String assignedStaffName;
+    private String assignedStaffEmail;
     private UserSummaryResponse createdBy;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

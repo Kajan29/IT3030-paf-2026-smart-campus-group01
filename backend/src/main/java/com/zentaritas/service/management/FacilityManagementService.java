@@ -337,6 +337,28 @@ public class FacilityManagementService {
         roomRepository.delete(room);
     }
 
+    /**
+     * Permanently assign a non-academic staff member to a room.
+     * That staff will automatically manage all bookings for this room.
+     */
+    @Transactional
+    public RoomResponse assignStaffToRoom(Long roomId, Long staffId) {
+        Room room = getRoomEntity(roomId);
+
+        if (staffId == null) {
+            // Unassign
+            room.setAssignedStaff(null);
+        } else {
+            User staff = userRepository.findById(staffId)
+                    .orElseThrow(() -> new IllegalArgumentException("Staff member not found"));
+            room.setAssignedStaff(staff);
+        }
+
+        Room saved = roomRepository.save(room);
+        log.info("Staff {} {} assigned to room {}", staffId, staffId != null ? "" : "(unassigned)", roomId);
+        return toRoomResponse(saved);
+    }
+
     private Building getBuildingEntity(Long id) {
         return buildingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Building not found with id: " + id));
@@ -438,6 +460,9 @@ public class FacilityManagementService {
                 .closingTime(room.getClosingTime())
                 .maintenanceHistory(new ArrayList<>(Optional.ofNullable(room.getMaintenanceHistory()).orElseGet(ArrayList::new)))
                 .imageUrl(room.getImageUrl())
+                .assignedStaffId(room.getAssignedStaff() != null ? room.getAssignedStaff().getId() : null)
+                .assignedStaffName(room.getAssignedStaff() != null ? room.getAssignedStaff().getFirstName() + " " + room.getAssignedStaff().getLastName() : null)
+                .assignedStaffEmail(room.getAssignedStaff() != null ? room.getAssignedStaff().getEmail() : null)
                 .createdBy(UserSummaryResponse.from(room.getCreatedBy()))
                 .createdAt(room.getCreatedAt())
                 .updatedAt(room.getUpdatedAt())

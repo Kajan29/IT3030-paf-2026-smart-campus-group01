@@ -45,8 +45,9 @@ import facilityService from "@/services/facilityService";
 import type { RoomTimetableEntry } from "@/types/booking";
 import { toast } from "react-toastify";
 import { cn } from "@/lib/utils";
+import { StaffBookingManagement } from "@/components/booking/StaffBookingManagement";
 
-type SectionId = "overview" | "bookings" | "tickets" | "assignedTickets" | "profile" | "settings";
+type SectionId = "overview" | "bookings" | "tickets" | "assignedTickets" | "manageBookings" | "profile" | "settings";
 
 type BookingItem = {
   id: string;
@@ -151,7 +152,7 @@ const ProfilePage = () => {
     const allowedSections: SectionId[] = ["overview", "bookings", "tickets", "profile", "settings"];
 
     if (isNonAcademicStaff) {
-      allowedSections.push("assignedTickets");
+      allowedSections.push("assignedTickets", "manageBookings");
     }
 
     if (section && allowedSections.includes(section as SectionId)) {
@@ -658,6 +659,11 @@ const ProfilePage = () => {
       label: "Assigned Tickets",
       icon: ClipboardList,
     });
+    sectionList.splice(4, 0, {
+      id: "manageBookings",
+      label: "Manage Bookings",
+      icon: CalendarCheck,
+    });
   }
 
   const pageTitles: Record<SectionId, string> = {
@@ -665,6 +671,7 @@ const ProfilePage = () => {
     bookings: isAcademicStaff ? "Classroom Allocations" : isStudent ? "My Bookings" : "Bookings Management",
     tickets: "Support Tickets",
     assignedTickets: "Assigned Tickets",
+    manageBookings: "Manage Bookings",
     profile: "Edit Profile",
     settings: "Preferences",
   };
@@ -1482,6 +1489,10 @@ const ProfilePage = () => {
       );
     }
 
+    if (activeSection === "manageBookings") {
+      return <StaffBookingManagement />;
+    }
+
     if (activeSection === "profile") {
       return (
         <Card className="border-border/50 shadow-card">
@@ -1947,6 +1958,7 @@ const ProfilePage = () => {
                 {activeSection === "bookings" && (isAcademicStaff ? "View your allocated classroom timetable" : "Manage your space reservations")}
                 {activeSection === "tickets" && "Track your support requests"}
                 {activeSection === "assignedTickets" && "Resolve assigned tickets and send ticket replies to users"}
+                {activeSection === "manageBookings" && "Verify student OTP and manage attendance"}
                 {activeSection === "profile" && "Update your personal information"}
                 {activeSection === "settings" && "Customize your experience"}
               </p>

@@ -77,6 +77,8 @@ public class ProfileService {
                 .profilePicture(user.getProfilePicture())
                 .role(user.getRole())
                 .isVerified(user.getIsVerified())
+                .bookingRestricted(user.getBookingRestricted())
+                .bookingRestrictionReason(user.getBookingRestrictionReason())
                 .build();
     }
 }

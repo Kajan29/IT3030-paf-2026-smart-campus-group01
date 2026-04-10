@@ -83,6 +83,9 @@ public class BookingNotification {
         SWAP_REQUEST_REJECTED, // Swap request rejected
         BOOKING_REMINDER,      // Reminder before booking time
         BOOKING_CANCELLED,     // Booking was cancelled
+        BOOKING_NO_SHOW,       // User didn't attend booking
+        BOOKING_RESTRICTED,    // User booking access restricted
+        BOOKING_UNRESTRICTED,  // User booking access restored
         ADMIN_ALERT            // Admin notification
     }
 

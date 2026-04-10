@@ -1,5 +1,6 @@
 package com.zentaritas.model.auth;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,6 +17,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Entity
 @Table(name = "users")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class User {
 
     @Id
@@ -60,6 +62,16 @@ public class User {
 
     @Column(name = "profile_picture")
     private String profilePicture;
+
+    @Column(name = "booking_restricted")
+    @Builder.Default
+    private Boolean bookingRestricted = false;
+
+    @Column(name = "booking_restriction_reason", columnDefinition = "TEXT")
+    private String bookingRestrictionReason;
+
+    @Column(name = "booking_restricted_at")
+    private LocalDateTime bookingRestrictedAt;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

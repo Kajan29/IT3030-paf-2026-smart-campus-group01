@@ -1,7 +1,7 @@
 // Booking-related types
 
 export type BookingType = "STUDENT" | "STAFF";
-export type BookingStatus = "PENDING" | "APPROVED" | "CONFIRMED" | "CANCELLED" | "REJECTED" | "COMPLETED" | "NO_SHOW";
+export type BookingStatus = "PENDING" | "APPROVED" | "CONFIRMED" | "CANCELLED" | "REJECTED" | "COMPLETED" | "ATTENDED" | "NO_SHOW";
 export type AvailabilityStatus = "AVAILABLE" | "RESERVED" | "OCCUPIED";
 
 export interface TimeSlot {
@@ -122,7 +122,8 @@ export interface BookingNotification {
         "TICKET_CREATED" | "TICKET_ASSIGNED" | "TICKET_REPLY" | "TICKET_STATUS_UPDATED" |
         "STUDENT_REGISTERED" |
         "SWAP_REQUEST_RECEIVED" | "SWAP_REQUEST_APPROVED" | "SWAP_REQUEST_REJECTED" |
-        "BOOKING_REMINDER" | "BOOKING_CANCELLED" | "ADMIN_ALERT";
+        "BOOKING_REMINDER" | "BOOKING_CANCELLED" | "BOOKING_NO_SHOW" |
+        "BOOKING_RESTRICTED" | "BOOKING_UNRESTRICTED" | "ADMIN_ALERT";
   relatedBookingId?: number;
   relatedTicketId?: number;
   targetPath?: string;

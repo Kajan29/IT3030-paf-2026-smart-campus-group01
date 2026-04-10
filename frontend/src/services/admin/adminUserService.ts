@@ -8,6 +8,9 @@ export interface UserResponse {
   role: 'STUDENT' | 'ACADEMIC_STAFF' | 'NON_ACADEMIC_STAFF' | 'ADMIN';
   isVerified: boolean;
   isActive: boolean;
+  bookingRestricted: boolean;
+  bookingRestrictionReason: string | null;
+  bookingRestrictedAt: string | null;
   profilePicture: string | null;
   createdAt: string;
   updatedAt: string;
@@ -55,6 +58,12 @@ export const adminUserService = {
   updateUserStatus: (id: number, data: UpdateUserStatusRequest) => 
     api.patch<{ data: UserResponse }>(`/admin/users/${id}/status`, data),
   
+  restrictBooking: (id: number, reason?: string) =>
+    api.patch<{ data: UserResponse }>(`/admin/users/${id}/restrict-booking`, { reason }),
+
+  unrestrictBooking: (id: number) =>
+    api.patch<{ data: UserResponse }>(`/admin/users/${id}/unrestrict-booking`),
+
   deleteUser: (id: number) => api.delete(`/admin/users/${id}`),
 };
 
