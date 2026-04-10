@@ -1,4 +1,4 @@
-package com.zentaritas.controller.booking.dto;
+package com.zentaritas.dto.booking;
 
 import com.zentaritas.model.booking.RoomBooking;
 import lombok.AllArgsConstructor;

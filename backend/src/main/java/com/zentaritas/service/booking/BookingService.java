@@ -1,7 +1,7 @@
 package com.zentaritas.service.booking;
 
-import com.zentaritas.controller.booking.dto.BookingRequestDTO;
-import com.zentaritas.controller.booking.dto.BookingResultDTO;
+import com.zentaritas.dto.booking.BookingRequestDTO;
+import com.zentaritas.dto.booking.BookingResultDTO;
 import com.zentaritas.model.auth.User;
 import com.zentaritas.model.booking.*;
 import com.zentaritas.repository.booking.*;

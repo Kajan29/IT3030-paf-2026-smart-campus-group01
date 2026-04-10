@@ -1,6 +1,6 @@
 package com.zentaritas.service.booking;
 
-import com.zentaritas.controller.booking.dto.BookingRequestDTO;
+import com.zentaritas.dto.booking.BookingRequestDTO;
 import com.zentaritas.model.auth.Role;
 import com.zentaritas.model.auth.User;
 import com.zentaritas.model.booking.RoomBooking;

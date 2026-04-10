@@ -1,6 +1,6 @@
-package com.zentaritas.controller.booking;
+package com.zentaritas.controller.notification;
 
-import com.zentaritas.controller.booking.dto.AdminNotificationRequest;
+import com.zentaritas.dto.booking.AdminNotificationRequest;
 import com.zentaritas.model.auth.User;
 import com.zentaritas.model.booking.BookingNotification;
 import com.zentaritas.repository.auth.UserRepository;
