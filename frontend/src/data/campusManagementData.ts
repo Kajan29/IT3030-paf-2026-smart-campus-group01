@@ -1,4 +1,10 @@
 import type { Building, Floor, Room, RoomType } from "@/types/campusManagement";
+import lectureHallImg from "@/assets/lecture-hall.jpg";
+import libraryImg from "@/assets/library.jpg";
+import libraryInteriorImg from "@/assets/library-interior.png";
+import scienceLabImg from "@/assets/science-lab.png";
+import campusAerialImg from "@/assets/campus-aerial.png";
+import heroCampusImg from "@/assets/hero-campus.jpg";
 
 export const buildingTypes = [
   "Academic",
@@ -183,6 +189,7 @@ export const rooms: Room[] = [
     maintenanceStatus: "Operational",
     bookingAvailable: true,
     maintenanceHistory: ["2026-01: Projector lens replacement", "2025-09: HVAC servicing"],
+    imageUrl: lectureHallImg,
   },
   {
     id: "R002",
@@ -214,6 +221,7 @@ export const rooms: Room[] = [
     maintenanceStatus: "Operational",
     bookingAvailable: true,
     maintenanceHistory: ["2025-12: Chair replacements"],
+    imageUrl: lectureHallImg,
   },
   {
     id: "R003",
@@ -245,6 +253,7 @@ export const rooms: Room[] = [
     maintenanceStatus: "Scheduled",
     bookingAvailable: false,
     maintenanceHistory: ["2026-02: Power panel audit", "2025-08: Tool calibration"],
+    imageUrl: scienceLabImg,
   },
   {
     id: "R004",
@@ -276,6 +285,7 @@ export const rooms: Room[] = [
     maintenanceStatus: "Operational",
     bookingAvailable: true,
     maintenanceHistory: ["2026-03: RAM upgrade", "2025-11: UPS battery replacement"],
+    imageUrl: scienceLabImg,
   },
   {
     id: "R005",
@@ -307,6 +317,7 @@ export const rooms: Room[] = [
     maintenanceStatus: "Critical",
     bookingAvailable: false,
     maintenanceHistory: ["2026-03: Fiber link fault under repair", "2025-10: Ceiling panel replacement"],
+    imageUrl: campusAerialImg,
   },
   {
     id: "R006",
@@ -338,6 +349,7 @@ export const rooms: Room[] = [
     maintenanceStatus: "Operational",
     bookingAvailable: false,
     maintenanceHistory: ["2026-01: Lighting retrofit"],
+    imageUrl: libraryImg,
   },
   {
     id: "R007",
@@ -369,6 +381,7 @@ export const rooms: Room[] = [
     maintenanceStatus: "Operational",
     bookingAvailable: true,
     maintenanceHistory: ["2025-07: Smart TV replacement"],
+    imageUrl: libraryInteriorImg,
   },
   {
     id: "R008",
@@ -400,6 +413,7 @@ export const rooms: Room[] = [
     maintenanceStatus: "Scheduled",
     bookingAvailable: false,
     maintenanceHistory: ["2026-02: Public display screen servicing"],
+    imageUrl: heroCampusImg,
   },
   {
     id: "R009",
@@ -431,6 +445,7 @@ export const rooms: Room[] = [
     maintenanceStatus: "Scheduled",
     bookingAvailable: false,
     maintenanceHistory: ["2026-03: Ceiling leak repair in progress"],
+    imageUrl: heroCampusImg,
   },
   {
     id: "R010",
@@ -462,6 +477,7 @@ export const rooms: Room[] = [
     maintenanceStatus: "Operational",
     bookingAvailable: false,
     maintenanceHistory: ["2026-01: Generator failover test", "2025-12: Cooling unit overhaul"],
+    imageUrl: scienceLabImg,
   },
   {
     id: "R011",
@@ -493,6 +509,7 @@ export const rooms: Room[] = [
     maintenanceStatus: "Operational",
     bookingAvailable: true,
     maintenanceHistory: ["2026-02: Access point upgrade"],
+    imageUrl: scienceLabImg,
   },
   {
     id: "R012",
@@ -524,6 +541,7 @@ export const rooms: Room[] = [
     maintenanceStatus: "Critical",
     bookingAvailable: false,
     maintenanceHistory: ["2026-03: Acoustic panel replacement planned", "2025-10: Stage floor reinforcement"],
+    imageUrl: campusAerialImg,
   },
   {
     id: "R013",
@@ -555,6 +573,7 @@ export const rooms: Room[] = [
     maintenanceStatus: "Operational",
     bookingAvailable: true,
     maintenanceHistory: ["2025-06: Audio mixer upgrade"],
+    imageUrl: lectureHallImg,
   },
   {
     id: "R014",
@@ -586,6 +605,7 @@ export const rooms: Room[] = [
     maintenanceStatus: "Operational",
     bookingAvailable: false,
     maintenanceHistory: ["2026-02: Medical inventory refresh"],
+    imageUrl: heroCampusImg,
   },
   {
     id: "R015",
@@ -617,6 +637,7 @@ export const rooms: Room[] = [
     maintenanceStatus: "Operational",
     bookingAvailable: false,
     maintenanceHistory: ["2025-09: Storage expansion"],
+    imageUrl: campusAerialImg,
   },
 ];
 

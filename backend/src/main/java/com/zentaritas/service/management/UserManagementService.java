@@ -9,6 +9,8 @@ import com.zentaritas.model.auth.Role;
 import com.zentaritas.model.auth.User;
 import com.zentaritas.repository.auth.UserRepository;
 import com.zentaritas.service.auth.EmailService;
+import com.zentaritas.model.booking.BookingNotification;
+import com.zentaritas.service.booking.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Cell;
@@ -40,6 +42,7 @@ public class UserManagementService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final NotificationService notificationService;
 
     public List<UserManagementResponse> getAllUsers() {
         return userRepository.findAll()
@@ -226,6 +229,64 @@ public class UserManagementService {
         user.setIsActive(Objects.requireNonNull(request.getIsActive(), "isActive cannot be null"));
         User savedUser = userRepository.save(user);
 
+        return UserManagementResponse.from(savedUser);
+    }
+
+    /**
+     * Restrict a user from making bookings (admin action after no-show)
+     */
+    @Transactional
+    public UserManagementResponse restrictBooking(Long id, String reason) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+
+        if (user.getRole() == Role.ADMIN) {
+            throw new IllegalArgumentException("Admin accounts cannot be restricted");
+        }
+
+        user.setBookingRestricted(true);
+        user.setBookingRestrictionReason(reason != null ? reason : "No-show violation");
+        user.setBookingRestrictedAt(java.time.LocalDateTime.now());
+        User savedUser = userRepository.save(user);
+
+        // Notify user about restriction
+        notificationService.createNotification(
+                user,
+                BookingNotification.NotificationType.BOOKING_RESTRICTED,
+                "Booking Access Restricted",
+                "Your booking access has been restricted" +
+                        (reason != null ? " (" + reason + ")" : "") +
+                        ". Please visit the Contact Us page to resolve this.",
+                null, null, "/contact", null
+        );
+
+        log.info("User {} booking access restricted: {}", id, reason);
+        return UserManagementResponse.from(savedUser);
+    }
+
+    /**
+     * Remove booking restriction from a user (admin action)
+     */
+    @Transactional
+    public UserManagementResponse unrestrictBooking(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+
+        user.setBookingRestricted(false);
+        user.setBookingRestrictionReason(null);
+        user.setBookingRestrictedAt(null);
+        User savedUser = userRepository.save(user);
+
+        // Notify user about unrestriction
+        notificationService.createNotification(
+                user,
+                BookingNotification.NotificationType.BOOKING_UNRESTRICTED,
+                "Booking Access Restored",
+                "Your booking access has been restored. You can now make room bookings again.",
+                null, null, "/bookings", null
+        );
+
+        log.info("User {} booking restriction removed", id);
         return UserManagementResponse.from(savedUser);
     }
 

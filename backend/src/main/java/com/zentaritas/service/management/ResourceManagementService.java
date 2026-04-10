@@ -83,6 +83,7 @@ public class ResourceManagementService {
             for (RoomResource entry : existingByType) {
                 mergedQuantity += entry.getQuantity();
             }
+            validateQuantityAgainstSeatingCapacity(room, type, mergedQuantity);
 
             primary.setName(name);
             primary.setQuantity(mergedQuantity);
@@ -96,6 +97,8 @@ public class ResourceManagementService {
 
             return toResourceResponse(updated);
         }
+
+        validateQuantityAgainstSeatingCapacity(room, type, request.getQuantity());
 
         RoomResource resource = RoomResource.builder()
             .name(name)
@@ -131,6 +134,8 @@ public class ResourceManagementService {
         if (roomResourceRepository.existsByRoomIdAndTypeAndIdNot(room.getId(), type, resource.getId())) {
             throw new IllegalArgumentException("This resource type already exists in the selected room. Please edit the existing one.");
         }
+
+        validateQuantityAgainstSeatingCapacity(room, type, request.getQuantity());
 
         resource.setName(name);
         resource.setType(type);
@@ -252,6 +257,28 @@ public class ResourceManagementService {
         return normalized;
     }
 
+    private void validateQuantityAgainstSeatingCapacity(Room room, String type, Integer quantity) {
+        if (quantity == null || quantity < 1) {
+            return;
+        }
+
+        boolean isSeatingBoundType = "chair".equals(type)
+                || "chairs".equals(type)
+                || "table".equals(type)
+                || "tables".equals(type);
+
+        if (!isSeatingBoundType) {
+            return;
+        }
+
+        int seatingCapacity = room.getSeatingCapacity() == null ? 0 : room.getSeatingCapacity();
+        if (quantity > seatingCapacity) {
+            throw new IllegalArgumentException(
+                    "Resource quantity for " + type + " cannot exceed room seating capacity (" + seatingCapacity + ")"
+            );
+        }
+    }
+
     private BuildingResponse toBuildingResponse(Building building) {
         return BuildingResponse.builder()
                 .id(building.getId())
@@ -303,7 +330,6 @@ public class ResourceManagementService {
                 .areaSqMeters(room.getAreaSqMeters())
                 .areaSqFeet(room.getAreaSqFeet())
                 .seatingCapacity(room.getSeatingCapacity())
-                .maxOccupancy(room.getMaxOccupancy())
                 .facilities(room.getFacilities())
                 .status(room.getStatus())
                 .description(room.getDescription())
@@ -313,8 +339,6 @@ public class ResourceManagementService {
                 .projectorAvailable(room.getProjectorAvailable())
                 .boardType(room.getBoardType())
                 .internetAvailable(room.getInternetAvailable())
-                .chairs(room.getChairs())
-                .tables(room.getTables())
                 .labEquipmentAvailable(room.getLabEquipmentAvailable())
                 .powerBackupAvailable(room.getPowerBackupAvailable())
                 .accessibilitySupport(room.getAccessibilitySupport())
@@ -325,6 +349,9 @@ public class ResourceManagementService {
                 .closingTime(room.getClosingTime())
                 .maintenanceHistory(room.getMaintenanceHistory())
                 .imageUrl(room.getImageUrl())
+                .assignedStaffId(room.getAssignedStaff() != null ? room.getAssignedStaff().getId() : null)
+                .assignedStaffName(room.getAssignedStaff() != null ? room.getAssignedStaff().getFirstName() + " " + room.getAssignedStaff().getLastName() : null)
+                .assignedStaffEmail(room.getAssignedStaff() != null ? room.getAssignedStaff().getEmail() : null)
                 .createdBy(UserSummaryResponse.from(room.getCreatedBy()))
                 .createdAt(room.getCreatedAt())
                 .updatedAt(room.getUpdatedAt())

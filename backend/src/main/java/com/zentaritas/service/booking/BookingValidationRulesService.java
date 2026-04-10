@@ -58,11 +58,6 @@ public class BookingValidationRulesService {
             RoomBooking.BookingStatus.APPROVED,
             RoomBooking.BookingStatus.CONFIRMED
     );
-    private static final EnumSet<RoomBooking.BookingStatus> STUDENT_SINGLE_BOOKING_BLOCKING_STATUSES = EnumSet.of(
-            RoomBooking.BookingStatus.PENDING,
-            RoomBooking.BookingStatus.APPROVED,
-            RoomBooking.BookingStatus.CONFIRMED
-    );
 
     /**
      * Main validation method
@@ -136,21 +131,9 @@ public class BookingValidationRulesService {
     private List<String> validateStudentBooking(BookingRequestDTO request, User booker) {
         List<String> errors = new ArrayList<>();
 
-        // Rule: A student can only keep one active/upcoming booking at a time.
-        if (booker != null && booker.getId() != null) {
-            boolean hasBlockingBooking = roomBookingRepository.existsActiveBookingForUser(
-                    booker.getId(),
-                    STUDENT_SINGLE_BOOKING_BLOCKING_STATUSES,
-                    LocalDateTime.now()
-            );
-            if (hasBlockingBooking) {
-                errors.add("You already booked a seat. You can submit a new booking only after the current one is completed or cancelled.");
-            }
-        }
-
-        // Rule: Only 1 seat per student per booking
-        if (request.getSeatsBooked() == null || request.getSeatsBooked() != 1) {
-            errors.add("Students can only book 1 seat per booking");
+        // Rule: Seats booked must be at least 1
+        if (request.getSeatsBooked() == null || request.getSeatsBooked() < 1) {
+            errors.add("You must book at least 1 seat");
         }
 
         // Rule: Max duration 2 hours

@@ -89,4 +89,49 @@ public interface RoomBookingRepository extends JpaRepository<RoomBooking, Long> 
 
         // Admin dashboard listing by status (latest first)
         List<RoomBooking> findByStatusOrderByCreatedAtDesc(RoomBooking.BookingStatus status);
+
+    // Find bookings for a staff member for today (by direct assignment OR room's permanent staff)
+    @Query("SELECT DISTINCT b FROM RoomBooking b WHERE " +
+            "(b.assignedStaff.id = :staffId OR b.room.assignedStaff.id = :staffId) " +
+            "AND b.startTime >= :dayStart AND b.startTime < :dayEnd " +
+            "AND b.status IN (com.zentaritas.model.booking.RoomBooking.BookingStatus.APPROVED, " +
+            "com.zentaritas.model.booking.RoomBooking.BookingStatus.CONFIRMED, " +
+            "com.zentaritas.model.booking.RoomBooking.BookingStatus.ATTENDED) " +
+            "ORDER BY b.startTime ASC")
+    List<RoomBooking> findTodayBookingsForStaff(
+            @Param("staffId") Long staffId,
+            @Param("dayStart") LocalDateTime dayStart,
+            @Param("dayEnd") LocalDateTime dayEnd
+    );
+
+    // Check if user has an overlapping booking at the given time
+    @Query("SELECT b FROM RoomBooking b WHERE b.booker.id = :userId " +
+            "AND b.status IN (com.zentaritas.model.booking.RoomBooking.BookingStatus.PENDING, " +
+            "com.zentaritas.model.booking.RoomBooking.BookingStatus.APPROVED, " +
+            "com.zentaritas.model.booking.RoomBooking.BookingStatus.CONFIRMED) " +
+            "AND NOT (b.endTime <= :startTime OR b.startTime >= :endTime)")
+    List<RoomBooking> findUserOverlappingBookings(
+            @Param("userId") Long userId,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime
+    );
+
+    // Count approved/confirmed seats booked for a room in a time range
+    @Query("SELECT COALESCE(SUM(b.seatsBooked), 0) FROM RoomBooking b " +
+            "WHERE b.room.id = :roomId " +
+            "AND b.status IN (com.zentaritas.model.booking.RoomBooking.BookingStatus.PENDING, " +
+            "com.zentaritas.model.booking.RoomBooking.BookingStatus.APPROVED, " +
+            "com.zentaritas.model.booking.RoomBooking.BookingStatus.CONFIRMED) " +
+            "AND NOT (b.endTime <= :startTime OR b.startTime >= :endTime)")
+    int countBookedSeatsForRoomInTimeRange(
+            @Param("roomId") Long roomId,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime
+    );
+
+    // Find all bookings for a staff member (by direct assignment OR room's permanent staff)
+    @Query("SELECT DISTINCT b FROM RoomBooking b WHERE " +
+            "(b.assignedStaff.id = :staffId OR b.room.assignedStaff.id = :staffId) " +
+            "ORDER BY b.startTime ASC")
+    List<RoomBooking> findBookingsForStaff(@Param("staffId") Long staffId);
 }

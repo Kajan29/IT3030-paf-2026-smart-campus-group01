@@ -2,7 +2,8 @@
 import {
   UserPlus, Search, Download, Upload,
   ChevronLeft, ChevronRight, X, CheckCircle2, XCircle,
-  ShieldCheck, GraduationCap, Briefcase, Users, Ban, CheckCircle, FileSpreadsheet
+  ShieldCheck, GraduationCap, Briefcase, Users, Ban, CheckCircle, FileSpreadsheet,
+  BookOpen
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { adminUserService, type UserResponse, type CreateStaffRequest } from "@/services/admin/adminUserService";
@@ -402,6 +403,22 @@ export const UserManagementPage = () => {
     }
   };
 
+  const handleToggleBookingRestriction = async (userId: number, currentlyRestricted: boolean) => {
+    try {
+      if (currentlyRestricted) {
+        await adminUserService.unrestrictBooking(userId);
+      } else {
+        const reason = window.prompt("Enter restriction reason:", "No-show violation");
+        if (reason === null) return;
+        await adminUserService.restrictBooking(userId, reason || "No-show violation");
+      }
+      await fetchUsers();
+    } catch (error: any) {
+      console.error("Failed to toggle booking restriction:", error);
+      alert(`Failed to update booking restriction: ${error.response?.data?.message || error.message}`);
+    }
+  };
+
   const filtered = users.filter((u) => {
     const matchSearch = 
       (u.firstName?.toLowerCase() || "").includes(search.toLowerCase()) || 
@@ -421,6 +438,7 @@ export const UserManagementPage = () => {
     { label: "Active", value: users.filter(u => u.isActive).length, color: "text-success" },
     { label: "Blocked", value: users.filter(u => !u.isActive).length, color: "text-destructive" },
     { label: "Students", value: users.filter(u => u.role === "STUDENT").length, color: "text-info" },
+    { label: "Booking Restricted", value: users.filter(u => u.bookingRestricted).length, color: "text-orange-600" },
   ];
 
   return (
@@ -450,7 +468,7 @@ export const UserManagementPage = () => {
       </div>
 
       {/* Summary row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {stats.map((s) => (
           <div key={s.label} className="bg-card rounded-xl p-4 border border-border shadow-card">
             <p className="text-xs text-muted-foreground">{s.label}</p>
@@ -538,7 +556,7 @@ export const UserManagementPage = () => {
             <table className="w-full">
               <thead>
                 <tr className="bg-muted/30">
-                  {["#", "User", "Role", "Status", "Joined", "Actions"].map((h) => (
+                  {["#", "User", "Role", "Status", "Booking", "Joined", "Actions"].map((h) => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider first:pl-5">
                       {h}
                     </th>
@@ -548,7 +566,7 @@ export const UserManagementPage = () => {
               <tbody className="divide-y divide-border">
                 {paginated.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-20 text-center">
+                    <td colSpan={7} className="py-20 text-center">
                       <div className="flex flex-col items-center gap-3 text-muted-foreground">
                         <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center">
                           <Users size={28} className="opacity-40" />
@@ -599,6 +617,19 @@ export const UserManagementPage = () => {
                             </div>
                           )}
                         </td>
+                        <td className="px-4 py-3.5">
+                          {user.bookingRestricted ? (
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-orange-100 text-orange-800 border border-orange-200" title={user.bookingRestrictionReason || "Restricted"}>
+                              <Ban size={12} />
+                              Restricted
+                            </div>
+                          ) : (
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <BookOpen size={12} />
+                              Allowed
+                            </div>
+                          )}
+                        </td>
                         <td className="px-4 py-3.5 text-xs text-muted-foreground">
                           {new Date(user.createdAt).toLocaleDateString()}
                         </td>
@@ -616,6 +647,20 @@ export const UserManagementPage = () => {
                             >
                               {user.isActive ? <Ban size={14} /> : <CheckCircle size={14} />}
                             </button>
+                            {user.role !== "ADMIN" && (
+                              <button
+                                onClick={() => handleToggleBookingRestriction(user.id, !!user.bookingRestricted)}
+                                className={cn(
+                                  "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
+                                  user.bookingRestricted
+                                    ? "text-orange-600 hover:bg-emerald-100 hover:text-emerald-700"
+                                    : "text-muted-foreground hover:bg-orange-100 hover:text-orange-700"
+                                )}
+                                title={user.bookingRestricted ? "Unrestrict Booking Access" : "Restrict Booking Access"}
+                              >
+                                <BookOpen size={14} />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

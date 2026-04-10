@@ -22,7 +22,6 @@ const navLinks = [
   { label: "About", path: "/about" },
   { label: "Book Room", path: "/book-room", studentOnly: true },
   { label: "Find Room", path: "/find-room" },
-  { label: "Resources", path: "/resources" },
   { label: "Gallery", path: "/gallery" },
   { label: "Contact", path: "/contact" },
 ];

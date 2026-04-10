@@ -26,6 +26,9 @@ interface BuildingFormState {
   imageUrl: string;
   yearEstablished: number;
   manager: string;
+  openingTime: string;
+  closingTime: string;
+  closedOnWeekends: boolean;
 }
 
 type BuildingFormErrors = Partial<Record<keyof BuildingFormState | "imageFile", string>>;
@@ -42,6 +45,9 @@ const emptyForm: BuildingFormState = {
   imageUrl: "",
   yearEstablished: new Date().getFullYear(),
   manager: "",
+  openingTime: "08:00",
+  closingTime: "18:00",
+  closedOnWeekends: false,
 };
 
 const statusBadgeClass: Record<BuildingStatus, string> = {
@@ -58,6 +64,21 @@ const getApiError = (error: unknown) => {
     }
   }
   return "Request failed. Please try again.";
+};
+
+const normalizeTimeForInput = (value?: string) => {
+  if (!value) {
+    return "";
+  }
+  return value.slice(0, 5);
+};
+
+const toApiTime = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  return `${trimmed}:00`;
 };
 
 export const BuildingManagementPage = ({
@@ -127,11 +148,6 @@ export const BuildingManagementPage = ({
   const getBuildingRoomCount = (buildingId: string) =>
     rooms.filter((room) => room.buildingId === buildingId).length;
 
-  const getBuildingCapacity = (buildingId: string) =>
-    rooms
-      .filter((room) => room.buildingId === buildingId)
-      .reduce((sum, room) => sum + room.maxOccupancy, 0);
-
   const getFloorCount = (buildingId: string) =>
     floors.filter((floor) => floor.buildingId === buildingId).length;
 
@@ -156,6 +172,9 @@ export const BuildingManagementPage = ({
       imageUrl: building.imageUrl || "",
       yearEstablished: building.yearEstablished,
       manager: building.manager,
+      openingTime: normalizeTimeForInput(building.openingTime) || "08:00",
+      closingTime: normalizeTimeForInput(building.closingTime) || "18:00",
+      closedOnWeekends: Boolean(building.closedOnWeekends),
     });
     setFormErrors({});
     setImageFile(null);
@@ -192,6 +211,15 @@ export const BuildingManagementPage = ({
     if (formState.yearEstablished < 1800 || formState.yearEstablished > currentYear) {
       errors.yearEstablished = `Year must be between 1800 and ${currentYear}.`;
     }
+    if (!formState.openingTime) {
+      errors.openingTime = "Opening time is required.";
+    }
+    if (!formState.closingTime) {
+      errors.closingTime = "Closing time is required.";
+    }
+    if (formState.openingTime && formState.closingTime && formState.closingTime <= formState.openingTime) {
+      errors.closingTime = "Closing time must be after opening time.";
+    }
     if (!formState.id && !imageFile) {
       errors.imageFile = "Building image is required.";
     }
@@ -225,6 +253,9 @@ export const BuildingManagementPage = ({
       status: formState.status,
       yearEstablished: formState.yearEstablished,
       manager: formState.manager.trim(),
+      openingTime: toApiTime(formState.openingTime),
+      closingTime: toApiTime(formState.closingTime),
+      closedOnWeekends: formState.closedOnWeekends,
     };
 
     setSubmitting(true);
@@ -262,7 +293,7 @@ export const BuildingManagementPage = ({
     return (
       <AdminLoadingState
         title="Loading Building Management"
-        subtitle="Syncing buildings, floors, and room capacity details."
+        subtitle="Syncing buildings, floors, and room details."
       />
     );
   }
@@ -375,7 +406,6 @@ export const BuildingManagementPage = ({
       <div className="space-y-4">
         {filteredBuildings.map((building) => {
           const buildingRoomCount = getBuildingRoomCount(building.id);
-          const buildingCapacity = getBuildingCapacity(building.id);
           const buildingFloorCount = getFloorCount(building.id);
           const creatorName = [building.createdBy?.firstName, building.createdBy?.lastName].filter(Boolean).join(" ");
 
@@ -404,7 +434,7 @@ export const BuildingManagementPage = ({
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                       <MapPin size={14} />
                       <span>{building.campus}</span>
-                      <span>â€¢</span>
+                      <span>•</span>
                       <span>{building.location}</span>
                     </div>
 
@@ -420,10 +450,13 @@ export const BuildingManagementPage = ({
                         <span className="font-medium text-foreground">{buildingRoomCount}</span> rooms
                       </span>
                       <span className="text-muted-foreground">
-                        Capacity: <span className="font-medium text-foreground">{buildingCapacity}</span>
+                        Manager: <span className="font-medium text-foreground">{building.manager}</span>
                       </span>
                       <span className="text-muted-foreground">
-                        Manager: <span className="font-medium text-foreground">{building.manager}</span>
+                        Hours: <span className="font-medium text-foreground">{normalizeTimeForInput(building.openingTime) || "08:00"} - {normalizeTimeForInput(building.closingTime) || "18:00"}</span>
+                      </span>
+                      <span className="text-muted-foreground">
+                        Open Days: <span className="font-medium text-foreground">{building.closedOnWeekends ? "Weekdays only" : "Weekdays and weekends"}</span>
                       </span>
                       {building.createdBy && (
                         <span className="text-muted-foreground">
@@ -594,6 +627,48 @@ export const BuildingManagementPage = ({
                   className={`w-full px-3 py-2.5 rounded-xl border bg-background text-sm ${formErrors.manager ? "border-destructive" : "border-border"}`}
                 />
                 {formErrors.manager && <p className="mt-1 text-xs text-destructive">{formErrors.manager}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Opening Time</label>
+                <input
+                  type="time"
+                  value={formState.openingTime}
+                  onChange={(event) => {
+                    setFormState((current) => ({ ...current, openingTime: event.target.value }));
+                    setFormErrors((current) => ({ ...current, openingTime: undefined }));
+                  }}
+                  className={`w-full px-3 py-2.5 rounded-xl border bg-background text-sm ${formErrors.openingTime ? "border-destructive" : "border-border"}`}
+                />
+                {formErrors.openingTime && <p className="mt-1 text-xs text-destructive">{formErrors.openingTime}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Closing Time</label>
+                <input
+                  type="time"
+                  value={formState.closingTime}
+                  onChange={(event) => {
+                    setFormState((current) => ({ ...current, closingTime: event.target.value }));
+                    setFormErrors((current) => ({ ...current, closingTime: undefined }));
+                  }}
+                  className={`w-full px-3 py-2.5 rounded-xl border bg-background text-sm ${formErrors.closingTime ? "border-destructive" : "border-border"}`}
+                />
+                {formErrors.closingTime && <p className="mt-1 text-xs text-destructive">{formErrors.closingTime}</p>}
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-foreground mb-1">Building Open Days</label>
+                <select
+                  value={formState.closedOnWeekends ? "weekday-only" : "weekday-weekend"}
+                  onChange={(event) =>
+                    setFormState((current) => ({
+                      ...current,
+                      closedOnWeekends: event.target.value === "weekday-only",
+                    }))
+                  }
+                  className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm"
+                >
+                  <option value="weekday-weekend">Open on weekdays and weekends</option>
+                  <option value="weekday-only">Open on weekdays only (weekends closed)</option>
+                </select>
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-foreground mb-1">Status</label>

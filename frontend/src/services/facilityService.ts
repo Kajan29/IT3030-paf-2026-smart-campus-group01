@@ -102,6 +102,9 @@ interface ApiRoom {
   openingTime?: string;
   closingTime?: string;
   createdBy?: ApiUserSummary;
+  assignedStaffId?: number | null;
+  assignedStaffName?: string | null;
+  assignedStaffEmail?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -178,7 +181,6 @@ export interface RoomUpsertPayload {
   lengthMeters: number;
   widthMeters: number;
   seatingCapacity: number;
-  maxOccupancy: number;
   facilities: string[];
   status: RoomStatus;
   description: string;
@@ -188,8 +190,6 @@ export interface RoomUpsertPayload {
   projectorAvailable: boolean;
   boardType: Room["boardType"];
   internetAvailable: boolean;
-  chairs: number;
-  tables: number;
   labEquipmentAvailable: boolean;
   powerBackupAvailable: boolean;
   accessibilitySupport: boolean;
@@ -284,7 +284,7 @@ const mapRoom = (room: ApiRoom): Room => ({
   areaSqMeters: room.areaSqMeters,
   areaSqFeet: room.areaSqFeet,
   seatingCapacity: room.seatingCapacity,
-  maxOccupancy: room.maxOccupancy,
+  maxOccupancy: room.maxOccupancy ?? room.seatingCapacity,
   facilities: room.facilities || [],
   status: room.status as RoomStatus,
   description: room.description,
@@ -306,6 +306,9 @@ const mapRoom = (room: ApiRoom): Room => ({
   closingTime: room.closingTime,
   maintenanceHistory: room.maintenanceHistory || [],
   imageUrl: room.imageUrl,
+  assignedStaffId: room.assignedStaffId != null ? String(room.assignedStaffId) : null,
+  assignedStaffName: room.assignedStaffName || null,
+  assignedStaffEmail: room.assignedStaffEmail || null,
   createdBy: mapUser(room.createdBy),
   createdAt: room.createdAt,
   updatedAt: room.updatedAt,
@@ -681,6 +684,15 @@ export const facilityService = {
     const response = await api.delete(`/management/facilities/rooms/${id}`);
     invalidateSnapshot();
     return response;
+  },
+
+  async assignStaffToRoom(roomId: string, staffId: number | null) {
+    const response = await api.put<ApiEnvelope<ApiRoom>>(
+      `/management/facilities/rooms/${roomId}/assign-staff`,
+      { staffId }
+    );
+    invalidateSnapshot();
+    return mapRoom(response.data.data);
   },
 };
 

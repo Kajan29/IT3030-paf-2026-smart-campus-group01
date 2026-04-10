@@ -40,11 +40,6 @@ public class RoomRequest {
     @Max(value = 1000, message = "Seating capacity must be at most 1000")
     private Integer seatingCapacity;
 
-    @NotNull(message = "Max occupancy is required")
-    @Min(value = 1, message = "Max occupancy must be at least 1")
-    @Max(value = 1200, message = "Max occupancy must be at most 1200")
-    private Integer maxOccupancy;
-
     @NotNull(message = "Facilities are required")
     @Size(min = 1, message = "At least one facility is required")
     private List<String> facilities;
@@ -72,16 +67,6 @@ public class RoomRequest {
 
     @NotNull(message = "Internet flag is required")
     private Boolean internetAvailable;
-
-    @NotNull(message = "Chairs count is required")
-    @Min(value = 0, message = "Chairs must be at least 0")
-    @Max(value = 2000, message = "Chairs must be at most 2000")
-    private Integer chairs;
-
-    @NotNull(message = "Tables count is required")
-    @Min(value = 0, message = "Tables must be at least 0")
-    @Max(value = 500, message = "Tables must be at most 500")
-    private Integer tables;
 
     @NotNull(message = "Lab equipment flag is required")
     private Boolean labEquipmentAvailable;

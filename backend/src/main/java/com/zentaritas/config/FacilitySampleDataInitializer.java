@@ -5,10 +5,12 @@ import com.zentaritas.model.auth.User;
 import com.zentaritas.model.management.Building;
 import com.zentaritas.model.management.Floor;
 import com.zentaritas.model.management.Room;
+import com.zentaritas.model.management.RoomResource;
 import com.zentaritas.repository.auth.UserRepository;
 import com.zentaritas.repository.management.BuildingRepository;
 import com.zentaritas.repository.management.FloorRepository;
 import com.zentaritas.repository.management.RoomRepository;
+import com.zentaritas.repository.management.RoomResourceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,6 +34,7 @@ public class FacilitySampleDataInitializer {
     private final BuildingRepository buildingRepository;
     private final FloorRepository floorRepository;
     private final RoomRepository roomRepository;
+        private final RoomResourceRepository roomResourceRepository;
     private final UserRepository userRepository;
 
     @Value("${app.admin.email}")
@@ -50,6 +53,7 @@ public class FacilitySampleDataInitializer {
             Map<String, Building> buildingByCode = seedBuildings(seedOwner);
             Map<String, Floor> floorByKey = seedFloors(buildingByCode, seedOwner);
             seedRooms(buildingByCode, floorByKey, seedOwner);
+                        seedRoomResources();
         };
     }
 
@@ -187,7 +191,6 @@ public class FacilitySampleDataInitializer {
                                         .areaSqMeters(data.areaSqMeters())
                                         .areaSqFeet(data.areaSqFeet())
                                         .seatingCapacity(data.seatingCapacity())
-                                        .maxOccupancy(data.maxOccupancy())
                                         .facilities(data.facilities())
                                         .status(data.status())
                                         .description(data.description())
@@ -197,8 +200,6 @@ public class FacilitySampleDataInitializer {
                                         .projectorAvailable(data.projectorAvailable())
                                         .boardType(data.boardType())
                                         .internetAvailable(data.internetAvailable())
-                                        .chairs(data.chairs())
-                                        .tables(data.tables())
                                         .labEquipmentAvailable(data.labEquipmentAvailable())
                                         .powerBackupAvailable(data.powerBackupAvailable())
                                         .accessibilitySupport(data.accessibilitySupport())
@@ -218,6 +219,67 @@ public class FacilitySampleDataInitializer {
 
         log.info("Facility sample-data: rooms newly created={}", created);
     }
+
+        private void seedRoomResources() {
+                int created = 0;
+
+                for (Room room : roomRepository.findAll()) {
+                        int seatingCapacity = Math.max(1, Optional.ofNullable(room.getSeatingCapacity()).orElse(1));
+
+                        created += seedResourceIfMissing(room, "chairs", "Chairs", seatingCapacity);
+                        created += seedResourceIfMissing(room, "tables", "Tables", Math.max(1, (int) Math.ceil(seatingCapacity / 2.0)));
+
+                        if (Boolean.TRUE.equals(room.getProjectorAvailable())) {
+                                created += seedResourceIfMissing(room, "projector", "Projector", 1);
+                        }
+
+                        String boardType = Optional.ofNullable(room.getBoardType()).orElse("").trim().toLowerCase(Locale.ROOT);
+                        if ("whiteboard".equals(boardType) || "both".equals(boardType)) {
+                                created += seedResourceIfMissing(room, "whiteboard", "Whiteboard", 1);
+                        }
+                        if ("smart board".equals(boardType) || "both".equals(boardType)) {
+                                created += seedResourceIfMissing(room, "smart_board", "Smart Board", 1);
+                        }
+
+                        if (Boolean.TRUE.equals(room.getInternetAvailable())) {
+                                created += seedResourceIfMissing(room, "access_point", "Access Point", Math.max(1, (int) Math.ceil(seatingCapacity / 40.0)));
+                        }
+
+                        if (Boolean.TRUE.equals(room.getLabEquipmentAvailable())) {
+                                created += seedResourceIfMissing(room, "lab_station", "Lab Station", Math.max(1, (int) Math.ceil(seatingCapacity / 2.0)));
+                        }
+
+                        if (Boolean.TRUE.equals(room.getPowerBackupAvailable())) {
+                                created += seedResourceIfMissing(room, "ups", "UPS Unit", 1);
+                        }
+
+                        if (Boolean.TRUE.equals(room.getAccessibilitySupport())) {
+                                created += seedResourceIfMissing(room, "accessibility_station", "Accessibility Station", 1);
+                        }
+                }
+
+                log.info("Facility sample-data: room resources newly created={}", created);
+        }
+
+        private int seedResourceIfMissing(Room room, String type, String name, Integer quantity) {
+                if (quantity == null || quantity <= 0) {
+                        return 0;
+                }
+
+                if (roomResourceRepository.existsByRoomIdAndType(room.getId(), type)) {
+                        return 0;
+                }
+
+                RoomResource resource = RoomResource.builder()
+                                .name(name)
+                                .type(type)
+                                .quantity(quantity)
+                                .room(room)
+                                .build();
+
+                roomResourceRepository.save(resource);
+                return 1;
+        }
 
     private List<BuildingSeedData> buildingSeedData() {
         return List.of(

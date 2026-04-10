@@ -23,4 +23,6 @@ public class AuthResponse {
     private String profilePicture;
     private Role role;
     private Boolean isVerified;
+    private Boolean bookingRestricted;
+    private String bookingRestrictionReason;
 }

@@ -69,6 +69,20 @@ public class UserManagementController {
         return ResponseEntity.ok(ApiResponse.success(userManagementService.updateUserStatus(id, request)));
     }
 
+    @PatchMapping("/{id}/restrict-booking")
+    public ResponseEntity<ApiResponse<UserManagementResponse>> restrictBooking(
+            @PathVariable Long id,
+            @RequestBody(required = false) java.util.Map<String, String> body) {
+        String reason = body != null ? body.get("reason") : null;
+        return ResponseEntity.ok(ApiResponse.success(userManagementService.restrictBooking(id, reason)));
+    }
+
+    @PatchMapping("/{id}/unrestrict-booking")
+    public ResponseEntity<ApiResponse<UserManagementResponse>> unrestrictBooking(
+            @PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(userManagementService.unrestrictBooking(id)));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Long id) {
         userManagementService.deleteUser(id);

@@ -17,6 +17,9 @@ public class UserManagementResponse {
     private Role role;
     private Boolean isVerified;
     private Boolean isActive;
+    private Boolean bookingRestricted;
+    private String bookingRestrictionReason;
+    private LocalDateTime bookingRestrictedAt;
     private String profilePicture;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -30,6 +33,9 @@ public class UserManagementResponse {
                 .role(user.getRole())
                 .isVerified(user.getIsVerified())
                 .isActive(user.getIsActive())
+                .bookingRestricted(user.getBookingRestricted())
+                .bookingRestrictionReason(user.getBookingRestrictionReason())
+                .bookingRestrictedAt(user.getBookingRestrictedAt())
                 .profilePicture(user.getProfilePicture())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())

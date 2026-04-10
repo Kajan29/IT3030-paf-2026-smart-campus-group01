@@ -34,12 +34,17 @@ public class BookingController {
     private final AvailabilityEngineService availabilityEngineService;
     private final UserRepository userRepository;
 
-    // ============= AVAILABILITY ENDPOINTS =============
-
     /**
-     * Check room availability for a specific time period
-     * GET /api/bookings/availability/{roomId}?startTime=...&endTime=...
+     * Resolve authenticated user by email (JWT subject) or username fallback
      */
+    private User resolveUser(Authentication authentication) {
+        String identity = authentication.getName();
+        return userRepository.findByEmailIgnoreCase(identity)
+                .or(() -> userRepository.findByUsername(identity))
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+    }
+
+    
     @GetMapping("/availability/{roomId}")
     @PreAuthorize("hasAnyRole('STUDENT', 'ACADEMIC_STAFF', 'NON_ACADEMIC_STAFF', 'ADMIN')")
     public ResponseEntity<AvailabilityResponse> checkRoomAvailability(
@@ -140,8 +145,7 @@ public class BookingController {
     public ResponseEntity<?> createBooking(@RequestBody BookingDto bookingRequest, Authentication authentication) {
         log.info("Creating booking for user {}", authentication.getName());
 
-        User booker = userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        User booker = resolveUser(authentication);
 
         // Convert BookingDto to BookingRequestDTO
         BookingRequestDTO request = BookingRequestDTO.builder()
@@ -202,8 +206,7 @@ public class BookingController {
     @GetMapping("/my-bookings")
     @PreAuthorize("hasAnyRole('STUDENT', 'ACADEMIC_STAFF', 'NON_ACADEMIC_STAFF')")
     public ResponseEntity<List<RoomBooking>> getMyBookings(Authentication authentication) {
-        User user = userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        User user = resolveUser(authentication);
 
         log.debug("Fetching bookings for user {}", user.getId());
         return ResponseEntity.ok(bookingService.getBookingsForUser(user.getId()));
@@ -222,8 +225,7 @@ public class BookingController {
         
         log.info("Approving booking {} by admin {}", bookingId, authentication.getName());
 
-        User approver = userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        User approver = resolveUser(authentication);
 
         BookingService.BookingResult result = bookingService.approveBooking(bookingId, approver, request.notes);
 
@@ -247,8 +249,7 @@ public class BookingController {
         
         log.info("Rejecting booking {} by admin {}", bookingId, authentication.getName());
 
-        User approver = userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        User approver = resolveUser(authentication);
 
         BookingService.BookingResult result = bookingService.rejectBooking(bookingId, approver, request.reason);
 
@@ -280,6 +281,160 @@ public class BookingController {
         }
     }
 
+    // ============= SEAT AVAILABILITY ENDPOINT =============
+
+    /**
+     * Get seat availability for a room at a given time
+     * GET /api/bookings/seats/{roomId}?startTime=...&endTime=...
+     */
+    @GetMapping("/seats/{roomId}")
+    @PreAuthorize("hasAnyRole('STUDENT', 'ACADEMIC_STAFF', 'NON_ACADEMIC_STAFF', 'ADMIN')")
+    public ResponseEntity<Map<String, Integer>> getSeatAvailability(
+            @PathVariable Long roomId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime) {
+        
+        log.debug("Getting seat availability for room {} from {} to {}", roomId, startTime, endTime);
+        Map<String, Integer> seats = bookingService.getRoomSeatAvailability(roomId, startTime, endTime);
+        return ResponseEntity.ok(seats);
+    }
+
+    // ============= ADMIN: ASSIGN STAFF =============
+
+    /**
+     * Assign non-academic staff to a booking (Admin only)
+     * PUT /api/bookings/{bookingId}/assign-staff
+     */
+    @PutMapping("/{bookingId}/assign-staff")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> assignStaffToBooking(
+            @PathVariable Long bookingId,
+            @RequestBody AssignStaffRequest request) {
+        
+        log.info("Assigning staff {} to booking {}", request.staffId, bookingId);
+
+        BookingService.BookingResult result = bookingService.assignStaffToBooking(bookingId, request.staffId);
+
+        if (result.success) {
+            return ResponseEntity.ok(new ApprovalResponse(true, "Staff assigned to booking"));
+        } else {
+            return ResponseEntity.badRequest().body(new ErrorResponse("Assignment failed", result.errors));
+        }
+    }
+
+    // ============= STAFF: BOOKING MANAGEMENT =============
+
+    /**
+     * Get today's bookings assigned to the current staff member
+     * GET /api/bookings/staff/today
+     */
+    @GetMapping("/staff/today")
+    @PreAuthorize("hasRole('NON_ACADEMIC_STAFF')")
+    public ResponseEntity<List<RoomBooking>> getTodayBookingsForStaff(Authentication authentication) {
+        User staff = resolveUser(authentication);
+
+        log.debug("Fetching today's bookings for staff {}", staff.getId());
+        return ResponseEntity.ok(bookingService.getTodayBookingsForStaff(staff.getId()));
+    }
+
+    /**
+     * Get all bookings assigned to the current staff member
+     * GET /api/bookings/staff/my-assigned
+     */
+    @GetMapping("/staff/my-assigned")
+    @PreAuthorize("hasRole('NON_ACADEMIC_STAFF')")
+    public ResponseEntity<List<RoomBooking>> getStaffAssignedBookings(Authentication authentication) {
+        User staff = resolveUser(authentication);
+
+        log.debug("Fetching assigned bookings for staff {}", staff.getId());
+        return ResponseEntity.ok(bookingService.getBookingsForStaff(staff.getId()));
+    }
+
+    /**
+     * Verify OTP for a booking (Staff action)
+     * POST /api/bookings/{bookingId}/verify-otp
+     */
+    @PostMapping("/{bookingId}/verify-otp")
+    @PreAuthorize("hasRole('NON_ACADEMIC_STAFF')")
+    public ResponseEntity<?> verifyBookingOtp(
+            @PathVariable Long bookingId,
+            @RequestBody OtpVerificationRequest request,
+            Authentication authentication) {
+        
+        User staff = resolveUser(authentication);
+
+        log.info("Staff {} verifying OTP for booking {}", staff.getId(), bookingId);
+
+        BookingService.BookingResult result = bookingService.verifyOtpAndMarkAttendance(bookingId, request.otp, staff.getId());
+
+        if (result.success) {
+            // Return booking details for staff review
+            RoomBooking booking = result.booking;
+            Map<String, Object> details = new LinkedHashMap<>();
+            details.put("bookingId", booking.getId());
+            details.put("studentName", booking.getBooker().getFirstName() + " " + booking.getBooker().getLastName());
+            details.put("studentEmail", booking.getBooker().getEmail());
+            details.put("roomName", booking.getRoom().getName());
+            details.put("roomCode", booking.getRoom().getCode());
+            details.put("startTime", booking.getStartTime());
+            details.put("endTime", booking.getEndTime());
+            details.put("purpose", booking.getPurpose());
+            details.put("seatsBooked", booking.getSeatsBooked());
+            details.put("status", booking.getStatus().toString());
+            details.put("attended", booking.getAttended());
+            return ResponseEntity.ok(details);
+        } else {
+            return ResponseEntity.badRequest().body(new ErrorResponse("OTP verification failed", result.errors));
+        }
+    }
+
+    /**
+     * Mark booking as attended (Staff action after OTP verification)
+     * PUT /api/bookings/{bookingId}/mark-attended
+     */
+    @PutMapping("/{bookingId}/mark-attended")
+    @PreAuthorize("hasRole('NON_ACADEMIC_STAFF')")
+    public ResponseEntity<?> markBookingAttended(
+            @PathVariable Long bookingId,
+            Authentication authentication) {
+        
+        User staff = resolveUser(authentication);
+
+        log.info("Staff {} marking booking {} as attended", staff.getId(), bookingId);
+
+        BookingService.BookingResult result = bookingService.markAttended(bookingId, staff.getId());
+
+        if (result.success) {
+            return ResponseEntity.ok(new ApprovalResponse(true, "Booking marked as attended"));
+        } else {
+            return ResponseEntity.badRequest().body(new ErrorResponse("Failed to mark attendance", result.errors));
+        }
+    }
+
+    /**
+     * Mark booking as no-show (Staff action when user doesn't attend)
+     * Notifies admins about the no-show
+     * PUT /api/bookings/{bookingId}/mark-no-show
+     */
+    @PutMapping("/{bookingId}/mark-no-show")
+    @PreAuthorize("hasRole('NON_ACADEMIC_STAFF')")
+    public ResponseEntity<?> markBookingNoShow(
+            @PathVariable Long bookingId,
+            Authentication authentication) {
+        
+        User staff = resolveUser(authentication);
+
+        log.info("Staff {} marking booking {} as no-show", staff.getId(), bookingId);
+
+        BookingService.BookingResult result = bookingService.markNoShow(bookingId, staff.getId());
+
+        if (result.success) {
+            return ResponseEntity.ok(new ApprovalResponse(true, "Booking marked as no-show. Admins have been notified."));
+        } else {
+            return ResponseEntity.badRequest().body(new ErrorResponse("Failed to mark no-show", result.errors));
+        }
+    }
+
     // ============= DTOs =============
 
     public record AvailabilityResponse(String status, int blackoutConflicts, int bookingConflicts, int timetableConflicts) {}
@@ -308,4 +463,6 @@ public class BookingController {
     public record RejectionResponse(boolean success, String message) {}
     public record CancellationResponse(boolean success, String message) {}
     public record ErrorResponse(String error, List<String> details) {}
+    public record AssignStaffRequest(Long staffId) {}
+    public record OtpVerificationRequest(String otp) {}
 }

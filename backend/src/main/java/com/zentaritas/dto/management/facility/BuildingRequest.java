@@ -48,4 +48,15 @@ public class BuildingRequest {
     private LocalTime closingTime;
 
     private Boolean closedOnWeekends = false;
+
+    @AssertTrue(message = "Opening and closing times must both be provided, and closing time must be after opening time")
+    public boolean isOperatingHoursValid() {
+        if (openingTime == null && closingTime == null) {
+            return true;
+        }
+        if (openingTime == null || closingTime == null) {
+            return false;
+        }
+        return closingTime.isAfter(openingTime);
+    }
 }

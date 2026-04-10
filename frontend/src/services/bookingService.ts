@@ -133,6 +133,64 @@ const bookingService = {
   },
 
   /**
+   * Get seat availability for a room at a given time
+   */
+  getSeatAvailability: async (roomId: string, startTime: string, endTime: string) => {
+    const response = await api.get(`/bookings/seats/${roomId}`, {
+      params: { startTime, endTime },
+    });
+    return response.data;
+  },
+
+  /**
+   * Assign non-academic staff to a booking (Admin only)
+   */
+  assignStaffToBooking: async (bookingId: string, staffId: number) => {
+    const response = await api.put(`/bookings/${bookingId}/assign-staff`, { staffId });
+    return response.data;
+  },
+
+  /**
+   * Get today's bookings assigned to current staff member
+   */
+  getStaffTodayBookings: async () => {
+    const response = await api.get(`/bookings/staff/today`);
+    return response.data;
+  },
+
+  /**
+   * Get all bookings assigned to current staff member
+   */
+  getStaffAssignedBookings: async () => {
+    const response = await api.get(`/bookings/staff/my-assigned`);
+    return response.data;
+  },
+
+  /**
+   * Verify OTP for a booking (Staff action)
+   */
+  verifyBookingOtp: async (bookingId: string, otp: string) => {
+    const response = await api.post(`/bookings/${bookingId}/verify-otp`, { otp });
+    return response.data;
+  },
+
+  /**
+   * Mark booking as attended after OTP verification (Staff action)
+   */
+  markBookingAttended: async (bookingId: string) => {
+    const response = await api.put(`/bookings/${bookingId}/mark-attended`);
+    return response.data;
+  },
+
+  /**
+   * Mark booking as no-show (Staff action when user doesn't attend)
+   */
+  markBookingNoShow: async (bookingId: string) => {
+    const response = await api.put(`/bookings/${bookingId}/mark-no-show`);
+    return response.data;
+  },
+
+  /**
    * Get notifications for current user
    */
   getNotifications: async () => {
