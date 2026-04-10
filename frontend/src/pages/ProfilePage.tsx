@@ -53,7 +53,7 @@ type BookingItem = {
   id: string;
   title: string;
   date: string;
-  status: "Confirmed" | "Pending" | "Cancelled";
+  status: "Confirmed" | "Pending" | "Approved" | "Attended" | "Cancelled";
   details: string;
   rawStatus: string;
   startTime?: string;
@@ -198,18 +198,16 @@ const ProfilePage = () => {
   };
 
   const mapBackendStatus = (status?: string): BookingItem["status"] => {
-    if (status === "APPROVED" || status === "CONFIRMED" || status === "COMPLETED") {
-      return "Confirmed";
-    }
-    if (status === "CANCELLED" || status === "REJECTED" || status === "NO_SHOW") {
-      return "Cancelled";
-    }
+    if (status === "APPROVED") return "Approved";
+    if (status === "CONFIRMED" || status === "COMPLETED") return "Confirmed";
+    if (status === "ATTENDED") return "Attended";
+    if (status === "CANCELLED" || status === "REJECTED" || status === "NO_SHOW") return "Cancelled";
     return "Pending";
   };
 
   const canCancelBooking = (status?: string) => {
     if (!status) return false;
-    return !["CANCELLED", "REJECTED", "COMPLETED", "NO_SHOW"].includes(status);
+    return !["CANCELLED", "REJECTED", "COMPLETED", "NO_SHOW", "ATTENDED"].includes(status);
   };
 
   const mapBackendBooking = (booking: BackendBooking): BookingItem => {
@@ -377,7 +375,7 @@ const ProfilePage = () => {
 
   const activeBookingCount = bookings.filter((booking) => booking.status !== "Cancelled").length;
   const pendingBookingCount = bookings.filter((booking) => booking.status === "Pending").length;
-  const confirmedBookingCount = bookings.filter((booking) => booking.status === "Confirmed").length;
+  const confirmedBookingCount = bookings.filter((booking) => booking.status === "Confirmed" || booking.status === "Approved" || booking.status === "Attended").length;
 
   const allocationsByDay = useMemo(() => {
     const grouped: Record<DayKey, RoomTimetableEntry[]> = {
@@ -679,6 +677,8 @@ const ProfilePage = () => {
   const renderStatusBadge = (status: BookingItem["status"]) => {
     const styles: Record<BookingItem["status"], string> = {
       Confirmed: "bg-success/10 text-success border-success/30",
+      Approved: "bg-emerald-100 text-emerald-800 border-emerald-300",
+      Attended: "bg-teal-100 text-teal-800 border-teal-300",
       Pending: "bg-warning/15 text-warning-foreground border-warning/30",
       Cancelled: "bg-destructive/10 text-destructive border-destructive/30",
     };
