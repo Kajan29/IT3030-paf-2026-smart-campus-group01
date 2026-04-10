@@ -109,10 +109,16 @@ public class AuthService implements UserDetailsService {
             "/admin?view=users"
         );
 
-        // Generate and send verification code
+        // Generate and save verification code
         String verificationCode = generateVerificationCode();
         saveVerificationToken(user.getEmail(), verificationCode, VerificationToken.TokenType.EMAIL_VERIFICATION);
-        emailService.sendVerificationEmail(user.getEmail(), verificationCode);
+
+        // Send email after data is saved — don't let email failure roll back user creation
+        try {
+            emailService.sendVerificationEmail(user.getEmail(), verificationCode);
+        } catch (Exception e) {
+            log.error("Failed to send verification email to {} — user was still created", user.getEmail(), e);
+        }
 
         log.info("User registered successfully: {}", user.getEmail());
 
@@ -225,10 +231,16 @@ public class AuthService implements UserDetailsService {
                 VerificationToken.TokenType.PASSWORD_RESET
         );
 
-        // Generate and send new verification code
+        // Generate and save new verification code
         String verificationCode = generateVerificationCode();
         saveVerificationToken(user.getEmail(), verificationCode, VerificationToken.TokenType.PASSWORD_RESET);
-        emailService.sendPasswordResetEmail(user.getEmail(), verificationCode);
+
+        // Send email after data is saved — don't let email failure roll back token creation
+        try {
+            emailService.sendPasswordResetEmail(user.getEmail(), verificationCode);
+        } catch (Exception e) {
+            log.error("Failed to send password reset email to {}", user.getEmail(), e);
+        }
 
         log.info("Password reset code sent to: {}", user.getEmail());
     }
@@ -283,10 +295,16 @@ public class AuthService implements UserDetailsService {
                 VerificationToken.TokenType.EMAIL_VERIFICATION
         );
 
-        // Generate and send new verification code
+        // Generate and save new verification code
         String verificationCode = generateVerificationCode();
         saveVerificationToken(email, verificationCode, VerificationToken.TokenType.EMAIL_VERIFICATION);
-        emailService.sendVerificationEmail(email, verificationCode);
+
+        // Send email after data is saved — don't let email failure roll back token creation
+        try {
+            emailService.sendVerificationEmail(email, verificationCode);
+        } catch (Exception e) {
+            log.error("Failed to resend verification email to {}", email, e);
+        }
 
         log.info("Verification code resent to: {}", email);
     }

@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -61,8 +62,11 @@ public class EmailService {
             mailSender.send(message);
             log.info("Email sent successfully to: {}", toEmail);
         } catch (MessagingException e) {
-            log.error("Failed to send email to: {}", toEmail, e);
+            log.error("Failed to compose email to: {}", toEmail, e);
             throw new RuntimeException("Failed to send email", e);
+        } catch (MailException e) {
+            log.error("SMTP error sending email to: {}", toEmail, e);
+            throw new RuntimeException("Failed to send email: " + e.getMessage(), e);
         }
     }
 
