@@ -12,8 +12,8 @@ export const SettingsPage = () => {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [academicYear, setAcademicYear] = useState("2025 / 2026");
   const [timeZone, setTimeZone] = useState("Asia/Colombo");
-  const [websiteName, setWebsiteName] = useState("Zentaritas University");
-  const [supportEmail, setSupportEmail] = useState("support@zentaritas.edu");
+  const [websiteName, setWebsiteName] = useState("Smart Campus");
+  const [supportEmail, setSupportEmail] = useState("support@smartcampus.edu");
 
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [otpSent, setOtpSent] = useState(false);
@@ -46,8 +46,8 @@ export const SettingsPage = () => {
       setMaintenanceMode(parsed.maintenanceMode ?? false);
       setAcademicYear(parsed.academicYear ?? "2025 / 2026");
       setTimeZone(parsed.timeZone ?? "Asia/Colombo");
-      setWebsiteName(parsed.websiteName ?? "Zentaritas University");
-      setSupportEmail(parsed.supportEmail ?? "support@zentaritas.edu");
+      setWebsiteName(parsed.websiteName ?? "Smart Campus");
+      setSupportEmail(parsed.supportEmail ?? "support@smartcampus.edu");
     } catch {
       localStorage.removeItem("adminWebsiteSettings");
     }

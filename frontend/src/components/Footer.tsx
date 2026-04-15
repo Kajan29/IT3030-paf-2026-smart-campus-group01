@@ -63,7 +63,7 @@ const Footer = () => (
               <GraduationCap className="h-5 w-5 text-accent" />
             </div>
             <span className="font-display text-xl font-bold text-primary-foreground tracking-wide">
-              Zentaritas
+              Smart Campus
             </span>
           </div>
           <p className="text-sm text-primary-foreground/55 leading-relaxed mb-5 max-w-xs">
@@ -132,14 +132,14 @@ const Footer = () => (
             <li className="flex items-start gap-3">
               <MapPin className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
               <span className="text-sm text-primary-foreground/55">
-                Zentaritas University Campus,<br />
+                Smart Campus,<br />
                 Colombo 07, Sri Lanka
               </span>
             </li>
             <li className="flex items-center gap-3">
               <Mail className="h-4 w-4 text-accent flex-shrink-0" />
-              <a href="mailto:info@zentaritas.edu" className="text-sm text-primary-foreground/55 hover:text-accent transition-colors">
-                info@zentaritas.edu
+              <a href="mailto:info@smartcampus.edu" className="text-sm text-primary-foreground/55 hover:text-accent transition-colors">
+                info@smartcampus.edu
               </a>
             </li>
             <li className="flex items-center gap-3">
@@ -155,7 +155,7 @@ const Footer = () => (
       {/* Bottom bar */}
       <div className="py-6 border-t border-primary-foreground/8 flex flex-col md:flex-row items-center justify-between gap-4">
         <p className="text-xs text-primary-foreground/35">
-          © {new Date().getFullYear()} Zentaritas University. All rights reserved.
+          © {new Date().getFullYear()} Smart Campus. All rights reserved.
         </p>
         <div className="flex gap-6 text-xs text-primary-foreground/35">
           <a href="#" className="hover:text-primary-foreground/60 transition-colors">Privacy Policy</a>

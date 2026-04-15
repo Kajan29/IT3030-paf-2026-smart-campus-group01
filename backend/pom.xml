@@ -12,10 +12,10 @@
     </parent>
     
     <groupId>com.zentaritas</groupId>
-    <artifactId>zentaritas-backend</artifactId>
+    <artifactId>smart-campus-backend</artifactId>
     <version>1.0.0</version>
-    <name>Zentaritas Backend</name>
-    <description>Backend API for Zentaritas Application</description>
+    <name>Smart Campus Backend</name>
+    <description>Backend API for Smart Campus Application</description>
     
     <properties>
         <java.version>17</java.version>

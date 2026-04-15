@@ -31,7 +31,7 @@ const AboutPreview = () => (
           <div className="relative rounded-2xl overflow-hidden shadow-2xl">
             <img
               src={campusAerial}
-              alt="Zentaritas University Campus"
+              alt="Smart Campus"
               className="w-full h-[500px] object-cover"
               width={800}
               height={500}
@@ -71,7 +71,7 @@ const AboutPreview = () => (
         >
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 mb-4">
             <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-            <span className="text-sm font-medium text-accent tracking-wide uppercase">About Zentaritas</span>
+            <span className="text-sm font-medium text-accent tracking-wide uppercase">About Smart Campus</span>
           </div>
 
           <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-6 leading-tight">
@@ -81,7 +81,7 @@ const AboutPreview = () => (
           </h2>
 
           <p className="text-muted-foreground text-lg leading-relaxed mb-4">
-            For over two decades, Zentaritas University has been at the forefront of higher education,
+            For over two decades, Smart Campus has been at the forefront of higher education,
             combining academic rigor with cutting-edge research and a commitment to shaping global leaders.
           </p>
 

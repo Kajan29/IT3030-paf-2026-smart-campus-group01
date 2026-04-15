@@ -201,7 +201,7 @@ const AdminDashboard = () => {
           <button onClick={() => setMobileSidebarOpen(true)} className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center text-muted-foreground">
             <Menu size={18} />
           </button>
-          <span className="font-bold text-primary text-lg">Zentaritas Admin</span>
+          <span className="font-bold text-primary text-lg">Smart Campus Admin</span>
           <span className="text-muted-foreground text-sm ml-1">/ {pageTitle}</span>
         </div>
 

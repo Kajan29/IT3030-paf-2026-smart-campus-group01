@@ -8,7 +8,7 @@ const AuthHeroPanel = () => {
           <div className="hero-logo-box">
             <GraduationCap size={28} className="hero-logo-icon" />
           </div>
-          <h1 className="hero-title">Zentaritas</h1>
+          <h1 className="hero-title">Smart Campus</h1>
         </div>
         <p className="hero-subtitle">University Platform & Management</p>
       </div>
@@ -42,7 +42,7 @@ const AuthHeroPanel = () => {
       </div>
 
       <p className="hero-footer">
-        © 2026 Zentaritas University. All rights reserved.
+        © 2026 Smart Campus. All rights reserved.
       </p>
     </div>
   );

@@ -6,7 +6,7 @@ const Header = (): JSX.Element => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="hover:opacity-80 transition-opacity">
-            <h1 className="text-2xl font-display font-bold">Zentaritas</h1>
+            <h1 className="text-2xl font-display font-bold">Smart Campus</h1>
           </Link>
           <nav className="flex items-center gap-8">
             <ul className="flex gap-6">

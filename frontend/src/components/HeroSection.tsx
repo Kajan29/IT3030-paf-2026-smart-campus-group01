@@ -9,7 +9,7 @@ const slides = [
   {
     image: heroCampus,
     title: "Shape Your Future",
-    subtitle: "World-class education at Zentaritas University",
+    subtitle: "World-class education at Smart Campus",
     badge: "Admissions Open 2026",
   },
   {

@@ -63,7 +63,7 @@ const CallToAction = () => (
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.3 }}
           >
-            Join thousands of students who have chosen Zentaritas University
+            Join thousands of students who have chosen Smart Campus
             as their path to excellence. Applications are now open.
           </motion.p>
 

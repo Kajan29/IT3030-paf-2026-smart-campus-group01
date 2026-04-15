@@ -638,7 +638,7 @@ export const ResourceAnalyticsPage = () => {
 
     if (type === "full") {
       const sections = [
-        "=== ZENTARITAS RESOURCE ANALYTICS REPORT ===",
+        "=== SMART CAMPUS RESOURCE ANALYTICS REPORT ===",
         `Generated: ${new Date().toLocaleString()}`,
         `Buildings: ${buildings.length} | Floors: ${floors.length} | Rooms: ${rooms.length} | Resources: ${allResources.length}`,
         "",

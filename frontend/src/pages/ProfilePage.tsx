@@ -1704,7 +1704,7 @@ const ProfilePage = () => {
             </div>
             {!sidebarCollapsed && (
               <div>
-                <span className="text-white font-bold text-lg leading-none">Zentaritas</span>
+                <span className="text-white font-bold text-lg leading-none">Smart Campus</span>
                 <p className="text-sidebar-foreground text-[10px] leading-tight mt-0.5 tracking-[0.16em] uppercase">
                   My Profile
                 </p>
@@ -1851,7 +1851,7 @@ const ProfilePage = () => {
               <GraduationCap size={20} className="text-white" />
             </div>
             <div>
-              <span className="text-white font-bold text-lg leading-none">Zentaritas</span>
+              <span className="text-white font-bold text-lg leading-none">Smart Campus</span>
               <p className="text-sidebar-foreground text-[10px] leading-tight mt-0.5 tracking-[0.16em] uppercase">
                 My Profile
               </p>

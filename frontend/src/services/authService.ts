@@ -73,7 +73,7 @@ export const authService = {
   
   // Resend verification code
   resendVerification: (email: string) => 
-    api.post<AuthResponse>(`/auth/resend-verification?email=${email}`),
+    api.post<AuthResponse>(`/auth/resend-verification?email=${encodeURIComponent(email)}`),
   
   // Forgot password (sends verification code)
   forgotPassword: (data: ForgotPasswordData) => 
