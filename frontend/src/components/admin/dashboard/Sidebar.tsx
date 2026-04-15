@@ -73,7 +73,7 @@ export const Sidebar = ({ activeItem, onItemClick, collapsed, onToggle }: Sideba
           </div>
           {!collapsed && (
             <div className="animate-fade-in">
-              <span className="text-white font-bold text-lg leading-none">Zentaritas</span>
+              <span className="text-white font-bold text-lg leading-none">Smart Campus</span>
               <p className="text-sidebar-foreground text-[10px] leading-tight mt-0.5 tracking-[0.16em] uppercase">
                 University Ops
               </p>

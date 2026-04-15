@@ -1,6 +1,6 @@
-# Zentaritas Backend
+# Smart Campus Backend
 
-Spring Boot REST API for Zentaritas university management system with comprehensive authentication and authorization.
+Spring Boot REST API for Smart Campus university management system with comprehensive authentication and authorization.
 
 ## 📋 Prerequisites
 
@@ -106,7 +106,7 @@ mvn spring-boot:run
 Or compile and run the JAR:
 ```bash
 mvn clean package
-java -jar target/zentaritas-backend-1.0.0.jar
+java -jar target/smart-campus-backend-1.0.0.jar
 ```
 
 The backend will start at: **http://localhost:8080**
@@ -127,7 +127,7 @@ mvn clean test jacoco:report
 
 ```
 src/main/java/com/zentaritas/
-├── ZentaritasApplication.java        # Main application entry point
+├── SmartCampusApplication.java        # Main application entry point
 ├── config/                           # Configuration classes
 │   ├── CorsConfig.java              # CORS configuration
 │   ├── SecurityConfig.java          # Spring Security setup
@@ -277,7 +277,7 @@ mvn clean install -U
 
 ## 📄 License
 
-This project is part of the Zentaritas university management system.
+This project is part of the Smart Campus university management system.
 - `GET /api/users/{id}` - Get user by ID
 - `POST /api/users` - Create user
 - `PUT /api/users/{id}` - Update user

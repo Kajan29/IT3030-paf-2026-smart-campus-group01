@@ -43,8 +43,8 @@ api.interceptors.request.use(
     const token = authService.getAccessToken()
     const shouldAttachToken = !isAuthEndpoint && token && (!isPublicEndpoint || !authService.isSessionExpired())
     if (shouldAttachToken) {
-      config.headers = config.headers || {}
-      ;(config.headers as Record<string, string>).Authorization = `Bearer ${token}`
+      config.headers = config.headers ?? axios.defaults.headers.common as typeof config.headers
+      config.headers.Authorization = `Bearer ${token}`
     }
     return config
   },

@@ -695,9 +695,9 @@ const ContactPage = () => {
               </h2>
               <div className="space-y-5">
                 {[
-                  { icon: MapPin, label: "Address", value: "Zentaritas University Campus, Malabe, Sri Lanka" },
+                  { icon: MapPin, label: "Address", value: "Smart Campus, Malabe, Sri Lanka" },
                   { icon: Phone, label: "Phone", value: "+94 11 234 5678" },
-                  { icon: Mail, label: "Email", value: "info@zentaritas.edu" },
+                  { icon: Mail, label: "Email", value: "info@smartcampus.edu" },
                 ].map((item) => (
                   <div key={item.label} className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent flex-shrink-0">
@@ -715,7 +715,7 @@ const ContactPage = () => {
             {/* Map placeholder */}
             <div className="rounded-xl overflow-hidden border border-border h-64 bg-muted flex items-center justify-center">
               <iframe
-                title="Zentaritas University Location"
+                title="Smart Campus Location"
                 src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3961.1445440424754!2d79.97091937500577!3d6.914682!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNsKwNTQnNTIuOSJOIDc5wrA1OCcxNS4zIkU!5e0!3m2!1sen!2slk!4v1234567890"
                 className="w-full h-full border-0"
                 loading="lazy"

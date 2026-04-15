@@ -26,7 +26,7 @@ const AboutPage = () => (
     {/* Hero */}
     <section className="relative pt-24 pb-16 overflow-hidden">
       <div className="absolute inset-0 z-0">
-        <img src={heroCampus} alt="Zentaritas Campus" className="w-full h-full object-cover" />
+        <img src={heroCampus} alt="Smart Campus" className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-primary/80" />
       </div>
       <div className="container mx-auto px-4 relative z-10 text-center py-16">
@@ -35,7 +35,7 @@ const AboutPage = () => (
           animate={{ opacity: 1, y: 0 }}
           className="font-display text-4xl md:text-5xl font-bold text-primary-foreground mb-4"
         >
-          About Zentaritas
+          About Smart Campus
         </motion.h1>
         <motion.p
           initial={{ opacity: 0, y: 20 }}
@@ -73,7 +73,7 @@ const AboutPage = () => (
         <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
           <h2 className="font-display text-3xl font-bold text-foreground mb-6">Our Mission</h2>
           <p className="text-muted-foreground leading-relaxed mb-4">
-            Zentaritas University is dedicated to fostering intellectual growth, innovation, and leadership. We provide a transformative educational experience that empowers students to excel in their chosen fields and make a positive impact on society.
+            Smart Campus is dedicated to fostering intellectual growth, innovation, and leadership. We provide a transformative educational experience that empowers students to excel in their chosen fields and make a positive impact on society.
           </p>
           <p className="text-muted-foreground leading-relaxed">
             Founded with a vision of accessible, world-class education, our university has grown into a vibrant academic community that brings together diverse perspectives, cutting-edge research, and a commitment to student success.

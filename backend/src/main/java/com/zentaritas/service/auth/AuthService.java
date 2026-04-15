@@ -182,17 +182,20 @@ public class AuthService implements UserDetailsService {
         }
 
         if (StringUtils.hasText(userEmail)) {
-            userRepository.findByEmail(userEmail)
+            userRepository.findByEmailIgnoreCase(userEmail)
                     .ifPresent(user -> refreshTokenService.revokeAllUserTokens(user.getId()));
         }
     }
 
     @Transactional
     public void verifyEmail(VerifyEmailRequest request) {
+        String normalizedEmail = normalizeEmail(request.getEmail());
+        String verificationCode = request.getVerificationCode().trim();
+
         VerificationToken token = verificationTokenRepository
-                .findByTokenAndEmailAndTokenType(
-                        request.getVerificationCode(),
-                        request.getEmail(),
+                .findByTokenAndEmailIgnoreCaseAndTokenType(
+                        verificationCode,
+                        normalizedEmail,
                         VerificationToken.TokenType.EMAIL_VERIFICATION
                 )
                 .orElseThrow(() -> new RuntimeException("Invalid verification code"));
@@ -205,7 +208,7 @@ public class AuthService implements UserDetailsService {
             throw new RuntimeException("Verification code expired");
         }
 
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmailIgnoreCase(normalizedEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         user.setIsVerified(true);
@@ -251,10 +254,13 @@ public class AuthService implements UserDetailsService {
 
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
+        String normalizedEmail = normalizeEmail(request.getEmail());
+        String verificationCode = request.getVerificationCode().trim();
+
         VerificationToken token = verificationTokenRepository
-                .findByTokenAndEmailAndTokenType(
-                        request.getVerificationCode(),
-                        request.getEmail(),
+            .findByTokenAndEmailIgnoreCaseAndTokenType(
+                verificationCode,
+                normalizedEmail,
                         VerificationToken.TokenType.PASSWORD_RESET
                 )
                 .orElseThrow(() -> new RuntimeException("Invalid verification code"));
@@ -267,7 +273,7 @@ public class AuthService implements UserDetailsService {
             throw new RuntimeException("Verification code expired");
         }
 
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmailIgnoreCase(normalizedEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
@@ -282,7 +288,9 @@ public class AuthService implements UserDetailsService {
 
     @Transactional
     public void resendVerificationCode(String email) {
-        User user = userRepository.findByEmail(email)
+        String normalizedEmail = normalizeEmail(email);
+
+        User user = userRepository.findByEmailIgnoreCase(normalizedEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (user.getIsVerified()) {
@@ -291,22 +299,22 @@ public class AuthService implements UserDetailsService {
 
         // Delete old verification tokens
         verificationTokenRepository.deleteByEmailAndTokenType(
-                email,
+            user.getEmail(),
                 VerificationToken.TokenType.EMAIL_VERIFICATION
         );
 
         // Generate and save new verification code
         String verificationCode = generateVerificationCode();
-        saveVerificationToken(email, verificationCode, VerificationToken.TokenType.EMAIL_VERIFICATION);
+        saveVerificationToken(user.getEmail(), verificationCode, VerificationToken.TokenType.EMAIL_VERIFICATION);
 
         // Send email after data is saved — don't let email failure roll back token creation
         try {
-            emailService.sendVerificationEmail(email, verificationCode);
+            emailService.sendVerificationEmail(user.getEmail(), verificationCode);
         } catch (Exception e) {
-            log.error("Failed to resend verification email to {}", email, e);
+            log.error("Failed to resend verification email to {}", user.getEmail(), e);
         }
 
-        log.info("Verification code resent to: {}", email);
+        log.info("Verification code resent to: {}", user.getEmail());
     }
 
     private String generateVerificationCode() {

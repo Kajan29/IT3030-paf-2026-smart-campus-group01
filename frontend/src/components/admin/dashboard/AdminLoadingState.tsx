@@ -16,7 +16,7 @@ export const AdminLoadingState = ({ title, subtitle }: AdminLoadingStateProps) =
       <div className="relative flex flex-col items-center text-center gap-5 animate-fade-in">
         <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-semibold tracking-wide text-primary">
           <Leaf className="h-3.5 w-3.5" />
-          Zentaritas Admin
+          Smart Campus Admin
         </div>
 
         <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-card border border-border shadow-sm">

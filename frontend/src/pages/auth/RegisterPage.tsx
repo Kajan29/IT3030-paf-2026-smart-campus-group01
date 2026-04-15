@@ -146,11 +146,11 @@ const RegisterPage = () => {
               <div className="logo-small">
                 <span className="logo-letter">Z</span>
               </div>
-              <span className="logo-text">Zentaritas</span>
+              <span className="logo-text">Smart Campus</span>
             </div>
             <h2 className="auth-title">Create Student Account</h2>
             <p className="auth-subtitle">
-              Join the Zentaritas academic community
+              Join the Smart Campus academic community
             </p>
           </div>
 

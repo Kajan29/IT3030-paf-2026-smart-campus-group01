@@ -7,7 +7,7 @@ const testimonials = [
     name: "Amara Perera",
     role: "Computer Science, Batch 2025",
     quote:
-      "Zentaritas transformed my university experience. The room booking system saved me countless hours, and the digital resources made studying so much more efficient.",
+      "Smart Campus transformed my university experience. The room booking system saved me countless hours, and the digital resources made studying so much more efficient.",
     avatar: "AP",
     rating: 5,
   },
@@ -31,7 +31,7 @@ const testimonials = [
     name: "Prof. Marcus de Silva",
     role: "Dean, Faculty of Science",
     quote:
-      "Zentaritas University's digital infrastructure sets us apart. The integrated management system has improved efficiency across all departments significantly.",
+      "Smart Campus digital infrastructure sets us apart. The integrated management system has improved efficiency across all departments significantly.",
     avatar: "MS",
     rating: 5,
   },
@@ -65,7 +65,7 @@ const TestimonialsSection = () => {
             What Our Community Says
           </h2>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-            Hear from students and faculty who make Zentaritas their academic home.
+            Hear from students and faculty who make Smart Campus their academic home.
           </p>
         </motion.div>
 

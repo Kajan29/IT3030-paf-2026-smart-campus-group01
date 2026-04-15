@@ -126,7 +126,7 @@ const LoginPage = () => {
               <div className="logo-small">
                 <span className="logo-letter">Z</span>
               </div>
-              <span className="logo-text">Zentaritas</span>
+              <span className="logo-text">Smart Campus</span>
             </div>
             <h2 className="auth-title">Welcome Back</h2>
             <p className="auth-subtitle">Sign in to your university account</p>

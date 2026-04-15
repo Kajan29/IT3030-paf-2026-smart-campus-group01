@@ -324,7 +324,7 @@ export const DashboardOverview = () => {
       <div className="glass-card rounded-2xl p-6 border border-border bg-gradient-to-r from-primary/5 to-primary/10">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Welcome to Zentaritas Admin</h1>
+            <h1 className="text-2xl font-bold text-foreground">Welcome to Smart Campus Admin</h1>
             <p className="text-muted-foreground mt-1">
               University Operations Management Dashboard
             </p>

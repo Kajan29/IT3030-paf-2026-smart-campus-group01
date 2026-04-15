@@ -1,5 +1,5 @@
 // App-wide constants
-export const APP_NAME = import.meta.env.VITE_APP_NAME || 'Zentaritas'
+export const APP_NAME = import.meta.env.VITE_APP_NAME || 'Smart Campus'
 
 export const API_URL = import.meta.env.VITE_API_URL || '/api'
 

@@ -232,7 +232,7 @@ export const Navbar = ({ darkMode, onToggleDark }: NavbarProps) => {
                   AD
                 </div>
                 <p className="font-semibold text-foreground text-sm">Admin User</p>
-                <p className="text-xs text-muted-foreground">{user?.email || "admin@zentaritas.com"}</p>
+                <p className="text-xs text-muted-foreground">{user?.email || "admin@smartcampus.com"}</p>
               </div>
               <div className="p-2">
                 {[
