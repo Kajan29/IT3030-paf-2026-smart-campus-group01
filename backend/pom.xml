@@ -24,6 +24,7 @@
         <spring-security.version>6.4.4</spring-security.version>
         <tomcat.version>10.1.50</tomcat.version>
         <jackson.version>2.18.2</jackson.version>
+        <surefire.argLine></surefire.argLine>
     </properties>
     
     <dependencyManagement>
@@ -225,6 +226,13 @@
                             <version>1.18.30</version>
                         </path>
                     </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>${surefire.argLine} -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar -Xshare:off</argLine>
                 </configuration>
             </plugin>
         </plugins>
