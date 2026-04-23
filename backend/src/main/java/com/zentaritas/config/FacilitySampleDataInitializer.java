@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 
 import java.util.HashMap;
@@ -27,6 +28,7 @@ import java.util.Optional;
 import java.time.LocalTime;
 
 @Configuration
+@Profile("!test")
 @RequiredArgsConstructor
 @Slf4j
 public class FacilitySampleDataInitializer {

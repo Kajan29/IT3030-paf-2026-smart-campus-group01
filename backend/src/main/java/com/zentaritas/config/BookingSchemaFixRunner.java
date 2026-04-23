@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component;
  * After dropping, all enum values work and Hibernate will not recreate the constraint.
  */
 @Component
+@Profile("!test")
 @RequiredArgsConstructor
 @Slf4j
 public class BookingSchemaFixRunner implements ApplicationRunner {
